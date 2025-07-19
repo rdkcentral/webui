@@ -1,0 +1,70 @@
+<?%
+/*
+ If not stated otherwise in this file or this component's Licenses.txt file the
+ following copyright and licenses apply:
+
+ Copyright 2018 RDK Management
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+*/
+?>
+<!-- $Id: home_loggedout.jst 3158 2010-01-08 23:32:05Z slemoine $ -->
+<!-- do nothing, just clean php session, log this logout !!!user!!!, then redirect to login page -->
+<?%
+include('includes/php.jst');
+include('csrfprotector.jst');
+	session_start();
+	csrfProtector.init();
+        $modelName= getStr("Device.DeviceInfo.ModelName");
+        if($_SESSION['loginuser'] == "admin") {
+                exec("/usr/bin/logger -t GUI -p local5.notice \"User:admin logout\" ");
+        }
+        else if($_SESSION['loginuser'] == "mso") {
+                exec("/usr/bin/logger -t GUI -p local5.notice \"User:mso logout\" ");
+        }
+        else {
+                exec("/usr/bin/logger -t GUI -p local5.notice \"User:Unknown logout\" ");
+        }
+	$cur_sess=session_id();
+	session_unset();
+	session_destroy();
+	var now = new Date();
+        function getShortWeekdayFromDate($date) {
+                $day = $date.getDay();
+                if ($day == 0) return "Sun"
+                else if ($day == 1) return "Mon"
+                else if ($day == 2) return "Tue"
+                else if ($day == 3) return "Wed"
+                else if ($day == 4) return "Thu"
+                else if ($day == 5) return "Fri"
+                else if ($day == 6) return "Sat"
+        }
+        function getShortMonthFromDate($date) {
+                $month = $date.getMonth();
+                if ($month == 0) return "Jan"
+                else if ($month == 1) return "Feb"
+                else if ($month == 2) return "Mar"
+                else if ($month == 3) return "Apr"
+                else if ($month == 4) return "May"
+                else if ($month == 5) return "Jun"
+                else if ($month == 6) return "Jul"
+                else if ($month == 7) return "Aug"
+                else if ($month == 8) return "Sep"
+                else if ($month == 9) return "Oct"
+                else if ($month == 10) return "Nov"
+                else if ($month == 11) return "Dec"
+        }
+        var timeStamp=getShortWeekdayFromDate(now) + ", " + now.getDate() + " " + getShortMonthFromDate(now)+ " " + now.getFullYear() + " " + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + " GMT";
+        header("Set-Cookie: DUKSID=" + $cur_sess + "; httponly" + ";expires=" +timeStamp+ ";path=/;");
+        echo( '<script type="text/javascript">location.href="../index.jst";</script>');
+?>

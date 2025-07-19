@@ -1,0 +1,201 @@
+<?%
+/*
+ If not stated otherwise in this file or this component's Licenses.txt file the
+ following copyright and licenses apply:
+
+ Copyright 2020 RDK Management
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+*/
+?>
+<?% include('includes/header.jst'); ?>
+<?% include('includes/utility.jst'); ?>
+<div id="sub-header">
+	<?% include('includes/userbar.jst'); ?>
+</div><!-- end #sub-header -->
+<?% include('includes/nav.jst'); ?>
+<?%
+    //DM's get for VOICE SIP BASIC SERVICE PROVIDER 0 page
+	function Dm_data_get(){
+		return {
+			'Ingress' : getStr($tvdml["ReceiveGain"]),
+			'Egress' : getStr($tvdml["TransmitGain"]),
+			'server_IP_addr' : getStr($tvdml["LogServer"]),
+			'server_port' : getStr($tvdml["LogServerPort"]),
+			'sip_status' : getStr($tvdml["VoiceProcessStatus"])
+		}/*p2j-array*/;
+	}
+	$values_got = Dm_data_get();
+	$values_got['server_IP_addr'] = htmlspecialchars($values_got['server_IP_addr'], ENT_NOQUOTES, 'UTF-8');
+?>
+
+<div id="content">
+	<h1>Voice Diagnostics > Debug > Service Provider</h1>
+	<div id="educational-tip">
+		<p class="tip">"View technical Information related to VOICE DIAGNOSTICS  Debug"</p>
+		<p class="hidden"><strong>Debug Configuration :</strong>Configure the server IP address and port where SIP logs are to be sent.</p>
+		<p class="hidden"><strong>Line :</strong>Additional gain or loss to be applied to speech, in 0.1 dB steps.<br/>The SIP client needs to be stopped and restarted for the changes to take effect.</p>
+	</div>
+	<form id='sip_debug'>
+		<div class="module forms">
+			<h2>Debug Configuration</h2>
+			<div class="form-row ">
+				<label for="SIP_log_svr_ip_addr">SIP Log Server IP Address :</label>
+				<input type="text" id='SIP_log_svr_ip_addr' name="SIP_log_svr_ip_addr" value='' class ='text'/>
+			</div>
+			<div class="form-row odd ">
+				<label for="SIP_log_svr_port">SIP Log Server Port :</label>
+				<input type="text" id='SIP_log_svr_port' name="SIP_log_svr_port" value='' class ='text'/>
+			</div>
+			<h2 id="voip_margin">Line</h2>
+			<div class="form-row odd ">
+				<label for="SIP_ingress">Ingress gain :</label>
+				<select id='ingress'></select>
+			</div>
+			<div class="form-row ">
+				<label for="egress">Egress gain :</label>
+				<select id='egress' name="egress" name="egress"></select>
+			</div>
+		</div>
+		<div class="form-row form-btn">
+				<input type="button" id='SIP_Start' name="Start" value='Start SIP Client' class ='btn sip_btn'/>
+				<input type="button" id='SIP_Stop' name="Stop" value='Stop SIP Client' class ='btn sip_btn'/>
+				<span id="voip">
+					<input type="button" id='SIP_Apply' name="SIP_auth_pwd" value='Apply' class ='btn' />
+				</span>
+			</div>
+	</form>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+	var token = "<?% echo(  $_SESSION['Csrf_token'] );?>";
+	gateway.page.init("Voice Diagnostics > Debug ", "nav-voice-debug-service");
+	// now we can show target content
+	$("#content").show();
+	var php_value = <?% echo( json_encode($values_got) );?>;
+		php_value['Ingress'] = parseInt(php_value["Ingress"])/10;
+		php_value['Egress'] = parseInt(php_value["Egress"])/10;
+	function page_load_values(){
+			server_IP_addr = php_value['server_IP_addr'].replace(/&lt;/g,"<");
+			server_IP_addr = server_IP_addr.replace(/&gt;/g,">");
+			server_IP_addr = server_IP_addr.replace(/&amp;/g,"&");
+			$('#SIP_log_svr_ip_addr').val(server_IP_addr);
+			$('#SIP_log_svr_port').val(php_value['server_port']);
+			$('#ingress').val(php_value['Ingress']);
+			$('#egress').val(php_value['Egress']);
+			if(php_value['sip_status'] == 'Started'|| php_value['sip_status']=='Starting'){
+				$('#SIP_Start').prop('disabled', true);
+			}
+			else if(php_value['sip_status'] == 'Stopped'|| php_value['sip_status']=='Stopping'){
+				$('#SIP_Stop').prop('disabled', true);
+			}
+	}
+	function add_dropdown(){
+		for(var i=3.0; i>=-12.0; i-= 0.1){
+			var r = parseFloat(i.toFixed(1));
+			$('#ingress , #egress').append('<option value='+r+'>'+r+'</option>');
+		}
+	}
+	$.validator.setDefaults({
+		errorElement : "p"
+		,errorPlacement: function(error, element) {
+			error.appendTo(element.closest(".form-row"));
+		}
+	});
+	jQuery.validator.addMethod("noSpace", function(value, element) {
+		return value.indexOf(" ") < 0 && value != "";
+	}, $.i18n("Spaces are not allowed"));
+	jQuery.validator.addMethod("allowed_char_new", function(value, element, param) {
+		//Invalid characters are Less than (<), Greater than (>), Ampersand (&), Double quote ("), Single quote ('), Pipe (|).
+		return !param || (value.match(/[\(<>&"'$`;|\)]/)==null);
+	}, $.i18n('Special characters are not allowed.'));
+	jQuery.validator.addMethod("port",function(value,element){
+		return this.optional(element) || (value.match(/^\d+$/g) && value >= 0 && value <= 65535);
+	}, $.i18n('Please enter a port number less than 65536.'));
+	$('#sip_debug').validate({
+		rules: {
+			SIP_log_svr_ip_addr: {
+				required: true,
+				noSpace: true,
+				allowed_char: true,
+				allowed_char_new: true,
+			},
+			SIP_log_svr_port: {
+				required: true,
+				port: true,
+			},
+		}
+	});
+	$('#SIP_Apply').on('click', function(){
+		if($('#sip_debug').valid()){
+			var mod_values='{"Ingress" :"'+$('#ingress').val()*10
+			+'","Egress" :"'+ $('#egress').val()*10
+			+'","server_IP_addr" :"'+$('#SIP_log_svr_ip_addr').val()
+			+'","server_port" :"'+$('#SIP_log_svr_port').val()+'"}';
+			var jsConfig = mod_values;
+			jProgress($.i18n('This may take several seconds...'),60);
+			$.ajax({
+				type: "POST",
+				url: "actionHandler/ajaxSet_voip_debug.jst",
+				data: { configInfo: jsConfig,csrfp_token: token },
+				success: function(msg) {
+					jHide();
+					msg_parseJSON = JSON.parse(msg);
+					if(msg_parseJSON["error_message"]){
+						jAlert(msg_parseJSON["error_message"]);
+						setTimeout(page_load_values,50);
+					} else location.href = 'Voip_Debug_ServiceProvider.jst';
+				},
+				error: function(){
+					jHide();
+				}
+			});
+		}
+	});
+	$('.sip_btn').on('click', function(){
+		var btn_val = $(this).attr('name');
+		if(btn_val == 'Start'){
+			$('#SIP_Start').prop('disabled', true);
+		}
+		else if(btn_val == 'Stop'){
+			$('#SIP_Stop').prop('disabled', true);
+		}
+		sipclient(btn_val);
+	});
+	function sipclient(val){
+		var SIP_val = val;
+		var jsConfig ='{"SIP_val":"'+SIP_val+'"}';
+		jProgress($.i18n('This may take several seconds...'), 60);
+		$.ajax({
+			type: "POST",
+			url: "actionHandler/ajaxSet_voip_debug.jst",
+			data: { configInfo: jsConfig,csrfp_token: token },
+			success: function(msg) {
+				jHide();
+				msg_parseJSON = JSON.parse(msg);
+				if(msg_parseJSON["error_message"]){
+					jAlert(msg_parseJSON["error_message"]);
+					setTimeout(page_load_values,50);
+				} else location.href = 'Voip_Debug_ServiceProvider.jst';
+			},
+			error: function(){
+				jHide();
+			}
+		});
+	}
+	setTimeout(add_dropdown,25);
+	setTimeout(page_load_values,50);
+});
+</script>
+<?% include('includes/footer.jst'); ?>
+

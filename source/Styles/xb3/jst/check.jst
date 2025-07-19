@@ -1,0 +1,749 @@
+<?%
+/*
+ If not stated otherwise in this file or this component's Licenses.txt file the
+ following copyright and licenses apply:
+
+ Copyright 2018 RDK Management
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+*/
+?>
+<?% header('X-robots-tag: noindex,nofollow'); ?>
+
+
+<?%
+include('includes/jwt.jst');
+include('includes/hash.jst');
+ /*
+ * Set the Locale for the Web UI based on the LANG setting or current linux locale
+ */
+$locale = getenv("LANG");
+$locale = $locale ? $locale : "false";
+if($locale != "false"){
+        if(strstr($locale, 'it')){
+                $locale="it";
+                $_SESSION['language'] = $locale;
+        }
+}
+
+function client_IP()
+{
+    $FILEID = "/tmp/IPADR";
+    exec("/usr/bin/snmpget -v 2c -c private -t 0.5 -r 1 172.31.255.45 1.3.6.1.4.1.4413.2.2.2.1.2.12161.1.1.27.0 |  awk '/STRING/ {print}' | awk '{print $4,$7}' | sed 's/\"/\/' > "+ $FILEID);
+    $fp=fopen($FILEID,"r");
+    if($fp)
+    {
+                                
+        $pos = 0;
+        $buffer=trim(substr(fgets($fp),$pos));
+        fclose($fp);
+        $OutIP = explode(" ", $buffer);
+        exec("rm "+ $FILEID);
+        $AcPort = $OutIP[1];
+        if ($AcPort == 80 || $AcPort == 443)
+        {
+            $IP_ADDR = $OutIP[0];
+            return $IP_ADDR ;
+        }
+    }
+    return $_SERVER["REMOTE_ADDR"];
+    
+}
+
+
+
+function sendError($code)
+{
+  echo('\
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">\
+  <head>\
+  <input type="hidden" name="loc" id="loc" value='+$locale+'>\
+      <link rel="stylesheet" type="text/css" media="screen" href="./cmn/css/common-min.css" />\
+      <!--Character Encoding-->\
+      <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />\
+      <script type="text/javascript" src="./cmn/js/lib/jquery-3.7.1.js"></script>\
+      <script type="text/javascript" src="./cmn/js/lib/jquery-migrate-1.2.1.js"></script>\
+      <script type="text/javascript" src="./cmn/js/lib/jquery.alerts.js"></script>\
+      <script src="./locale/CLDRPluralRuleParser.js"></script>\
+	<script src="./locale/jquery.i18n.js"></script>\
+	<script src="./locale/jquery.i18n.messagestore.js"></script>\
+	<script src="./locale/jquery.i18n.fallbacks.js"></script>\
+	<script src="./locale/jquery.i18n.language.js"></script>\
+	<script src="./locale/jquery.i18n.parser.js"></script>\
+	<script src="./locale/jquery.i18n.emitter.js"></script>\
+	<script src="./locale/jquery.i18n.emitter.bidi.js"></script>\
+	<script src="./locale/global.js"></script>\
+	<script type="text/javascript">\
+	var locale=document.getElementById("loc").value;\
+	$.i18n().locale = locale;\
+ 	$.i18n().load( {\
+                        it: {\
+				"Access denied!":"Accesso negato",\
+				"You have ":"Sono stati effettuati ",\
+				" failed login attempts and your account will be locked for ":" tentativi di accesso non riusciti: il tuo account sarà bloccato per ",\
+				" minutes":" minuti",\
+				"Can not get password from backend!":"Non è possibile ottenere la password da backend",\
+				"Incorrect password !":"Password errata",\
+				"Username or password is incorrect!": "Nome utente o password non sono corretti!",\
+				"Access Denied, level is none!": "Accesso negato, il livello è nessuno!",\
+				"Access Denied, unknown error": "Accesso negato, errore sconosciuto",\
+				"You are using default password. Please change the password.":"Si sta utilizzando la password predefinita. Modificare la password.",\
+				"Incorrect user name!":"Nome utente errato",\
+				"Access level is none!":"Il livello di accesso è nessuno"\
+                        }\
+                });\
+	</script>\
+  </head>\
+  ');
+  echo($code);
+}
+$flag=0;
+$flag_mso=0;
+$passLockEnable = getStr("Device.UserInterface.PasswordLockoutEnable");
+$failedAttempt=parseInt(getStr("Device.Users.User.3.NumOfFailedAttempts"));
+$failedAttempt_mso=parseInt(getStr("Device.Users.User.1.NumOfFailedAttempts"));
+$passLockoutAttempt=parseInt(getStr("Device.UserInterface.PasswordLockoutAttempts"));
+$passLockoutTime=getStr("Device.UserInterface.PasswordLockoutTime");
+$lanMode=getStr("Device.X_CISCO_COM_DeviceControl.LanManagementEntry.1.LanMode");
+$currentOpMode = getStr("Device.X_RDKCENTRAL-COM_EthernetWAN.CurrentOperationalMode");
+$passLockoutTimeMins=$passLockoutTime/(1000*60);
+$modelName= getStr("Device.DeviceInfo.ModelName");
+$client_ip = $_SERVER["REMOTE_ADDR"];       // $client_ip="::ffff:10.0.0.101";
+$server_ip = $_SERVER["SERVER_ADDR"];
+$redirect_page = "https://"+$_SERVER["HTTP_HOST"] + $_SERVER["SCRIPT_NAME"];
+PHP_SESSION_ACTIVE = 2;
+$iface = "";
+$Device_IP = "";
+if (($modelName == "CGM4140COM") || ($modelName == "CGM4331COM") || ($modelName == "CGM4981COM") || ($modelName == "CGM601TCOM") || ($modelName == "SG417DBCT")) {
+    $clientIp = client_IP();
+}
+else
+{
+    $clientIp = $_SERVER["REMOTE_ADDR"];
+}
+
+
+
+    if (isset($_POST["username"]))
+    {
+        $iface = if_type( $server_ip );
+        if ($iface == "cm_ip") {
+            $Device_IP = getStr("Device.X_CISCO_COM_CableModem.IPv6Address");
+        }
+        if ($iface == "lan_ip") {
+            $Device_IP = getStr("Device.X_CISCO_COM_DeviceControl.LanManagementEntry.1.LanIPAddress");
+        }
+        LogBeginLoginAttempt();
+
+		/*=============================================*/
+		// $dev_mode = true;
+		/*if (file_exists("/var/ui_dev_mode")) {
+			$_SESSION["timeout"] = 100000;
+			if ($_POST["password"] == "dev") {
+				if ($_POST["username"] == "mso") {
+					header("location:at_a_glance.jst");
+				}
+				else if ($_POST["username"] == "admin") {
+					header("location:at_a_glance.jst");
+				}
+				create_session();
+				return;
+			}
+		}*/
+		/*===============================================*/
+
+	LogStr(" : webui_event:login_user = " + $_POST["username"]);
+        if ($_POST["username"] == "mso")
+        {
+            if ($iface == "lan_ip" || $iface == "docsis_ip") {
+                LogStr(" : Unauthorized attempt to access the page as " + $_POST["username"] + " user" );
+                sendError('<script type="text/javascript"> alert($.i18n("Incorrect username to access this page!")); history.back(); </script>');
+                exit(0);
+            }
+            $logstr = " : webui_event:mso_login: cm_ip =" + $Device_IP;
+            LogStr($logstr);
+            if(typeof $_POST["password"] == "undefined")
+            {
+                sendError( '<script type="text/javascript"> alert($.i18n("Username or password is incorrect!"));history.back(); </script>');
+                exit(0);
+            }
+            $authmode=getStr( "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.OAUTH.AuthMode" );
+            if( $authmode != "sso" )
+            {
+                if( $authmode == "potd" || $_POST["password"] != "" )
+                {
+                    LogStr( " : Authentication = potd" );
+                    $pass_sha = SHA256($_POST["password"]);
+                    $pass_hex = asc2hex($pass_sha);
+                    $str = " : Attempted password = " + $pass_hex;
+                    LogStr( $str );
+                    //triggering password validation in back end if "potd" or "mixed" and a password is supplied
+                    $return_status = setStr("Device.Users.User.1.X_CISCO_COM_Password",$_POST["password"],true);
+                    sleep(1);
+                    $curPwd1 = getStr("Device.Users.User.1.X_CISCO_COM_Password");
+                }
+                else
+                {
+                    $curPwd1 = "Invalid_PWD";    // trigger SSO login attempt
+                }
+            }
+            else
+            {
+                $curPwd1 = "Invalid_PWD";    // trigger SSO login attempt
+            }
+	    if ( innerIP($client_ip) || ( (($iface == "rg_ip") || ($iface == "docsis_ip") ) && (strtolower($currentOpMode) !="ethernet") ) )
+            {
+                LogStr( " : Interface check FAILED" );
+                if($passLockEnable == "true")
+                {
+                    if($failedAttempt_mso<$passLockoutAttempt){
+                        $failedAttempt_mso=$failedAttempt_mso+1;
+                        setStr("Device.Users.User.1.NumOfFailedAttempts",$failedAttempt_mso.toString(),true);
+                     }
+
+                     if($failedAttempt_mso==$passLockoutAttempt){
+                         $flag_mso=1;
+			 sendError('<script type="text/javascript"> alert($.i18n("You have ")+"'+$passLockoutAttempt+'"+$.i18n(" failed login attempts and your account will be locked for ")+"'+$passLockoutTimeMins+'"+$.i18n(" minutes"));history.back();</script>');
+
+                     }
+                }
+                if($flag_mso==0){
+		    setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_failed",true);
+                    LogStr( " : potd FAILED" );
+                    session_destroy();
+                    sendError('<script type="text/javascript"> alert($.i18n("Username or password is incorrect!"));history.back(); </script>');
+                }
+            }
+            else if ($curPwd1 == "Good_PWD" && $return_status)
+            {
+                if(($passLockEnable == "true") && ($failedAttempt_mso==$passLockoutAttempt)){
+                    $flag_mso=1;
+		    sendError('<script type="text/javascript"> alert($.i18n("You have ")+"'+$passLockoutAttempt+'"+$.i18n(" failed login attempts and your account will be locked for ")+"'+$passLockoutTimeMins+'"+$.i18n(" minutes"));history.back();</script>');
+
+                }
+                else{
+                    $failedAttempt_mso=0;
+		    setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_success",true);
+                    LogStr( " : potd SUCCESS" );
+                    setStr("Device.Users.User.1.NumOfFailedAttempts",$failedAttempt_mso.toString(),true);
+                    exec("/usr/bin/logger -t GUI -p local5.notice 'User:mso login'");
+                    header("location:at_a_glance.jst");
+                    create_session();
+                }
+            }
+            else if ("" == $curPwd1)
+            {
+		setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_failed",true);
+                LogStr( " : potd FAILED (cannot get passwrd from backend)" ); 
+                session_destroy();
+                sendError('<script type="text/javascript"> alert($.i18n("Can not get password from backend!")); history.back(); </script>');
+            }
+            else
+            {
+                $authendpoint=getStr( "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.OAUTH.ServerUrl" );
+                if( $authmode != "potd" && $authendpoint )
+                {
+                    if (!isset($_GET['code']))
+                    {
+                        LogStr( " : Authentication = OAUTH" );
+                        $auth_url = getAuthenticationUrl( $authendpoint, $redirect_page );
+                        sendError("<script type='text/javascript'>document.location.href='"+$auth_url+"';</script>");
+                        die("Please wait ...");
+                    }
+                }
+                else
+                {
+                    if($passLockEnable == "true"){
+
+                        if($failedAttempt_mso<$passLockoutAttempt){
+                            $failedAttempt_mso=$failedAttempt_mso+1;
+                            setStr("Device.Users.User.1.NumOfFailedAttempts",$failedAttempt_mso.toString(),true);
+                        }
+
+                        if($failedAttempt_mso==$passLockoutAttempt){
+			    setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_failed",true);
+                            LogStr( " : potd FAILED" );
+                            $flag_mso=1;
+			    sendError('<script type="text/javascript"> alert($.i18n("You have ")+"'+$passLockoutAttempt+'"+$.i18n(" failed login attempts and your account will be locked for ")+"'+$passLockoutTimeMins+'"+$.i18n(" minutes"));history.back();</script>');
+
+                        }
+                    }
+
+                    if($flag_mso==0){
+			setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_failed",true);
+                        LogStr( " : potd FAILED" );
+                        session_destroy();
+                        sendError('<script type="text/javascript"> alert($.i18n("Username or password is incorrect!"));history.back(); </script>');
+                    }
+                }
+            }
+
+            $outStr = " : Failed attempts = " + $failedAttempt_mso.toString();
+            LogStr($outStr);
+        }
+        else if ($_POST["username"] == "admin")
+        {
+            if ($iface == "cm_ip") {
+                LogStr(" : Unauthorized attempt to access the page as " + $_POST["username"] + " user" );
+                sendError('<script type="text/javascript"> alert($.i18n("Incorrect username to access this page!")); history.back(); </script>');
+                exit(0);
+            }
+            $logstr = " : webui_event:lanwebui_login: lan_ip = " + $Device_IP;
+            LogStr($logstr);
+            if(typeof $_POST["password"] == "undefined")
+            {
+		LogStr(" : webui_event:lanwebui_login_failed");
+		sendError( '<script type="text/javascript"> alert($.i18n("Username or password is incorrect!"));history.back(); </script>');
+		exit(0);
+            }
+            LogStr( " : Authentication = password" );
+            $pass_sha = SHA256($_POST["password"]);
+            $pass_hex = asc2hex($pass_sha);
+            $str = " : Attempted password = " + $pass_hex;
+            LogStr( $str );
+            $return_status = setStr("Device.Users.User.3.X_RDKCENTRAL-COM_ComparePassword",$_POST["password"],true);
+            sleep(1);
+            $passVal= getStr("Device.Users.User.3.X_RDKCENTRAL-COM_ComparePassword");
+
+            if(!$return_status)
+            {
+		LogStr(" : webui_event:lanwebui_login_failed");
+		LogStr( " : Password FAILED" );
+		$passVal = "Invalid_PWD";
+            }
+           if ( !innerIP($client_ip) && (($iface != "rg_ip" || $iface != "eth_ip" )) && ($iface != "rm_ip") && ($iface != "docsis_ip") )
+            {
+                LogStr( " : Interface check FAILED" );
+                if($passLockEnable == "true"){
+                    if($failedAttempt<$passLockoutAttempt){
+                        $failedAttempt=$failedAttempt+1;
+                        setStr("Device.Users.User.3.NumOfFailedAttempts",$failedAttempt.toString(),true);
+                        }
+                    if($failedAttempt==$passLockoutAttempt){
+                        $flag=1;
+                        sendError('<script type="text/javascript"> alert($.i18n("You have ")+"'+$passLockoutAttempt+'"+$.i18n(" failed login attempts and your account will be locked for ")+"'+$passLockoutTimeMins+'"+$.i18n(" minutes"));history.back();</script>');
+                        LogStr(" : webui_event:admin_account_locked");
+                    }
+                }
+                if($flag==0){
+		    setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_failed",true);
+                    session_destroy();
+                    sendError( '<script type="text/javascript"> alert($.i18n("Access denied!")); history.back(); </script>');
+                }
+            }
+            else if($passVal=="Invalid_PWD"){
+		setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_failed",true);
+		LogStr(" : webui_event:lanwebui_login_failed");
+		LogStr( " : Password FAIL" );
+		session_destroy();
+		if($passLockEnable == "true"){
+                    if($failedAttempt<$passLockoutAttempt){
+                        $failedAttempt=$failedAttempt+1;
+                        setStr("Device.Users.User.3.NumOfFailedAttempts",$failedAttempt.toString(),true);
+                    }
+                    if($failedAttempt==$passLockoutAttempt){
+                        $flag=1;
+                        sendError('<script type="text/javascript"> alert($.i18n("You have ")+"'+$passLockoutAttempt+'"+$.i18n(" failed login attempts and your account will be locked for ")+"'+$passLockoutTimeMins+'"+$.i18n(" minutes"));history.back();</script>');
+                        LogStr(" : webui_event:admin_account_locked");
+                    }
+                }
+                if($flag==0){
+//                    session_destroy();
+                    sendError( '<script type="text/javascript"> alert($.i18n("Username or password is incorrect!"));history.back(); </script>');
+                }
+            }
+            else
+            {
+                if(($passLockEnable == "true") && ($failedAttempt==$passLockoutAttempt)){
+			setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_failed",true);
+			LogStr(" : webui_event:lanwebui_login_failed");
+			LogStr( " : Password FAIL" );
+			$flag=1;
+			sendError('<script type="text/javascript"> alert($.i18n("You have ")+"'+$passLockoutAttempt+'"+$.i18n(" failed login attempts and your account will be locked for ")+"'+$passLockoutTimeMins+'"+$.i18n(" minutes"));history.back();</script>');
+                        LogStr(" : webui_event:admin_account_locked");
+                }else{
+                   $failedAttempt=0;
+                   setStr("Device.Users.User.3.NumOfFailedAttempts",$failedAttempt.toString(),true);
+                   exec("/usr/bin/logger -t GUI -p local5.notice 'User:admin login'");
+                   setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_success",true);
+                   if($passVal=="Default_PWD"){
+                       create_session();
+                       $_SESSION["password_change"] = "default_pwd";
+                       sendError( '<script type="text/javascript"> \
+                           jAlert($.i18n("You are using default password. Please change the password."), "Alert", \
+                           function (ret) { \
+                               if(ret) \
+                                   { \
+                                       window.location = "user_password_change.jst"; \
+                                   } \
+                           }); \
+                       </script>') ;
+                    }else{
+                       LogStr( " : Password SUCCESS" );
+                       header("location:at_a_glance.jst");
+                       create_session();
+                    }
+                }
+            }
+            $outStr = " : Failed attempts = " + $failedAttempt.toString();
+            LogStr($outStr);
+        }
+        else
+        {
+            LogStr( " : Username FAIL" );
+            setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_failed",true);
+            $outStr = " : Failed attempts = " + $failedAttempt.toString();
+            LogStr($outStr);
+            if( session_status() == PHP_SESSION_ACTIVE )
+            {
+                session_destroy();
+            }
+            sendError( '<script type="text/javascript"> alert($.i18n("Username or password is incorrect!"));history.back(); </script>');
+        }
+    }
+    else
+    {
+        if (isset($_GET['token']))
+        {
+            $ADToken = $_GET['token'];
+            $tokenvalid = VerifyToken( $ADToken );
+            if( $tokenvalid == true )
+            {
+                LogStr( " : OAUTH SUCCESS" );
+                
+                $failedAttempt_mso=0;
+                setStr("Device.Users.User.1.NumOfFailedAttempts",$failedAttempt_mso.toString(),true);
+                exec("/usr/bin/logger -t GUI -p local5.notice 'User:mso login'");
+                header("location:at_a_glance.jst");
+                create_session();
+                // since $_POST["username"] is empty when we get a token, we'll set it in the $_SESSION["loginuser"]
+                // to mso because that's the only user that can get the JWT. Later Web GUI processing requires it to be set
+                $_SESSION['loginuser'] = "mso";
+                $_SESSION['JWT_VALID'] = true;
+            }
+            else
+            {
+                LogStr( " : OAUTH FAILED" );
+                setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","token_failed",true);
+                if( session_status() == PHP_SESSION_ACTIVE )
+                {
+                    session_destroy();
+                }
+                sendError( '<script type="text/javascript"> alert($.i18n("Access Denied, level is none!")); history.back(); </script>');
+            }
+        }
+        else
+        {
+            LogStr( " : OAUTH UNKNOWN ERROR" );
+            setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","token_fetch",true);
+            if( session_status() == PHP_SESSION_ACTIVE )
+            {
+                session_destroy();
+            }
+            sendError( '<script type="text/javascript"> alert($.i18n("Access Denied, unknown error")); history.back(); </script>');
+        }
+        $outStr = " : Failed attempts = " + $failedAttempt_mso.toString();
+        LogStr( $outStr );
+    }
+
+	function innerIP($client_ip){		//for compatibility, $client_ip is not used
+		$out		= [];
+		$tmp		= [];
+		$lan_ip		= [];
+		$lxc_check	= [];
+		$status		= 1;
+		$server_ip	= parseIP($_SERVER["SERVER_ADDR"]);
+		$bin = exec("which ifconfig");
+		$xbin=$bin[0].replace(/ /g,'').replace(/\n/g,'');
+		exec('grep -a container=lxc /proc/1/environ', $lxc_check, $status);//use eth0 if webserver is running in lxc
+		if (0==$status && $_POST["username"] == "admin") {
+			$out = exec($xbin+" eth0");
+		} else {
+			$out = exec($xbin+" brlan0");
+		}
+		for($k in $out){
+      			$v = $out[$k];
+			if (strpos($v, 'inet addr')){
+				$tmp = explode('Bcast', $v);
+				$tmp = explode('addr:', $tmp[0]);
+				$lan_ip.push(trim($tmp[1]));
+			}
+			else if (strpos($v, 'inet6 addr')){
+				$tmp = explode('Scope', $v);
+				$tmp = explode('addr:', $tmp[0]);
+				$tmp = explode('%', $tmp[1]);
+				$tmp = explode('/', $tmp[0]);
+				$lan_ip.push(trim($tmp[0]));
+			}
+		}
+		return in_array($server_ip, $lan_ip);
+	}
+	function get_ips($if_name){
+		$out = [];
+		$tmp = [];
+		$ret = [];
+		$bin = exec("which ip");
+		$xbin=$bin[0].replace(/ /g,'').replace(/\n/g,'');
+		$out = exec($xbin+" addr show "+$if_name);
+		for ($k in $out){
+      			$v = $out[$k];
+			if (strstr($v, 'inet')){
+				$tmp = explode('/', $v);
+				$tmp = explode(' ', $tmp[0]);
+				$ret.push(trim($tmp.pop()));
+			}
+		}
+		return $ret;
+	}
+	function if_type($ip_addr){
+		var $tmp;
+		$lxc_check = [];
+		$status = 1;
+		$Manufacturer = getStr("Device.DeviceInfo.Manufacturer");
+		$lan_ip	= get_ips("brlan0");
+		exec('grep -a container=lxc /proc/1/environ', $lxc_check, $status);//use eth0 if webserver is running in lxc
+		if (0==$status) {
+			$cm_ip  = get_ips("eth0");
+		} else {
+			if (($Manufacturer == "Technicolor") || ($Manufacturer == "Sercomm")) {
+				$cm_ip  = get_ips("privbr");
+			} else {
+				$cm_ip  = get_ips("wan0");
+			} //upstreamed webui_pod_jst.patch (RDKB-21882) as part of RDKB-41235
+		}
+    		$ip_addr = parseIP($ip_addr);
+		if (in_array($ip_addr, $lan_ip)){
+			return "lan_ip";
+		}
+		else if (in_array($ip_addr, $cm_ip)){
+			return "cm_ip";
+		}
+		else{
+			$remoteAcess= getStr("Device.UserInterface.X_CISCO_COM_RemoteAccess.Enable");
+			$httpRemoteEnable= getStr("Device.UserInterface.X_CISCO_COM_RemoteAccess.HttpEnable");
+			$httpRemotePort= getStr("Device.UserInterface.X_CISCO_COM_RemoteAccess.HttpPort");
+			$httpsRemoteEnable=getStr("Device.UserInterface.X_CISCO_COM_RemoteAccess.HttpsEnable");
+			$httpsRemotePort= getStr("Device.UserInterface.X_CISCO_COM_RemoteAccess.HttpsPort");
+			$server_port = $_SERVER["SERVER_PORT"];
+			$server_ip      = parseIP($_SERVER["SERVER_ADDR"]);
+			$adminOnlyMode = "true";
+			if(strtolower($currentOpMode) =="ethernet"){
+				$remote_ip=get_ips("erouter0");
+				if (in_array($server_ip,$remote_ip)){
+					$adminOnlyMode= "false";
+					if( $remoteAcess && ($httpRemoteEnable || $httpsRemoteEnable) && (($server_port==$httpRemotePort)|| ($server_port==$httpsRemotePort))){
+							return "rm_ip";
+					}
+				}
+				if(($lanMode=="bridge-static")&&($adminOnlyMode=="true")){
+					return "rm_ip";
+				}
+				return "eth_ip";
+			}else if(!$currentOpMode || strtolower($currentOpMode) =="docsis"){
+                         	return "docsis_ip";
+			}else{
+                                return "rg_ip";
+                        }
+			
+		//	return "rg_ip";
+		}
+		// print_r($lan_ip);
+		// print_r($cm_ip);
+	}
+	function create_session(){
+		session_create();
+                $modelName= getStr("Device.DeviceInfo.ModelName");
+                if (($modelName != "CGM4140COM") && ($modelName != "CGM4331COM") && ($modelName != "TG1682G") && ($modelName != "CGA4131COM") && ($modelName != "CGA4332COM") && ($modelName != "CGM4981COM") && ($modelName != "CGM601TCOM") && ($modelName != "SG417DBCT")) { 
+                    // session IP binding
+                    if (!isset($_SESSION['PREV_REMOTEADDR'])) {
+                        //session_regenerate_id();
+                        $_SESSION['PREV_REMOTEADDR'] = $_SERVER['REMOTE_ADDR'];
+                    }
+                    $curr_sessID = session_id();
+                    $curr_IP = $_SERVER['REMOTE_ADDR'];
+                    if ($_SERVER['REMOTE_ADDR'] != $_SESSION['PREV_REMOTEADDR']) {
+                        session_destroy(); // Destroy all data in session
+                        echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
+                        exit(0);
+                    }
+                    if (!isset($_SESSION['PREV_SESSID'])) {
+                        $_SESSION['PREV_SESSID'] = session_id();
+                    }
+                    
+                    if ($curr_sessID != $_SESSION['PREV_SESSID']) {
+                        session_destroy(); // Destroy all data in session
+                        echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
+                        exit(0);
+                    }
+                }
+                if ($modelName == "TG1682G") {
+                    if (!isset($_SESSION['PREV_REMOTEADDR'])) {
+                        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                            $_SESSION['PREV_REMOTEADDR'] = $_SERVER['HTTP_X_FORWARDED_FOR'];
+                        }
+                        else
+                        {
+                            $_SESSION['PREV_REMOTEADDR'] = $_SERVER['REMOTE_ADDR'];
+                        }
+                    }
+                    $curr_sessID = session_id();
+                    if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                        $_SESSION['CURR_REMOTEADDR'] = $_SERVER['HTTP_X_FORWARDED_FOR'];
+                    }
+                    else
+                    {
+                        $_SESSION['CURR_REMOTEADDR'] = $_SERVER['REMOTE_ADDR'];
+                    }
+                    $curr_IP = $_SESSION['CURR_REMOTEADDR'];
+                    if ($_SESSION['CURR_REMOTEADDR'] != $_SESSION['PREV_REMOTEADDR']) {
+                        session_destroy(); // Destroy all data in session
+                        echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
+                        exit(0);
+                    }
+                 }
+                    if (($modelName == "CGM4140COM") || ($modelName == "CGM4331COM") || ($modelName == "CGM4981COM") || ($modelName == "SG417DBCT") || ($modelName == "CGM601TCOM") || ($modelName == "CGA4131COM") || ($modelName == "CGA4332COM")) {
+                    $curr_sessID = session_id();
+                    if ( strcmp($_SERVER['REMOTE_ADDR'], "172.31.255.45") == 0 ||
+                        strcasecmp($_SERVER['REMOTE_ADDR'], "fe80::ffff:ac1f:ff2d") == 0 ||
+                        strcasecmp($_SERVER['REMOTE_ADDR'], "fd00::ffff:ac1f:ff2d") == 0 ) {
+                        $SID = session_id();
+                        $FILEID = "/tmp/IPADDR";
+                        $FILEID += $SID;
+                        exec("/usr/bin/snmpget -v 2c -c private -t 0.5 -r 1 172.31.255.45 1.3.6.1.4.1.4413.2.2.2.1.2.12161.1.1.27.0 |  awk '/STRING/ {print}' | awk '{print $4,$7}' | sed 's/\"/\/' > "+ $FILEID);
+                        $fp=fopen($FILEID,"r");
+                        if($fp)
+                        {
+                                
+                                $pos = 0;
+                                $buffer=trim(substr(fgets($fp),$pos));
+                                fclose($fp);
+                                $OutIP = explode(" ", $buffer);
+                                exec("rm "+ $FILEID);
+                                $AcPort = $OutIP[1];
+                                if ($AcPort == 80 || $AcPort == 443)
+                                {
+                                    $IP_ADDR = $OutIP[0];
+                                    if (!isset($_SESSION['PREV_REMOTEADDR'])) {
+                                        $_SESSION['PREV_REMOTEADDR'] = $IP_ADDR;
+                                    }
+                                }
+                                else
+                                {
+                                    if (isset($_SESSION['PREV_REMOTEADDR'])) {
+                                        $IP_ADDR = $_SESSION['PREV_REMOTEADDR'];
+                                    }
+                                }
+                        }
+                    }
+                    else {
+                       $IP_ADDR = $_SERVER['REMOTE_ADDR'];
+                       if (!isset($_SESSION['PREV_REMOTEADDR'])) {
+                           $_SESSION['PREV_REMOTEADDR'] = $IP_ADDR;
+                       } 
+                    }
+                    if(isset($_SESSION['PREV_REMOTEADDR'])){
+                        if ($IP_ADDR != $_SESSION['PREV_REMOTEADDR']) {
+                            session_destroy(); // Destroy all data in session
+                            echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
+                            exit(0);
+                        }
+                   }
+                    if (!isset($_SESSION['PREV_SESSID'])) {
+                        $_SESSION['PREV_SESSID'] = session_id();
+                    }
+                    
+                    if ($curr_sessID != $_SESSION['PREV_SESSID']) {
+                        session_destroy(); // Destroy all data in session
+                        echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
+                        exit(0);
+                    }   
+                 }
+		/*
+		 * Set the Locale for the Web UI based on the LANG setting or current linux locale
+		 */
+		$locale = getenv("LANG");
+		if($locale != false) {
+		    if(!isset($_SESSION['language']) || exec("export LC_MESSAGES=0") != $locale){
+		        //putenv("LANG=" . $locale);
+		        exec("export LC_MESSAGES="+$locale);
+		        exec("export LC_TIME="+$locale);
+ 
+		        $domain = "rdkb";
+		        bindtextdomain($domain, 'locales');
+		        bind_textdomain_codeset($domain, 'UTF-8');
+		        textdomain($domain);
+		        $_SESSION['language'] = $locale; // set the default locale for future pages
+		    }
+		}
+		//echo("You are logging...");
+		$timeout_val 		= intval(getStr("Device.X_CISCO_COM_DeviceControl.WebUITimeout"));
+		("" == $timeout_val) && ($timeout_val = 900);
+		$_SESSION["timeout"]	= $timeout_val - 60;	//dmcli param is returning 900, GUI expects 840 - then GUI adds 60
+		$_SESSION["sid"]	= session_id();
+		$_SESSION["loginuser"]	= $_POST["username"];
+	}
+
+function getAuthenticationUrl( $auth_endpoint, $redirect_uri )
+{
+    $parameters = {
+        ip_uri:$redirect_uri
+    };
+    return $auth_endpoint + '?' + http_build_query($parameters, null, '&');
+}
+
+/*
+	function innerIP($client_ip)
+	{
+		if (strstr($client_ip, "192.168.100.") && ("bridge-static"==getStr("Device.X_CISCO_COM_DeviceControl.LanManagementEntry.1.LanMode")))
+		{
+			return true;
+		}
+		if (strpos($client_ip, "."))		//IPv4
+		{
+			$tmp0	= explode(":", $client_ip);
+			$tmp1	= $tmp0.pop();
+			$client	= explode(".", $tmp1);
+			$lanip4	= explode(".", getStr("Device.X_CISCO_COM_DeviceControl.LanManagementEntry.1.LanIPAddress"));
+			$lanmsk	= explode(".", getStr("Device.X_CISCO_COM_DeviceControl.LanManagementEntry.1.LanSubnetMask"));
+			for (var $i=0; $i<4; $i++)
+			{
+				if ((parseInt($lanmsk[$i]&(int)$client[$i])) != (parseInt($lanmsk[$i]&parseInt($lanip4[$i]))))
+				{
+					return false;
+				}
+			}	
+		}
+		else
+		{
+			$prefix_dm	= getStr("Device.RouterAdvertisement.InterfaceSetting.1.Prefixes");
+			$client		= explode(":", $client_ip);		
+			$prefix		= explode(":", $prefix_dm);
+			$prelen		= explode("/", $prefix_dm);
+			$intlen		= intval($prelen.pop())/16;
+			($intlen < 1) && ($intlen = 1);
+			if (strtoupper($client[0]) != "FE80")
+			{
+				for (var $i=0; $i<$intlen; $i++)
+				{
+					if ($client[$i]!=$prefix[$i])
+					{
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+*/
+?>

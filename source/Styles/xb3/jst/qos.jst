@@ -1,0 +1,203 @@
+<?%
+/*
+ If not stated otherwise in this file or this component's Licenses.txt file the
+ following copyright and licenses apply:
+
+ Copyright 2018 RDK Management
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+*/
+?>
+<?% include('includes/header.jst'); ?>
+<?% include('includes/utility.jst'); ?>
+<!-- $Id: firewall_settings.jst 3158 2010-01-08 23:32:05Z slemoine $ -->
+<div id="sub-header">
+    <?% include('includes/userbar.jst'); ?>
+</div><!-- end #sub-header -->
+<?% include('includes/nav.jst'); ?>
+<script type="text/javascript">
+$(document).ready(function() {
+    <?% if(is_device_router()) { ?>
+ 	gateway.page.init("Router > Connection > CallP/QoS ", "nav-qos");
+    <?% } else { ?>
+	gateway.page.init("Gateway > Connection > CallP/QoS ", "nav-qos");
+    <?% } ?>
+	$('#show_DSXlog').click(function(){
+		jConfirm(
+		$.i18n("This action may take more than one minute. Do you want to continue?"), 
+		$.i18n("Are you sure?"),
+		function(ret){
+			if(ret){
+				window.location = "DSXlog.jst";
+			}
+		});
+    });
+	$('#show_callsignallog').click(function(){
+		jConfirm(
+		$.i18n("This action may take more than one minute. Do you want to continue?"), 
+		$.i18n("Are you sure?"),
+		function(ret){
+			if(ret){
+				window.location = "callsignallog.jst";
+			}
+		});
+    });
+});
+function save_config(target)
+{
+	var jsConfig = "";
+	if ("switch_callsignallog" == target) {
+		if ($('#switch_callsignallog').attr("value")==$.i18n("Enable Logging"))	{
+			$('#switch_callsignallog').attr("value", $.i18n("Disable Logging"));
+			jsConfig = '{"target":"'+target+'", "value":"'+"true"+'"}';
+		}
+		else {
+			$('#switch_callsignallog').attr("value", $.i18n("Enable Logging"));
+			jsConfig = '{"target":"'+target+'", "value":"'+"false"+'"}';
+		}
+		set_config(jsConfig);
+	}
+	else if ("clear_callsignallog" == target) {
+		jConfirm(
+			$.i18n("Are you sure to clear call signal log?"), 
+			"Confirm", 
+			function(ret){if(ret){
+				jsConfig = '{"target":"'+target+'", "value":"'+"true"+'"}';
+				set_config(jsConfig);
+			}
+		});
+	}
+	else if ("switch_DSXlog" == target) {
+		if ($('#switch_DSXlog').attr("value")==$.i18n("Enable Logging"))	{
+			$('#switch_DSXlog').attr("value", $.i18n("Disable Logging"));
+			jsConfig = '{"target":"'+target+'", "value":"'+"true"+'"}';
+		}
+		else {
+			$('#switch_DSXlog').attr("value", $.i18n("Enable Logging"));
+			jsConfig = '{"target":"'+target+'", "value":"'+"false"+'"}';
+		}
+		set_config(jsConfig);
+	}	
+	else if ("clear_DSXlog" == target) {
+		jConfirm(
+			$.i18n("Are you sure to clear DSX log?"), 
+			$.i18n("Confirm"), 
+			function(ret){if(ret){
+				jsConfig = '{"target":"'+target+'", "value":"'+"true"+'"}';
+				set_config(jsConfig);
+			}
+		});
+	}
+}	
+function set_config(jsConfig)
+{
+	var token = "<?% echo(  $_SESSION['Csrf_token'] );?>";
+	// alert(jsConfig);
+	jProgress($.i18n("This may take several seconds..."), 60);
+	$.ajax({
+		type: "POST",
+		url: "actionHandler/ajaxSet_qos.jst",
+		data: { configInfo: jsConfig,csrfp_token: token },
+		success: function(msg) {
+			location.reload();
+			jHide();
+		},
+		error: function(){
+			jHide();
+			alertLocale("Failure, please try again.");
+		}
+	});
+}
+</script>
+<?%
+        $voice_lines    = getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
+?>
+<div id="content">
+  <?% if(is_device_router()) { ?>
+    <h1>Router > Connection > CallP/QoS </h1>
+  <?% } else { ?>
+    <h1>Gateway > Connection > CallP/QoS </h1>
+  <?% } ?>
+    <div id="educational-tip">
+		<p class="tip" id="qostip">This Page shows CallP/QoS statistics of USG.</p>
+    </div>
+    <div class="module data">
+		<h2>CALLP </h2>
+		<table class="data">
+			<tr>
+				<th id="qosmess1">Line</th>
+				<th id="qosmess2">LC State</th>
+				<th id="qosmess3">CallP State</th>
+				<th id="qosmess4">Loop Current</th>
+			</tr>
+			<tr>
+				<td>1</td>
+				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.1.CALLP.LCState")); ?></td>
+				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.1.CALLP.CallPState")); ?></td>
+				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.1.CALLP.LoopCurrent")); ?></td>
+			</tr>
+			<?% if(Number($voice_lines) > 1) { ?>
+			<tr class="odd">
+				<td>2</td>
+				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.2.CALLP.LCState")); ?></td>
+				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.2.CALLP.CallPState")); ?></td>
+				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.2.CALLP.LoopCurrent")); ?></td>
+			</tr>
+			<?% } ?>
+		</table>
+    </div> <!-- end .module -->
+	<div class="btn-group">
+		&nbsp;&nbsp;&nbsp;&nbsp;<input id="show_callsignallog" name="show_callsignallog" type="button"  value="Show Call Signalling Log" class="btn" />
+		<?%
+			var callsigLog =getStr('Device.X_CISCO_COM_MTA.CallSignallingLogEnable')!='true'? 'enablelogging' : 'disablelogging';
+		?>
+		<input id="switch_callsignallog" type="button" onClick="save_config('switch_callsignallog')"  value="<?% echo( getStr('Device.X_CISCO_COM_MTA.CallSignallingLogEnable')!='true'?'Enable Logging':'Disable Logging'); ?>" class="btn alt <?% echo(callsigLog); ?>" />
+        <input id="clear_callsignallog"  type="submit" onClick="save_config('clear_callsignallog')"   value="Clear" class="btn" />
+    </div>
+	<div class="module data">
+		<h2>QoS </h2>
+		<table class="data">
+			<tr>
+				<th>SFID</th>
+				<th id="qosmess5">Service Class Name</th>
+				<th id="qosmess6">Direction</th>
+				<th id="qosmess7">Primary Flow</th>
+				<th id="qosmess8">Traffic Type</th>
+				<th id="qosmess9">Packets</th>
+			</tr>
+			<?%
+				$ids = array_filter(explode(",", getInstanceIds("Device.X_CISCO_COM_MTA.ServiceFlow.")));
+				$odd = true;
+				for(var $keytmp in $ids) { $id=$ids[$keytmp];/*p2j-foreach*/
+					echo( '<tr class="'+(($odd = !$odd)?'odd':'')+'" >');
+					echo( '<td>'+getStr("Device.X_CISCO_COM_MTA.ServiceFlow."+$id+".SFID")+'</td>');
+					echo( '<td>'+getStr("Device.X_CISCO_COM_MTA.ServiceFlow."+$id+".ServiceClass")+'</td>');
+					echo( '<td>'+getStr("Device.X_CISCO_COM_MTA.ServiceFlow."+$id+".Direction")+'</td>');
+					echo( '<td>'+getStr("Device.X_CISCO_COM_MTA.ServiceFlow."+$id+".DefaultFlow")+'</td>');
+					echo( '<td>'+getStr("Device.X_CISCO_COM_MTA.ServiceFlow."+$id+".TrafficType")+'</td>');
+					echo( '<td>'+getStr("Device.X_CISCO_COM_MTA.ServiceFlow."+$id+".NumberOfPackets")+'</td>');
+					echo( '</tr>');
+				}
+			?>
+		</table>
+    </div> <!-- end .module -->
+    <div class="btn-group">
+		&nbsp;&nbsp;&nbsp;&nbsp;<input id="show_DSXlog" name="show_DSXlog" type="button"   value="Show DSX Log" class="btn" />
+	<?%
+                        var callsigLog =getStr('Device.X_CISCO_COM_MTA.DSXLogEnable')!='true'? 'enablelogging' : 'disablelogging';
+        ?>
+        <input id="switch_DSXlog" type="button" onClick="save_config('switch_DSXlog')" value="<?% echo( getStr('Device.X_CISCO_COM_MTA.DSXLogEnable')!='true'?'Enable Logging':'Disable Logging'); ?>" class="btn alt <?% echo(callsigLog); ?>" />
+        <input id="clear_DSXlog"  type="submit" onClick="save_config('clear_DSXlog')"  value="Clear" class="btn" />
+    </div>
+</div><!-- end #content -->
+<?% include('includes/footer.jst'); ?>

@@ -1,0 +1,304 @@
+<?% include('includes/php.jst'); 
+    include('includes/hash.jst'); 
+?>
+
+<?%
+
+$tid = "906aefe9-76a7-4f65-b82d-5ec20775d5aa";
+$JWTdir = "/tmp/.jwt/";
+$PUBKEYFILE = $JWTdir + "pubkey.cer";
+$JWTkeyfile = $JWTdir + "keys";
+$KeyURL = "https://login.microsoftonline.com/906aefe9-76a7-4f65-b82d-5ec20775d5aa/discovery/v2.0/keys";
+
+function VerifyToken($token)
+{
+
+    $tokendata = {};
+    $tokensegs = explode('.', $token);
+    $cnt = count($tokensegs);
+    if( $cnt != 3) {
+        $validtoken = false;
+        throw new Exception('The JWT has an incorrect number of segments');
+    }
+    else
+    {
+        $validtoken = VerifySignature( $tokensegs[0], $tokensegs[1], $tokensegs[2] );
+        if( $validtoken == true )
+        {
+            $decodeddata = base64decode_url( $tokensegs[1] );
+            $decodeddata = trim( $decodeddata, "{}" );
+            $decodeddata = str_replace( '{', '', $decodeddata);
+            $decodeddata = str_replace( '}', '', $decodeddata);
+            $decodeddata = $decodeddata.split('"').join('');
+            $pair = explode( ',', $decodeddata );
+            for ( $k in $pair ) {
+                temp = $pair[$k];
+                list = {};
+                list = explode( ':', temp, 2 );
+                $tokendata[list[0]] = list[1];
+            }
+            $validtoken &= VerifyTokenData( $tokendata );
+        }
+        else
+        {
+            LogStr( " : Signature Failed!!!" );
+            
+        }
+    }
+
+    if( $validtoken == true )
+    {
+        LogTokenData( $tokendata );
+    }
+    else
+    {
+        LogStr( " : Invalid Token Received" );
+    }
+
+    return $validtoken;
+}
+
+function VerifySignature($header, $payload, $sig)
+{
+    $sigverified = false;
+
+    if( file_exists( $JWTdir ) || exec("mkdir "+$JWTdir) )
+    {
+        ccsp.getSignKeys( $KeyURL, $JWTkeyfile );    // always try to download new list of keys.
+        // key output file is updated in above call only if curl worked successfully.
+        // but even if previous curl failed, see if old key file is still there.
+        // it might work if it is. This could get you logged in if no server response.
+        if( file_exists( $JWTkeyfile ) )
+        {
+            $modtimevalid = CheckModTimeValid( $JWTkeyfile );
+            if( $modtimevalid == true )
+            {
+                $headerdecoded = base64decode_url( $header );
+                $headerarr = json_decode( $headerdecoded );
+    
+                $keyfile = file_get_contents( $JWTkeyfile );
+                if( $keyfile != "" )    // doubtful this would be possible but just in case
+                {
+                    $keyarr = json_decode( $keyfile );
+                    if( $keyarr != false )
+                    {
+                        for( $n in $keyarr['keys'] )  {
+                            $key = $keyarr['keys'][$n];
+                            if( $key['kid'] == $headerarr['kid'] ) {
+                                WritePubKey( $key['x5c'] );
+                                break;
+                            }
+                        }
+                        $pubkey = "file://" + $PUBKEYFILE;
+                        $token = $header + '.' + $payload;
+                        $sig2verify = base64decode_url( $sig );
+                        $sigvalid = ccsp.openssl_verify_with_cert($pubkey, $token, $sig2verify, 'SHA256');
+    
+                        if( $sigvalid == 1 )
+                        {
+                            $sigverified = true;
+                        }
+                    }
+                    else
+                    {
+                        unlink($JWTkeyfile);    // file is no good for some reason so remove it, it's useless
+                        LogStr( " : Key file invalid json" );
+                    }
+                }
+                else
+                {
+                    unlink($JWTkeyfile);    // file is no good for some reason so remove it, it's useless
+                    LogStr( " : Key file empty" );
+                }
+            }
+            else        // file modification time out of bounds
+            {
+                unlink($JWTkeyfile);    // file is no good for some reason so remove it, it's useless
+                LogStr( " : Key file mod time invalid" );
+            }
+
+            unlink($PUBKEYFILE);    // always delete if it exists. It's re-created every time key file is OK
+        }
+        else        // file is non-existent
+        {
+            LogStr( " : No key file found" );
+        }
+    }
+
+    return $sigverified;
+}
+
+function CheckModTimeValid($filename)
+{
+    var date = new Date();
+    $fourhours = 4 * 3600;
+    $modtimevalid = false;
+
+    $curtime = parseInt( date.getTime()/1000 );
+    $modtime = filemtime($filename);
+    $fileage = $curtime - $modtime;
+    if( $fileage >= 0 && $fileage <= $fourhours )
+    {
+        $modtimevalid = true;
+    }
+    return $modtimevalid;
+}
+
+function VerifyTokenData($tkdata)
+{
+    $retval = false;
+    $errstr = "";
+
+    var date = new Date();
+    $curtime = parseInt( date.getTime()/1000 );
+    $tokeniat = parseInt( $tkdata['iat'] );
+    $tokennbf = parseInt( $tkdata['nbf'] );
+    $tokenexp = parseInt( $tkdata['exp'] );
+
+    if( ($curtime < $tokenexp)        // current time must be < expiration
+        && ($curtime >= $tokennbf)    // current time must be >= not before time
+        && ($curtime >= $tokeniat) )  // current time must be >= issued at time
+    {
+        if( $tkdata['tid'] == $tid )
+        {
+            $retval = true;
+        }
+        else
+        {
+            $errstr = " : Error: Token fails Tenant ID, tid=" + $tkdata['tid'];
+            LogStr( $errstr );
+        }
+    }
+    else
+    {
+        $errstr = " : Error: Token fails time validation, cur=" + $curtime;
+        $errstr = $errstr + ", iat=" + $tokeniat + ", nbf=" + $tokennbf + ", exp=" + $tokenexp;
+        LogStr( $errstr );
+    }
+
+    return $retval;
+}
+
+function WritePubKey($pubkey)
+{
+    $file = fopen( $PUBKEYFILE, "w" );
+    if( $file != false )
+    {
+        $str = "-----BEGIN CERTIFICATE-----" + "\n";
+        fwrite( $file, $str );
+        $str = $pubkey + "\n";
+        fwrite( $file, $str );
+        $str = "-----END CERTIFICATE-----" + "\n";
+        fwrite( $file, $str );
+        fclose( $file );
+    }
+    else
+    {
+        LogStr( " : Unable to write public key file" );
+    }
+}
+
+function LogBeginLoginAttempt()
+{
+
+    $file = fopen( "/rdklogs/logs/webui.log", "a" );
+    if( $file != false )
+    {
+        var date = new Date();
+
+        var year = date.getFullYear();
+        var month = date.getMonth() + 1;
+        var day = date.getDate();
+        var hours = date.getHours();
+        var minutes = date.getMinutes();
+        var seconds = date.getSeconds();
+        $datestr = year+"-"+month+"-"+day+" "+hours+":"+minutes+":"+seconds;
+
+        if( isset( $_POST["username"] ) )
+        {
+            $username = $_POST["username"];
+        }
+        else if( isset( $_SESSION["loginuser"] ) )
+        {
+            $username = $_SESSION["loginuser"];
+        }
+        else
+        {
+            $username = "UNKNOWN";
+        }
+
+        $str = "\n" + $datestr + "  WEBUI Login attempted";
+        fwrite( $file, $str );
+        $str = " : client IP = " + $clientIp;
+        fwrite( $file, $str );
+        $str = " : username = " + $username ;
+        fwrite( $file, $str );
+        $str = " : interface = " + $iface;
+        fwrite( $file, $str );
+        $str = " : Device IP = " + $Device_IP;
+        fwrite( $file, $str );
+        $host = $_SERVER['HTTP_HOST'];   
+        $url = $_SERVER['REQUEST_URI'];
+        $str = " : URL = "+$host+$url + "\n";
+        fwrite( $file, $str );
+        fclose( $file );
+    }
+}
+
+function LogTokenData($tkdata)
+{
+
+    $email = SHA256($tkdata['email']);
+    $strhex = asc2hex($email);
+    $str = " : OAUTH userId=" + $strhex;
+    $str = $str + "  JWT expiration=" + $tkdata['exp'] ;
+
+    LogStr( $str );
+}
+
+function LogStr($str)
+{
+
+    $file = fopen( "/rdklogs/logs/webui.log", "a" );
+    if( $file != false )
+    {
+        var date = new Date();
+        var year = date.getFullYear();
+        var month = date.getMonth() + 1;
+        var day = date.getDate();
+        var hours = date.getHours();
+        var minutes = date.getMinutes();
+        var seconds = date.getSeconds();
+        $datestr = year+"-"+month+"-"+day+" "+hours+":"+minutes+":"+seconds;
+        $str = $datestr + $str + "\n" ;
+        fwrite( $file, $str );
+        fclose( $file );
+    }
+}
+
+
+
+function base64decode_url($string)
+{
+	/* Need to map non-RFC-1421 characters in the URL to the proper base64 charset. */
+	$data = $string.split("-").join("+");
+	$data = $data.split("_").join("/");
+	/* Decode input must be a multiple of 4 bytes so pad up with “=”. */
+	$mod4 = strlen($data) % 4;
+
+	switch ($mod4)
+	{
+		case 1:
+			 $data = $data+"===";
+			 break;
+	 	case 2:
+	 		 $data = $data+"==";
+	 		 break;
+	 	case 3:
+	 		 $data = $data+"=";
+	 		 break;
+	}
+	 return base64_decode($data);
+}
+?>
+

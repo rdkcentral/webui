@@ -1,0 +1,214 @@
+<?%
+/*
+ If not stated otherwise in this file or this component's Licenses.txt file the
+ following copyright and licenses apply:
+
+ Copyright 2018 RDK Management
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+*/
+?>
+<?% include('includes/header.jst'); ?>
+<!-- $Id: port_triggering_add.jst 3117 2009-10-15 20:23:13Z cporto $ -->
+<div id="sub-header">
+<?% include('includes/userbar.jst'); ?>
+</div><!-- end #sub-header -->
+<?% include('includes/nav.jst'); ?>
+<?%
+	$portPVDEnable = getStr("Device.RouterAdvertisement.X_RDK_PvD.Enable"); 
+	$speedBoostPortRanges = getStr("Device.X_RDK_Speedboost.PortRanges"); 
+	if (empty($portPVDEnable)) {         
+		$portPVDEnable = "false";                      
+	} 
+?>
+<script type="text/javascript">
+$(document).ready(function() {
+	var portPVDEnableStr = "<?% echo($portPVDEnable); ?>";
+	var portPVDEnable = (portPVDEnableStr.toLowerCase() === "true");
+        if (portPVDEnable) {
+          var speedBoostPortRanges = "<?% echo( $speedBoostPortRanges); ?>";
+          var regexIpv4 = /IPv4 (\w+) (\d+) (\d+)/;
+          var matchIpv4 = speedBoostPortRanges.match(regexIpv4);
+          if (matchIpv4) {
+            var portRangeStart = parseInt(matchIpv4[2]);
+            var portRangeEnd = parseInt(matchIpv4[3]);
+            if(portRangeStart === 0 && portRangeEnd === 0) {
+		portPVDEnable = false;
+	    }
+          }
+        }
+
+    gateway.page.init("Port Triggering Add - Advanced", "nav-port-triggering");
+    $('#service_name').focus();
+	jQuery.validator.addMethod("port",function(value,element){
+		return this.optional(element) || (value.match(/^\d+$/g) && value >= 0 && value <= 65535);
+	}, $.i18n("Please enter a port number less than 65536."));
+	jQuery.validator.addMethod("triggermore",function(value,element){
+		var fstartport=parseInt($("#from_start_port").val());
+		return this.optional(element) || value>=fstartport;
+	}, $.i18n("Please enter a value more than or equal to Trigger Port From."));
+	jQuery.validator.addMethod("targetmore",function(value,element){
+		var tstartport=parseInt($("#to_start_port").val());
+		return this.optional(element) || value>=tstartport;
+	}, $.i18n("Please enter a value more than or equal to Target Port From."));
+        jQuery.validator.addMethod("customPortRangeFrom",function(value,element){
+		if (!portPVDEnable) {
+				return true;
+		} 
+                
+		startPort = $('#from_start_port').val();
+		endPort = $('#from_end_port').val();
+
+		if(startPort > portRangeEnd){                                
+			return true;
+		}                                                               
+		if (endPort >= portRangeStart || (startPort >= portRangeStart && endPort <= portRangeEnd)) {
+				return false;                                                                                       
+		}                                                                                                                  
+		return this.optional(element) || (value.match(/^\d+$/g) && (value <= portRangeStart || value >= portRangeEnd));
+    	}, $.i18n('Selected port(s) are reserved, please use ports other than ' + portRangeStart + ' to '+ portRangeEnd + ' for the configuration rule.'));
+	jQuery.validator.addMethod("customPortRangeTo",function(value,element){
+		if (!portPVDEnable) {
+				return true;
+		} 
+                
+		startPort = $('#to_start_port').val();
+		endPort = $('#to_end_port').val();
+
+        	if(startPort > portRangeEnd){                                
+			return true;
+		}                                                               
+		if (endPort >= portRangeStart || (startPort >= portRangeStart && endPort <= portRangeEnd)) {
+				return false;                                                                                       
+		}                                                                                                                  
+		return this.optional(element) || (value.match(/^\d+$/g) && (value <= portRangeStart || value >= portRangeEnd));
+    	}, $.i18n('Selected port(s) are reserved, please use ports other than ' + portRangeStart + ' to '+ portRangeEnd + ' for the configuration rule.'));
+        
+    $("#pageForm").validate({
+        rules: {
+            service_name: {
+                required: true,
+				allowed_char: true
+            }
+            ,from_start_port: {
+                required: true
+				,port: true
+				,digits: true
+				,min: 1
+				,customPortRangeFrom: true
+            }
+            ,from_end_port: {
+                required: true
+				,port: true
+				,digits: true
+				,min: 1
+				,triggermore: true
+				,customPortRangeFrom: true
+            }
+            ,to_start_port: {
+                required: true
+				,port: true
+				,digits: true
+				,min: 1
+				,customPortRangeTo: true
+            }
+            ,to_end_port: {
+                required: true
+				,port: true
+				,digits: true
+				,min: 1
+				,targetmore: true
+				,customPortRangeTo: true
+            }
+        }
+        ,highlight: function( element, errorClass, validClass ) {
+			$(element).closest(".form-row").find("input").addClass(errorClass).removeClass(validClass);
+		}
+		,unhighlight: function( element, errorClass, validClass ) {
+			$(element).closest(".form-row").find("input").removeClass(errorClass).addClass(validClass);
+		}
+    });
+    $("#btn-cancel").click(function() {
+    	window.location = "port_triggering.jst";
+    });
+	$("#btn-save-add").click(function(){
+		var name=$('#service_name').val();
+		var type=$('#service_type').find("option:selected").text();
+		var fsp=$('#from_start_port').val();
+		var fep=$('#from_end_port').val();
+		var tsp=$('#to_start_port').val();
+		var tep=$('#to_end_port').val();
+		var token = "<?% echo(  $_SESSION['Csrf_token'] );?>";
+		if($("#pageForm").valid()){
+		jProgress($.i18n('This may take several seconds.'),60);
+		$.ajax({
+			type:"POST",
+			url:"actionHandler/ajax_port_triggering.jst",
+			data:{add:"true",name:name,type:type,fsp:fsp,fep:fep,tsp:tsp,tep:tep,csrfp_token: token},
+			dataType: "json",
+			success:function(results){
+				jHide();
+				if (results=="Success!") { window.location.href="port_triggering.jst";}
+				else if (results=="") {alertLocale('Failure! Please check your inputs.');}
+				else alertLocale(results);
+			},
+			error:function(){
+				jHide();
+				alertLocale("Something went wrong, please try later!");
+			}
+		});
+		}
+	});
+});
+</script>
+<div id="content">
+	<h1 id="portrigaddhead">Advanced > Port Triggering > Add Port Trigger</h1>
+    <div id="educational-tip">
+		<p class="tip" id="porttrigaddtip1">Add a rule for port triggering services by user.</p>
+		<p class="hidden"  id="portrigtip2">Port triggering monitors outbound traffic on your network. When traffic is detected on a particular outbound port, the Gateway remembers that computer's IP address, triggers the inbound port to accept the incoming traffic, and directs the communications to the same computer.</p>
+		<p class="hidden" id="portrigtip4">Port triggering settings can affect the Gateway's performance.</p>
+	</div>
+	<form method="post" id="pageForm" action="">
+	<div class="module forms">
+		<h2 id="portrigaddmess1">Add Port Trigger</h2>
+		<div class="form-row odd">
+			<label for="service_name" id="servname">Service Name:</label> <input tabindex='0' type="text" class="text" value="" id="service_name" name="service_name" />
+		</div>
+		<div class="form-row">
+			<label for="service_type" id="servtyp">Service Type:</label>
+			<select id="service_type">
+				<option value="tcp_udp" >TCP/UDP</option>
+				<option value="tcp" selected="selected">TCP</option>
+				<option value="udp">UDP</option>
+			</select>
+		</div>
+		<div class="form-row odd">
+			<label for="from_start_port" id="portrigaddmess2">Trigger Port From:</label>  <input tabindex='0' type="text" class="text" value="" id="from_start_port" name="from_start_port" />
+		</div>
+		<div class="form-row">
+			<label for="from_end_port" id="portrigaddmess3">Trigger Port To:</label>  <input tabindex='0'  type="text" class="text" value="" id="from_end_port" name="from_end_port" />
+		</div>
+	    <div class="form-row odd">
+			<label for="to_start_port" id="portrigaddmess4">Target Port From:</label>  <input tabindex='0' type="text" class="text" value="" id="to_start_port" name="to_start_port" />
+		</div>
+		<div class="form-row">
+			<label for="to_end_port" id="portrigaddmess5">Target Port To:</label>  <input tabindex='0' type="text" class="text" value="" id="to_end_port" name="to_end_port" />
+		</div>
+		<div class="form-btn">
+			<input tabindex='0' type="button" id="btn-save-add" value="Add" class="btn submit"/>
+			<input tabindex='0' type="reset" id="btn-cancel" value="Cancel" class="btn alt reset"/>
+		</div>
+	</div> <!-- end .module -->
+	</form>
+</div><!-- end #content -->
+<?% include('includes/footer.jst'); ?>

@@ -1,0 +1,496 @@
+/*message css */
+media screen and (max-width: 860px) and (min-width: 481px) {
+        #phoneNumberContainer{
+                z-index: 1;
+        }
+        input[type='text']::placeholder{
+                color: rgba(255,255,255,.5);
+        }
+        .container {
+           /*  margin-left: 93% !important; */
+            position: absolute !important;
+        }
+        input::-webkit-input-placeholder {
+            opacity: 1;
+        }
+        .navigationButton{
+                display: block;
+        }
+         #button_previous_01,#button_next_01 {
+            margin-right: auto !important;
+            margin-left: auto !important;
+            display: block !important;
+            margin-top: 10px;
+        }
+        #agreementContainer .requirements{
+            top: -45px !important;
+            left: 82% !important;
+        }
+        .container .requirements .arrow{
+            margin-left:0px !important;
+            top:-18px !important;
+            border-color: transparent transparent #39464d transparent !important;
+            border-width: 8.5px 9px 8.5px 9px !important;       
+        }
+        .container .requirements{
+            left: 85% !important;
+            top: 70px;
+            font-size: 12px;
+            width: 204px !important;
+        }
+        #phoneNumberContainer .requirements{
+            top: -11px !important;
+            left: 47% !important;
+        }
+}
+/*message css */
+/* RDKB-29694 changes */
+@media only screen
+ and (max-device-width: 480px){
+        #WiFi_Name_Field, #password_field {
+                    display: block;
+                    width: 90vw;
+                    margin: auto;
+                    background-color: rgba(255,255,255,.15);
+        }
+        #WiFi_Name, #WiFi_Password{
+                background: none;
+                outline: none;
+                font-size: 15px;
+                margin-top: 0px;
+        }
+        #WiFi_Name{
+                width: 241px;
+                margin-left:-24px;
+        }
+        #WiFi_Password{
+                width:203px;
+                margin-left:-57px;
+        }
+        #showPass {
+                 margin: -36px 0 0 57% !important;
+        }
+}
+@media only screen
+ and (min-width: 481px){
+    #WiFi_Name_Field{
+        display: inline-block;
+        width: 357px;
+        height: 56px;
+        background-color: rgba(255,255,255,.15);
+}
+#password_field{
+        display: inline-block;
+        width: 357px;
+        height: 56px;
+        background-color: rgba(255,255,255,.15);
+        margin-top: 28px;
+        margin-left: -12px;
+}
+#WiFi_Name{
+    outline: none;
+    background: none;
+    margin-left: -51px;
+    width: 287px;
+    margin-top: 0px;
+}
+ #WiFi_Password{
+    background: none;
+    margin-top: 0px;
+    margin-left: -78px;
+    width: 256px;
+    outline: none;
+}
+}
+@media only screen
+ and (min-width: 481px) and (max-width: 1024px) {
+#PasswordContainer .requirements{
+    top: 105px;
+    left: 150px;
+}
+#NameContainer .requirements{
+    left: 153px;
+    top:104px;
+}
+#WiFi_Name_Field{
+    margin-top: 12px;
+    margin-bottom: 20px ;
+}
+#password_field{
+    display: inline-block;
+    width: 357px;
+    height: 56px;
+    background-color: rgba(255,255,255,.15);
+    margin-top: 12px;
+    margin-left: -9%;
+}
+ #phoneNumberContainer{
+    z-index: 1;
+}
+input[type='text']::placeholder{
+    color: rgba(255,255,255,.5);
+}
+input::-webkit-input-placeholder {
+  opacity: 1 !important;
+}
+.navigationButton{
+    display: block;
+}
+.access-box  div{
+    float: none !important;
+}
+.access-box  p{
+    width: 100% !important;
+}
+ #phoneNumberContainer .requirements{
+        top: -16px !important;
+        left: 137px !important;
+ }
+p {
+    display: block !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    font-size: 12px !important;
+    width: 100%;
+    text-align: center !important;
+}
+ #button_previous_01,#button_next_01 {
+    margin-right: auto !important;
+    margin-left: auto !important;
+    display: block !important;
+ }
+.container .requirements .arrow{
+    margin-left:0px !important;
+    top:-18px !important;
+    border-color: transparent transparent #39464d transparent !important;
+    border-width: 8.5px 9px 8.5px 9px !important;
+}
+.container {
+    position: absolute !important;
+}
+#agreementContainer .requirements{
+    top: 6px !important;
+    left: 185px !important;
+}
+#passwordIndicator{
+    margin-top: 13px;
+}
+.progress-bg{
+    margin: 0px;
+    margin: auto;
+}
+}
+/*RDKB-29694 changes */
+#WiFi_Password_01,#WiFi_Name_01,#WiFi_Name_02
+,#WiFi_Password_02,#WiFi_Name_04,#WiFi_Password_04,#WiFi_Password_05,
+#WiFi_Name_05{
+        white-space: pre;
+}
+@media only screen
+ and (max-device-width: 600px){
+#topbar,#set_up > p,#set_up{
+        width: 100% !important;
+}
+}
+@media only screen
+ and (max-device-width: 656px){
+.portal, #personalize > p {
+    width: 100% !important;
+   }
+}
+@media only screen
+ and (max-device-width: 420px){
+  .rightbar{
+         right: 0px !important;
+  }
+}
+/* for mobiles*/
+@media only screen
+ and (max-device-width: 480px){
+/*old changes*/
+#phoneNumberContainer{
+    z-index: 1;
+}
+input[type='text']::placeholder{
+    color: rgba(255,255,255,.5);
+}
+input::-webkit-input-placeholder {
+    opacity: 1 !important;
+}
+.navigationButton{
+    display: block;
+}
+  
+.access-box  div{
+    float: none !important;
+ }
+.access-box  p{
+    width: 100% !important;
+}
+ #phoneNumberContainer .requirements{
+        top: -11px !important;
+ }
+/*old changes*/
+#phoneNumberContainer{
+    z-index: 1;
+}
+input[type='text']::placeholder{
+    color: rgba(255,255,255,.5);
+}
+input::-webkit-input-placeholder {
+  opacity: 1 !important;
+}
+.navigationButton{
+    display: block;
+}
+.access-box  div{
+    float: none !important;
+ }
+.access-box  p{
+        width: 100% !important;
+}
+ #phoneNumberContainer .requirements{
+        top: -11px !important;
+ }
+p {
+    display: block !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    font-size: 12px !important;
+    width: 100%;
+    text-align: center !important;
+}
+  #show5Pass{
+        margin: -36px 0 0 141px !important;
+  }
+#showDual{
+    margin-right: auto !important;
+    margin-left: auto !important;
+}
+.check-copy{
+    margin-right: auto !important;
+    margin-left: auto !important;
+    text-align: unset !important;
+}
+ #button_previous_01,#button_next_01 {
+    margin-right: auto !important;
+    margin-left: auto !important;
+    display: block !important;
+ }
+.password-text{
+    margin-left: 10% !important;
+    text-align: left !important;
+    width: fit-content;
+}
+.progress-bg{
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 80% !important;
+}
+input[type='text'].error{
+    background-position: 96% !important;
+}
+input[type='text'].success{
+    background-position: 96% !important;
+}
+.container .requirements .arrow{
+    margin-left:0px !important;
+    top:-18px !important;
+    border-color: transparent transparent #39464d transparent !important;
+    border-width: 8.5px 9px 8.5px 9px !important;
+}
+.container .requirements {
+    left: 30% !important;
+    top: 94px;
+    font-size: 10px;
+    width: 204px;
+}
+.container {
+    position: absolute !important;
+}
+#phoneNumber{
+        width: 80% !important;
+}
+#agreementContainer .requirements{
+    top: -45px !important;
+}
+}
+#agreementContainer .requirements{
+    top: -116px;
+    left: 352px;
+}
+.confirm-text{
+    font-family: 'xfinSansLt';
+    font-size: 14px;
+    line-height: 24px;
+    color: #fff;
+    -webkit-font-smoothing: antialiased;
+}
+.left-settings  {
+    padding: 10px 30px 0px 0px;
+    text-align: right;
+    font-family: 'xfinSansLt';
+    font-size: 14px;
+    line-height: 24px;
+    color: #888;
+    -webkit-font-smoothing: antialiased;
+}
+svg.defs-only {
+    display: block;
+    position: absolute;
+    height: 0;
+    width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    overflow: hidden;
+}
+.rightbar {
+    position: absolute;
+    top: 35px;
+    right: 20px;
+    font-family: 'xfinSansXtraLt';
+}
+#dropdown_initial_state {
+    font-size: 16px;
+    border-radius: 0px;
+    outline: none;
+    width: 110px;
+    height: 40px;
+    font-family: inherit;
+    margin: 0;
+    overflow: hidden;
+}
+#dropdown_active_state {
+    font-size: 16px;
+    border-radius: 0px;
+    outline: none;
+    width: 150px;
+    height: 81px;
+    color: white;
+    font-family: inherit;
+    margin: 0;
+    overflow: hidden;
+    background-color: #445159;
+    -webkit-padding-start: 0px;
+    text-align: right;
+}
+ele{
+    color: white;
+    text-decoration: none;
+    display: block;
+    -webkit-font-smoothing: initial;
+    padding: 0px 20px;
+    line-height: 40px;
+    border-bottom: 1px solid black;
+    text-align: left;
+}
+ili{
+  position: absolute;
+  top: 10;
+  right: 20;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  display: inline-block;
+  padding: 3px;
+}
+.down {
+    transform: rotate(45deg);
+    -webkit-transform: rotate(45deg);
+}
+.up {
+    transform: rotate(-135deg);
+    -webkit-transform: rotate(-135deg);
+    top: 15px;
+    right: 20px;
+}
+.captive_box{
+	float: left; 
+	padding-bottom: 50px;
+}
+
+.captive_img{
+	margin: 10px 20px 0 20px;
+}
+.captive_para{
+	margin: 10px 0 0 0; 
+	text-align: left; 
+	width: 380px; 
+	font-size: large;
+}
+.captive_para2{
+	margin: 10px 0 0 0; 
+	text-align: left; 
+	width: 400px;
+}
+.captive_logo{
+	margin-top: 20px;
+	text-align:right;
+}
+.captive_personalize{
+	margin: 20px auto 0 auto;
+}
+.captive_personalize2{
+	width: 500px;
+}
+.captive_name{
+	display:inline; 
+	margin: 1px 40px 0 0; 
+	text-align: right;
+}
+.captive_pass{
+	display:inline; 
+	margin: 1px 40px 0 -60px; 
+	text-align: right;
+}
+.captive_showpass{
+	display:inline-table; 
+	margin: 4px 0 0 -90px;
+}
+.captive_whitespace{
+	white-space: pre;
+}
+.captive_net{
+	margin: 10px 40px 0 -10px;
+}
+.captive_example{
+	display:inline; 
+	margin: 4px 0 0 -8px;
+}
+.captive_pwdfield{
+	display:inline; 
+	margin: 4px 0 0 -26px;
+}
+.hidden{
+        display:none;
+}
+.captive_btn{
+	text-align: center; 
+	width: 215px; display: none;
+}
+.captive_self_text{
+	text-align: left; 
+	margin: 13px 0 0 115px;
+}
+.captive_mobilenum{
+	text-align: left; 
+	margin: 27px 0 0 115px;
+}
+.captive_margin{
+	margin: 20px 30% auto auto; 
+}
+.captive_text{
+	top: -118px;
+	left: 335px;
+}
+.captive_insertBox{
+	margin: -40px 10px 0 15px;
+}
+.captive_copy{
+	text-align: left; 
+	color: #888;
+}
+.captive_mess{
+	top: -109px; 
+	left: 337px;
+}

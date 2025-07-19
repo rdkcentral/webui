@@ -1,0 +1,263 @@
+<?%
+/*
+ If not stated otherwise in this file or this component's Licenses.txt file the
+ following copyright and licenses apply:
+
+ Copyright 2018 RDK Management
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+*/
+?>
+<?% include('includes/header.jst'); ?>
+<!-- $Id: lan.jst 3158 2010-01-08 23:32:05Z slemoine $ -->
+<div id="sub-header">
+	<?% include('includes/userbar.jst'); ?>
+</div><!-- end #sub-header -->
+<?% include('includes/nav.jst'); ?>
+<?% include('includes/utility.jst'); ?>
+<?%
+$PartnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
+$HomeNetworkControl = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.LocalUI.HomeNetworkControl");
+function getPort4XHSEnabled() {
+	$rootObjName = "Device.X_CISCO_COM_MultiLAN.";
+	$paramNameArray = ["Device.X_CISCO_COM_MultiLAN."]/*p2j-array*/;
+	$mapping_array  = ["PrimaryLANBridge", "PrimaryLANBridgeHSPorts", "HomeSecurityBridge", "HomeSecurityBridgePorts"]/*p2j-array*/;
+	$multiLan = getParaValues($rootObjName, $paramNameArray, $mapping_array);
+	if (!empty($multiLan)) {
+		$pLanBridgeHSPortEnable = getStr($multiLan[0]["PrimaryLANBridge"]+".Port."+$multiLan[0]["PrimaryLANBridgeHSPorts"]+".Enable");
+		$HSBridgePortEnable = getStr($multiLan[0]["HomeSecurityBridge"]+".Port."+$multiLan[0]["HomeSecurityBridgePorts"]+".Enable");
+		return ($pLanBridgeHSPortEnable === 'false' && $HSBridgePortEnable === 'true');
+	}
+	return false;
+}
+$isPort4XHSEnabled = getPort4XHSEnabled();
+?>
+<script type="text/javascript">
+var o_isPort4XHSEnabled = <?% echo( $isPort4XHSEnabled ? 'true' : 'false'); ?>;
+function onsavePort4() {
+	var token = "<?% echo(  $_SESSION['Csrf_token'] );?>";
+	var postData = {};
+	postData.op = "savePort4XHS";
+	postData.enable = $("#port4").prop("checked");
+	postData.csrfp_token =token;
+	jProgress($.i18n('This may take several seconds'), 60);
+	$.ajax({
+		type: 'POST',
+		url: 'actionHandler/ajaxSet_hardware_lan.jst',
+		dataType: 'json',
+		data: postData,
+		success: function(data) {
+			jHide();
+			if (data.status != 'success') {
+				var str = "Failed, please try again later.";
+				if (data.msg) {
+					str += '\nMessage:' + data.msg;
+				}
+				alertLocale(str);
+				return;
+			}
+			else {
+				window.location.reload(true);
+			}
+		},
+		error: function() {
+			/* restore the previous state */
+			jHide();
+			alertLocale("Failure, please try again.");
+		}
+	});
+}
+function initEvents() {
+	$("#saveXHSBtn").off("click").click(onsavePort4);
+}
+$(document).ready(function() {
+	gateway.page.init("Gateway > Hardware > LAN Ethernet", "nav-lan");
+	$("#port4").prop("checked", o_isPort4XHSEnabled);
+	initEvents();
+});
+</script>
+<div id="content">
+	<h1 id="lanheadloc">Gateway > Hardware > LAN Ethernet</h1>
+	<div id="educational-tip">
+		<p class="tip" id="lantip1">View information about the Gateway's Ethernet Ports. </p>
+		<p class="hidden" id="lantip2">The Gateway has 4 Gigabit (GbE) Ethernet Ports. When a device is connected to the Gateway with an Ethernet cable, you\'ll see an <i>Active</i> status for that port.</p>
+	</div>
+	<?%
+	function NameMap($str,$i)
+	{
+		//true for Ethernet, False for Docsis
+		$wan_enable = getStr("Device.Ethernet.X_RDKCENTRAL-COM_WAN.Enabled");
+		$selectedOperationalMode = current_operationalMode();
+		$allowEthWan= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.AllowEthernetWAN");
+  		$autoWanEnable= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_AutowanFeatureSupport");
+		$wanPort= getStr("Device.Ethernet.X_RDKCENTRAL-COM_WAN.Port");
+		switch ($str)
+		{
+			case "Up":
+				if($allowEthWan=="true"  && $autoWanEnable=="false"){
+					if($wan_enable=="true")
+						return "Active Ethernet WAN";
+					else
+						return "Active Docsis WAN";
+				}else if(($autoWanEnable=="true") && ($i==($wanPort+1))){
+					if(strtolower($selectedOperationalMode)=="ethernet"){
+						return "Active Ethernet WAN";
+					}else if(strtolower($selectedOperationalMode)=="docsis"){
+						return "Active";
+					}else{
+						return  "Active Auto WAN";
+					}
+				} else {
+					return "Active";
+				}
+				break;
+			case "Down":
+				return "Inactive";
+				break;
+			default:
+				return ($str == "Up" ? "Up" : "Down");
+		}
+	}
+
+	/*if ($_DEBUG) {
+		$ids = array("1", "2", "3", "4");
+	}*/
+
+	$wanManagerVersion = getStr("Device.X_RDK_WanManager.Version");
+
+	$ModelName = getStr("Device.DeviceInfo.ModelName");
+	if($ModelName == "SR213") $idx = {1:"2", 2:"3", 3:"4", 4:"1", 5:"5"};
+	else $idx = {1:"1", 2:"2", 3:"3", 4:"4", 5:"5"};
+
+	$ids = {1:"4", 2:"1", 3:"2", 4:"3", 5:"5"};
+
+	if($ModelName == "SR203") $InterfaceNumber = getStr("Device.Ethernet.X_RDK_InterfaceNumberOfEntries");
+	else $InterfaceNumber = getStr("Device.Ethernet.InterfaceNumberOfEntries");
+	for ( $j=1; $j<= ($InterfaceNumber); $j++) {
+
+		$p = $idx[$j];
+
+		if($ModelName == "SR203") $ethernetUpstream = getStr("Device.Ethernet.X_RDK_Interface."+$p+".Upstream");
+		else $ethernetUpstream = getStr("Device.Ethernet.Interface."+$p+".Upstream");
+
+		if($wanManagerVersion >= 1.5) {
+			$isOfLanBridge = getStr("Device.Ethernet.X_RDK_Interface."+$p+".AddToLanBridge");
+			$ethernetUpstream = ($isOfLanBridge == "true") ? "false" : "true"  ;
+		}
+
+		if ("true" == $ethernetUpstream){
+			continue;
+		}
+
+		if($ModelName == "SR213") $k = $ids[$p];
+		else $k = $p;
+
+		$ethernetStatus = getStr("Device.Ethernet.Interface."+$k+".Status");
+		$ethernetMACAddress = getStr("Device.Ethernet.Interface."+$k+".MACAddress");
+		$ethernetBitRate = getStr("Device.Ethernet.Interface."+$k+".CurrentBitRate");
+
+		echo( '<div class="module forms block">');
+		echo( '<h2><span id="lanethport">LAN Ethernet Port </span>'+$k+'</h2>');
+		$dm = [
+			["LAN Ethernet link status:", null, $ethernetStatus]
+		]/*p2j-array*/;
+		/* link speed */
+		$lspeed = $ethernetBitRate;
+		$lunit = " Mbps";
+		if (empty($lspeed)) {
+			$lspeed = "Not Applicable";
+			$lunit = "";
+		}
+		else if (intval($lspeed) < 0) {
+			$lspeed = "Disconnected";
+			$lunit = "";
+		}
+		/* zqiu
+		else if (intval($lspeed) >= 1000) {
+			$lspeed = floor(intval($lspeed) / 1000);
+			$lunit = " Gbps";
+		}
+		*/
+		array_push($dm, ["MAC Address:", $ethernetMACAddress]);
+		array_push($dm, ["Connection Speed:", $lspeed+$lunit]/*p2j-array*/);
+		for ($m=0, $i=0; $i<count($dm); $i++)
+		{
+			 var id="";
+                       if($dm[$i][0]=="MAC Address:"){
+                         id='macaddr'+$k;
+                        }
+			if($dm[$i][0]=="LAN Ethernet link status:"){
+                         id='lanethlinkstat'+$k;
+			}
+			 if($dm[$i][0]=="Connection Speed:"){
+                         id='connspeed'+$k;
+                        }
+
+			var idValue= ($dm[$i][1] === null ? NameMap($dm[$i][2],$k) : $dm[$i][1]);
+                        if(idValue == "Inactive")
+                                idValue="inact";
+			else if(idValue == "Active")
+                                idValue="active";
+                        else if(idValue== "Active Ethernet WAN")
+                                idValue="actethwan";
+                        else if(idValue== "Active Docsis WAN")
+                                idValue="actdocwan";
+			else if(idValue== "Active Auto WAN")
+    				idValue="actautwan";
+                        else if(idValue== "Up")
+				idValue="uploc";
+			else if(idValue== "Down")
+				idValue="downloc";
+			else if(idValue== "Not Applicable")
+                                idValue="notappl";
+			else if(idValue== "Disconnected")
+                                idValue="disconloc";
+                        else
+			        idValue="";
+
+			echo( '<div class="form-row '+(($m++ % 2)?'odd':'')+'" >');
+			echo( '<span class="readonlyLabel" id='+id+'>'+$dm[$i][0]+'</span>');
+			echo( '<span class="value" id='+idValue+'>'+($dm[$i][1] === null ? NameMap($dm[$i][2],$k) : $dm[$i][1])+'</span>');
+			echo( '</div>');
+		}
+		if ($k === 4) {
+			/* port 4 as home security port */
+			//if($HomeNetworkControl == 'true'){
+				if($PartnerId == 'comcast'){
+
+                                echo( '<div class="form-row odd ">'+
+                                        '<label for="channel_selection" id="chansel">Associate Ethernet Port 4 to XFINITY HOME Network:</label>'+
+					'<span class="checkbox"><input type="checkbox" id="port4" name="port4" /></span></br></br></br></br><span id="chansel2">Note: Associating Ethernet Port 4 to XFINITY HOME network will remove the port from your home network.</span></br></br>'+
+                                '</div>'+
+                                '<div class="form-row odd" >'+
+                                        '<div class="lan_style"><input id="saveXHSBtn" type="button" value="Save" class="btn submit" /></div>'+
+                                '</div>');
+                                }
+                                else if($PartnerId == 'cox'){
+
+                                echo( '<div class="form-row odd ">'+
+                                        '<label for="channel_selection" id="chansel3">Associate Ethernet Port 4 to HOME SECURITY Network:</label>'+
+					'<span class="checkbox"><input type="checkbox" id="port4" name="port4" /></span></br></br></br></br><span id="chansel4">Note: Associating Ethernet Port 4 to HOME SECURITY network will remove the port from your home network.</span></br></br>'+
+                                '</div>'+
+                                '<div class="form-row odd" >'+
+                                        '<div class="lan_style"><input id="saveXHSBtn" type="button" value="Save" class="btn submit" /></div>'+
+                                '</div>');
+                                }
+
+			//}
+		}
+		echo( '</div>');
+	}
+	?>
+</div><!-- end #content -->
+<?% include('includes/footer.jst'); ?>

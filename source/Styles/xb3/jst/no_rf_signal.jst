@@ -1,0 +1,197 @@
+<?%
+/*
+ If not stated otherwise in this file or this component's Licenses.txt file the
+ following copyright and licenses apply:
+
+ Copyright 2018 RDK Management
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+*/
+ include('includes/utility.jst');
+ $productLink = "";
+ $productLink = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.CloudUI.link");
+?>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <link rel="stylesheet" type="text/css" media="screen" href="./cmn/css/lib/progressBar.css" />
+  <link rel="stylesheet" type="text/css" media="screen" href="./cmn/css/common-min.css" />
+  <link rel="stylesheet" type="text/css" media="screen" href="./cmn/css/no_rf.css" />
+   <!--[if IE 6]>
+  <link rel="stylesheet" type="text/css" href="./cmn/css/ie6-min.css" />
+  <![endif]-->
+  <!--[if IE 7]>
+  <link rel="stylesheet" type="text/css" href="./cmn/css/ie7-min.css" />
+  <![endif]-->
+  <!--Character Encoding-->
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+        <meta name="robots" content="noindex,nofollow">
+  <script type="text/javascript" src="./cmn/js/lib/jquery-3.7.1.js"></script>
+ <script type="text/javascript" src="./cmn/js/lib/jquery.validate.js"></script>
+     <script type="text/javascript" src="./cmn/js/lib/jquery-migrate-1.2.1.js"></script>
+  <script type="text/javascript" src="./cmn/js/lib/jquery.alerts.js"></script>
+  <script type="text/javascript" src="./cmn/js/lib/jquery.ciscoExt.js"></script>
+  <script type="text/javascript" src="./cmn/js/lib/jquery.highContrastDetect.js"></script>
+  <script type="text/javascript" src="./cmn/js/lib/jquery.radioswitch.js"></script>
+  <script type="text/javascript" src="./cmn/js/lib/jquery.virtualDialog.js"></script>
+  <script type="text/javascript" src="./cmn/js/utilityFunctions.js"></script>
+  <script type="text/javascript" src="./cmn/js/gateway.js"></script>
+  <script type="text/javascript" src="./cmn/js/lib/bootstrap.min.js"></script>
+    <script type="text/javascript" src="./cmn/js/lib/bootstrap-waitingfor.js"></script>
+<script>
+var check="false";
+var cnt=0;
+function checkRFSignalStatus(val){
+	//var min=1;
+	//var rand = Math.floor(Math.random() * (max - min + 1) + min);
+	if(cnt == 8)
+        	cnt =8;
+	else
+        	cnt++; 
+	var max= Math.pow(2, cnt) ;
+	//console.log("cnt====="+cnt+"===max==="+max);
+      if(val=="button"){
+        jProgress('Waiting for backend to be fully executed, please be patient...',60);
+      }
+      
+      $.ajax({
+      type: "POST",
+      url: "actionHandler/ajaxSet_checkRFSignal.jst",
+      success: function (msg) {
+        msg= msg.replace(/\s+/g, " ").trim();
+      if(msg=="true"){
+	check="true";
+        jHide();
+        //console.log("inside");
+          window.location = "<?% echo( updateURL($productLink));?>";
+        
+        }
+        else{
+         if(val=="button"){
+             jHide();
+           
+          }
+        }
+      }
+    });
+setTimeout(checkRFSignalStatus, max * 1000);
+      }
+checkRFSignalStatus();
+$(document).ready(function(){
+  $("#get_set_up").click(function(){
+     checkRFSignalStatus("button");
+  });
+  $("#dropdown_initial_state").mouseenter(function(){
+      $("#dropdown_initial_state").hide();
+      $("#dropdown_active_state").show();
+  });
+  $("#dropdown_active_state").mouseleave(function(){
+      $("#dropdown_initial_state").show();
+      $("#dropdown_active_state").hide();
+  });
+  $("#f_i_option1").click(function(){
+      $("#dropdown_initial_state").show();
+      $("#dropdown_active_state").hide();
+  });
+  $("#f_a_option2").click(function(){
+    
+  });
+});
+/*setInterval(function() {
+
+  if(check=="false"){
+      checkRFSignalStatus();
+  }
+  
+}, 5000);*/
+  </script>
+</head>
+
+<body class="si-twilight-background">
+<?% include('includes/utility.jst'); ?>
+<?%
+        
+$defaultLanguage= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.DefaultLanguage");
+  $PartnerId= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
+  if($defaultLanguage=="fre" || $_GET['lang']=="fre"){
+      $header="Aucun signal de câble détecté.";
+      $content="Vérifiez que vos câbles coaxiaux sont bien connectés. S’ils sont connectés et que vous tentez d’activer votre borne, essayez d’utiliser une autre prise. Si le problème persiste, veuillez nous appeler.";
+      $tryAgain="Réessayer";
+  }else{
+      $header="We can't detect a cable signal.";
+      $content ="Please check that your coax cables are tightly secured. If the cables are secured, and you're trying to activate your Gateway, try another cable outlet in your house. If the problem persists, give us a call";
+       if($PartnerId=="comcast")
+          $content = $content+" at <font color='#3BB9FF'> 1-800-xfinity </font></p>";
+        else
+          $content = $content+".";
+      $tryAgain="Try Again";  
+  }
+$lang_file='';
+$lang={};
+$personalization_value='';
+var $arr = new Array();
+$arr['lang']="";
+ if ($arr['lang'] != $_GET['lang'] && !empty($_GET['lang'])) {
+                if ($_GET['lang'] == "eng") {
+                        $arr['lang'] = "eng";
+                        $lang_file='includes/eng.jst';
+                }
+                else if ($_GET['lang'] == "fre") {
+                        $arr['lang'] = "fre";
+                        $lang_file='includes/fre.jst';
+                }
+        }else{
+                 if ($defaultLanguage == "eng") {
+                        $arr['lang'] = "eng";
+                        $lang_file='includes/eng.jst';
+                }
+                else if ($defaultLanguage == "fre") {
+                        $arr['lang'] = "fre";
+                        $lang_file='includes/fre.jst';
+                }
+        }
+  header('X-robots-tag: noindex,nofollow');
+        include($lang_file);
+
+?>
+
+  <div class="dp-content">
+    <div class="dp-space-filler-top"></div>
+    <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+  
+    <div class="dp-space-filler-30"></div>
+    <?%
+      echo( '<div class="rightbar">\
+                                 <ul id="dropdown_initial_state">\
+        <a href = "no_rf_signal.jst?lang='); echo(  $lang['lang']); echo( '"> <ele id="f_i_option1">'); echo( $lang["option1"]); echo( '<ili class="down"></ili></ele></a>\
+                                </ul>\
+                                 <ul id="dropdown_active_state" class="hidden">\
+                                <a href = "no_rf_signal.jst?lang='); echo(  $lang['lang']); echo( '">  <ele id="f_a_option1">'); echo(  $lang["option1"]); echo( '<ili class="up"></ili></ele></a>\
+                                <a href = "no_rf_signal.jst?lang='); echo(  $lang['otherlang']); echo( '">  <ele id="f_a_option2">'); echo( $lang["option2"]); echo( '</ele></a>\
+                                </ul>\
+                </div>');
+      ?>
+    <p class="dp-header dp-white-text"><?% echo( $header );?></p>
+    <div class="dp-space-filler-30"></div>
+    <p class="dp-text dp-gray-text"><?% echo( $content );?>
+  <br><br>
+  <div>
+        <button id="get_set_up"><?% echo( $tryAgain);?></button>
+      </div>
+</div>
+</body>
+
+</html>
+
