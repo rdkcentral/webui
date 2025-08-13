@@ -893,15 +893,25 @@ function init_form()
 				}	
 				else{	//AboveControlChannel or Auto
 					//$("#channel_number [value='40'],[value='48'],[value='56'],[value='64'],[value='104'],[value='112'],[value='136'],[value='153'],[value='161']").prop("disabled", true);
-					$("#channel_number").find("<?% if(!$isPartnerSky) echo("[value='116'],"); ?>[value='140'],[value='144'],[value='165']").prop("disabled", true).prop("selected", false);
+					if ("6" == radio_band) {
+                                        	$("#channel_number").find("<?% if(!$isPartnerSky) echo("[value='116'],"); ?>[value='140'],[value='144']").prop("disabled", true).prop("selected", false);
+                                        } else {
+                                        	$("#channel_number").find("<?% if(!$isPartnerSky) echo("[value='116'],"); ?>[value='140'],[value='144'],[value='165']").prop("disabled", true).prop("selected", false);
+                                        }
 				}	
 			}
 		}
 		else if ("160MHz" == channel_bandwidth){
-			$("#channel_number").find("[value='132'],[value='136'],[value='140'],[value='144'],[value='149'],[value='153'],[value='157'],[value='161'],[value='165']").prop("disabled", true).prop("selected", false);
+                	if ("6" == radio_band) {
+				$("#channel_number").find("[value='132'],[value='136'],[value='140'],[value='144'],[value='149'],[value='153'],[value='157'],[value='161']").prop("disabled", true).prop("selected", false);
+                        } else {
+                        	$("#channel_number").find("[value='132'],[value='136'],[value='140'],[value='144'],[value='149'],[value='153'],[value='157'],[value='161'],[value='165']").prop("disabled", true).prop("selected", false);
+                        }        
 		}
-		// NOT 20MHz, disable channel 165
-		$("#channel_number").find("[value='165']").prop("disabled", true).prop("selected", false);
+                if ("6" != radio_band) {
+		         // NOT 20MHz, disable channel 165
+		         $("#channel_number").find("[value='165']").prop("disabled", true).prop("selected", false);
+                }
 	}
 	else {
 		//if Channel Bandwidth is 20MHz DFS Channels (Channels 50 - 144) should be greyed out
