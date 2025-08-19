@@ -61,8 +61,10 @@ $http_port	= $DeviceControl_value['http_port'];
 $https_port	= $DeviceControl_value['https_port'];
 $ipv4_gw	= $DeviceControl_value['ipv4_gw'];
 $ipv4_smask	= $DeviceControl_value['ipv4_smask'];
+$dhcp_client_interfaces = get_dhcp_client_interfaces();
+$dhcp_client_interface_v6 = $dhcp_client_interfaces.v6;
 $mapT = "";
-$mapT = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
+$mapT = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
 $jsMapEnable="false";
 if(($mapT=="MAPT") && (strpos($partnerId, "sky-") === false)){
         $jsMapEnable = "true";
@@ -802,7 +804,7 @@ function remote_access_block(){
 				else{*/
 					echo('<span id="remmess1">Remote Management Address (IPv4):</span> ');
 					if($jsMapEnable == "true")
-						echo(getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapIpv4Address"));
+						echo(getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapIpv4Address"));
 					else
 						echo( getStr($fistUSif+"IPv4Address.1.IPAddress"));
 				//}

@@ -27,19 +27,22 @@
 <?% include('includes/nav.jst'); ?>
 <?% $ForceDisable = getStr("Device.WiFi.X_RDK-CENTRAL_COM_ForceDisable"); ?>
 <?%
-    $fistDSif = getFirstDownstreamIpInterface();
-    $autoWanEnable= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_AutowanFeatureSupport");
-    $OperatingChannelBandwidth = "";
-    $RadioNumberOfEntries = getStr("Device.WiFi.RadioNumberOfEntries");
-    if($RadioNumberOfEntries)
-    {
-	for($r=1; $r <= $RadioNumberOfEntries ; $r++)
+	$dhcp_client_interfaces = get_dhcp_client_interfaces();
+	$dhcp_client_interface_v4 = $dhcp_client_interfaces.v4;
+	$dhcp_client_interface_v6 = $dhcp_client_interfaces.v6;
+	$fistDSif = getFirstDownstreamIpInterface();
+	$autoWanEnable= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_AutowanFeatureSupport");
+	$OperatingChannelBandwidth = "";
+	$RadioNumberOfEntries = getStr("Device.WiFi.RadioNumberOfEntries");
+	if($RadioNumberOfEntries)
 	{
-		$OperatingChannelBandwidth = getStr("Device.WiFi.Radio."+$r+".OperatingFrequencyBand");
-		if($OperatingChannelBandwidth == "6GHz")
-			break;
+		for($r=1; $r <= $RadioNumberOfEntries ; $r++)
+		{
+			$OperatingChannelBandwidth = getStr("Device.WiFi.Radio."+$r+".OperatingFrequencyBand");
+			if($OperatingChannelBandwidth == "6GHz")
+				break;
+		}
 	}
-    }
     // $fistDSif = "Device.IP.Interface.2.";
 	// initial some variable to suppress some error
     $ipv6_local_addr = "";
@@ -433,7 +436,7 @@ if(($allowEthWan=="true") || ($autoWanEnable=="true")) {
                                     echo('<span class="value" id="actautwan">Active Auto WAN');
                                 }
                             }
-                          }          
+                          }
                          ?>
                     </span>
                 </div>
@@ -441,7 +444,7 @@ if(($allowEthWan=="true") || ($autoWanEnable=="true")) {
                     <span class="readonlyLabel" id="wanip4">WAN IP Address (IPv4):</span> <span class="value">
                          <?%
 			$mapT ="";
-			$mapT = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
+			$mapT = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
 			//$mapT = "MAPT";
 			$jsMapEnable="false";
 			$partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
@@ -449,7 +452,7 @@ if(($allowEthWan=="true") || ($autoWanEnable=="true")) {
 			        $jsMapEnable = "true";
 			}
 			if($jsMapEnable == "true")
-				$WANIPv4 = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
+				$WANIPv4 = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
 			else
                         	$WANIPv4 = getStr($fistUSif+"IPv4Address.1.IPAddress");
                           echo( $WANIPv4);
@@ -495,7 +498,7 @@ if(($allowEthWan=="true") || ($autoWanEnable=="true")) {
                       echo("<span class='value' id='act'>Active</span>");
                    }
                    else{
-                      echo("<span class='value' id='inact'>Inactive</span>"); 
+                      echo("<span class='value' id='inact'>Inactive</span>");
                    }
               }
             }
@@ -505,10 +508,10 @@ if(($allowEthWan=="true") || ($autoWanEnable=="true")) {
             $WAN_IP_Address = '';
             $address_style = '';
             if(strpos($partnerId, "sky-") !== false){
-                $isMapT = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
+                $isMapT = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
                 if($isMapT == 'MAPT'){
-		    $WANIPv4 = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
-		    $WANIPv4 += '<span id="shrdMpT_cs"> (Shared using MAP-T)</span>';
+					$WANIPv4 = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
+					$WANIPv4 += '<span id="shrdMpT_cs"> (Shared using MAP-T)</span>';
                     //$WANIPv4Gateway = '-NA-';
                     $WAN_IP_Address = $WANIPv4;
                     $address_style = 'connection_address';
@@ -547,7 +550,7 @@ if(($allowEthWan=="true") || ($autoWanEnable=="true")) {
         <div class="form-row">
           <span class="readonlyLabel" id="dhcpexploc">DHCP Expire Time:</span> <span class="value">
                     <?%
-                    $expire_time = getStr("Device.DHCPv4.Client.1.LeaseTimeRemaining");
+                    $expire_time = getStr($dhcp_client_interface_v4+".LeaseTimeRemaining");
                     echo( sec2dhms($expire_time));
                     ?>
                 </span>
