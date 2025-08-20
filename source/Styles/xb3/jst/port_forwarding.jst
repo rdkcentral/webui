@@ -43,7 +43,9 @@ else{
 	$idadv = "connhom1";
 	$idadv2 = "portmess";
 }
-$mapT = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
+$dhcp_client_interfaces = get_dhcp_client_interfaces();
+$dhcp_client_interface_v6 = $dhcp_client_interfaces.v6;
+$mapT = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
 $partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
 $jsMapEnable="false";
 if(($mapT=="MAPT") && (strpos($partnerId, "sky-") === false)){

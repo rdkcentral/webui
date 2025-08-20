@@ -25,11 +25,14 @@
 </div><!-- end #sub-header -->
 <?% include('includes/nav.jst'); ?>
 <?%
+	$dhcp_client_interfaces = get_dhcp_client_interfaces();
+	$dhcp_client_interface_v4 = $dhcp_client_interfaces.v4;
+	$dhcp_client_interface_v6 = $dhcp_client_interfaces.v6;
 	$NetworkName = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.HelpTip.NetworkName");
 	$wanType = get_wan_type();
 	$partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
 	$mapT ="";
-	$mapT = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
+	$mapT = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
 	$jsMapEnable="false";
 	$maptEnabled = "Disabled";
 	$maptSpanId = "disablespanid_mapt";
@@ -38,7 +41,7 @@
 		$maptEnabled = "Enabled";
 		$maptSpanId  = "enablespanid_mapt";
 	}
-	$maptRatio = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapRatio");
+	$maptRatio = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapRatio");
 	if (strpos($partnerId, "sky-") !== false) {
 		$maptRatio += ":1";
 	}
@@ -158,9 +161,9 @@ function sec2dhm($sec)
 	$sta_inet = (getStr("Device.DeviceInfo.X_RDKCENTRAL-COM.InternetStatus")=="true") ? "true" : "false";
 	//in Bridge mode > Internet connectivity status is always active
 	$sta_inet = ($_SESSION["lanMode"] == "bridge-static") ? "true" : $sta_inet ;
-	$WANIPv4Gateway = getStr("Device.DHCPv4.Client.1.IPRouters");
+	$WANIPv4Gateway = getStr($dhcp_client_interface_v4+".IPRouters");
 	if(strpos($partnerId, "sky-") !== false){
-		$isMapT = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
+		$isMapT = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
 		if($isMapT == 'MAPT'){
 		    /*$WANIPv4_val = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapRuleIPv4Prefix");
 		    $WANIPv4_val_array = explode('.',$WANIPv4_val);
@@ -169,7 +172,7 @@ function sec2dhm($sec)
                     $Add_val_int = intval($Add_val_int);
                     $WANIPv4_val_array[3]=$Convert_int+$Add_val_int;
                     $WANIPv4 = $WANIPv4_val_array[0]+'.'+$WANIPv4_val_array[1]+'.'+$WANIPv4_val_array[2]+'.'+$WANIPv4_val_array[3]+' (Shared using MAP-T)';*/
-		    $WANIPv4 = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
+		    $WANIPv4 = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
 		    $WANIPv4 += '<span id="shrdMpT_ns"> (Shared using MAP-T)</span>';
                     $WANIPv4Gateway = '-NA-';
 		}
@@ -324,7 +327,7 @@ function sec2dhm($sec)
 		<?%
 			//echo getStr("Device.Routing.Router.1.IPv4Forwarding.1.GatewayIPAddress");
 			/* For BWG, we just use the DHCP GW received from upstream as the wan side GW */
-			$wanDefaultGatewayAddressIPv4 = getStr("Device.DHCPv4.Client.1.IPRouters");
+			$wanDefaultGatewayAddressIPv4 = getStr($dhcp_client_interface_v4+".IPRouters");
 			if(get_mapt_status()) $wanDefaultGatewayAddressIPv4 = "NA";
 			if((strpos($partnerId, "sky-") !== false) && !$is_wan_connected) $wanDefaultGatewayAddressIPv4 = "0.0.0.0";
 			echo($wanDefaultGatewayAddressIPv4);
@@ -417,19 +420,19 @@ function sec2dhm($sec)
 	<div class="form-row ">
 		<span class="readonlyLabel" id="dhcliv6">DHCP Client (IPv6):</span>
 		<?%
-                        var idEnabled =("true"==getStr("Device.DHCPv6.Client.1.Enable")) ? "enablespanid" : "disablespanid";
+                        var idEnabled =("true"==getStr($dhcp_client_interface_v6+".Enable")) ? "enablespanid" : "disablespanid";
 		?>
 		 <span class="value" id="<?% echo(idEnabled); ?>">
-		<?% echo( ("true"==getStr("Device.DHCPv6.Client.1.Enable")) ? "Enabled" : "Disabled");?>
+		<?% echo( ("true"==getStr($dhcp_client_interface_v6+".Enable")) ? "Enabled" : "Disabled");?>
 		</span>
-	</div>	
+	</div>
 	<div class="form-row odd">
 		<span class="readonlyLabel" id="dhlease">DHCP Lease Expire Time (IPv4):</span>
 		<span class="value">
 		<?%
 			if(strpos($partnerId, "sky-") !== false){
 				if($Wan_Port_Status !="Disconnected"){
-					$sec = getStr("Device.DHCPv4.Client.1.LeaseTimeRemaining");
+					$sec = getStr($dhcp_client_interface_v4+".LeaseTimeRemaining");
 					$tmp = div_mod($sec, 24*60*60);
 					$day = $tmp[0];
 					$tmp = div_mod($tmp[1], 60*60);
@@ -439,7 +442,7 @@ function sec2dhm($sec)
 					echo( $day+"d:"+$hor+"h:"+$min+"m");
 				}
 			}else{
-				$sec = getStr("Device.DHCPv4.Client.1.LeaseTimeRemaining");
+				$sec = getStr($dhcp_client_interface_v4+".LeaseTimeRemaining");
 				$tmp = div_mod($sec, 24*60*60);
 				$day = $tmp[0];
 				$tmp = div_mod($tmp[1], 60*60);
