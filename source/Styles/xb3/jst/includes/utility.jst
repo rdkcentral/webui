@@ -1248,5 +1248,27 @@ function current_operationalMode()
         }
          return $selectedOperationalMode;
 }
-?>
 
+/**
+* Description:
+*  DHCP-manager will have individual DHCP client interfaces for each WAN interface.
+*  We have to identify the current active interface and use its DHCP interface details.
+* return the active DHCP client interfaces as JSON
+*/
+function get_dhcp_client_interfaces()
+{
+	var $dhcp_client_interfaces = { v4: "", v6: "" };
+	$ids = explode(",", getInstanceIds("Device.X_RDK_WanManager.Interface."));
+	wanInterfaceLoop: for($key in $ids) { $j = $ids[$key];
+		$status = getStr("Device.X_RDK_WanManager.Interface."+$j+".Status");
+		if($status == "true" || $status == "Up" || $status == "Active"){
+			$dhcp_client_interfaces.v4 = getStr("Device.X_RDK_WanManager.Interface."+$j+".VirtualInterface.1.IP.DHCPv4Interface");
+			$dhcp_client_interfaces.v6 = getStr("Device.X_RDK_WanManager.Interface."+$j+".VirtualInterface.1.IP.DHCPv6Interface");
+			break wanInterfaceLoop;
+		}
+	}
+	if($dhcp_client_interfaces.v4 == "") $dhcp_client_interfaces.v4 = "Device.DHCPv4.Client.1";
+	if($dhcp_client_interfaces.v6 == "") $dhcp_client_interfaces.v6 = "Device.DHCPv6.Client.1";
+	return $dhcp_client_interfaces;
+}
+?>

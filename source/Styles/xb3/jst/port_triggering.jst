@@ -28,8 +28,10 @@
 <?%
 $PTEnable=getStr("Device.NAT.X_CISCO_COM_PortTriggers.Enable");
 $partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
+$dhcp_client_interfaces = get_dhcp_client_interfaces();
+$dhcp_client_interface_v6 = $dhcp_client_interfaces.v6;
 $mapT ="";
-$mapT = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
+$mapT = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
 //$mapT = "MAPT";
 $jsMapEnable="false";
 if(($mapT=="MAPT") && (strpos($partnerId, "sky-") === false)){
