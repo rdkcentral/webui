@@ -25,8 +25,11 @@
 </div><!-- end #sub-header -->
 <?% include('includes/nav.jst'); ?>
 <?%
-        $NetworkName = "";
-        $NetworkName = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.HelpTip.NetworkName");
+	$NetworkName = "";
+	$NetworkName = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.HelpTip.NetworkName");
+	$dhcp_client_interfaces = get_dhcp_client_interfaces();
+	$dhcp_client_interface_v4 = $dhcp_client_interfaces.v4;
+	$dhcp_client_interface_v6 = $dhcp_client_interfaces.v6;
 ?>
 <script type="text/javascript">
 $(document).ready(function() {
@@ -141,7 +144,7 @@ function sec2dhms($sec)
                 <?%
                         //echo getStr("Device.Routing.Router.1.IPv4Forwarding.1.GatewayIPAddress");
                         /* For BWG, we just use the DHCP GW received from upstream as the wan side GW */
-                        echo( getStr("Device.DHCPv4.Client.1.IPRouters"));
+                        echo( getStr($dhcp_client_interface_v4+".IPRouters"));
                 ?>
                 </span>
         </div>
@@ -223,7 +226,7 @@ function sec2dhms($sec)
         </div>
         <div class="form-row ">
 		<span class="readonlyLabel" id="dhcliv6">DHCP Client (IPv6):</span> <span class="value">
-                <?% echo( ("true"==getStr("Device.DHCPv6.Client.1.Enable")) ? "Enabled" : "Disabled");?>
+                <?% echo( ("true"==getStr($dhcp_client_interface_v6+".Enable")) ? "Enabled" : "Disabled");?>
                 </span>
         </div>
         <div class="form-row odd">
@@ -231,7 +234,7 @@ function sec2dhms($sec)
                 <span class="value">
                 <?%
                         $sec = 0;
-                        $sec = getStr("Device.DHCPv4.Client.1.LeaseTimeRemaining");
+                        $sec = getStr($dhcp_client_interface_v4+".LeaseTimeRemaining");
                         $tmp = div_mod($sec, 24*60*60);
                         $day = $tmp[0];
                         $tmp = div_mod($tmp[1], 60*60);
