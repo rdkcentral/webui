@@ -49,6 +49,8 @@
 	    $MoCA = false;
 	    $battery = false;
 	}
+	$dhcp_client_interfaces = get_dhcp_client_interfaces();
+	$dhcp_client_interface_v6 = $dhcp_client_interfaces.v6;
 ?>
 <script type="text/javascript">
 setTimeout(function(){
@@ -150,7 +152,7 @@ setTimeout(function(){
 				?>
 				var ipv4_status = '<?% echo ($ipv4_status); ?>';
 				var ipv6_status = '<?% echo ($ipv6_status); ?>';
-				var map_mode = '<?% echo (getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapTransportMode")); ?>';
+				var map_mode = '<?% echo (getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapTransportMode")); ?>';
 				if((ipv6_status == 'up' || ipv4_status == 'up')&& map_mode =='MAPT'){
 					$('#sta_inet').removeClass('off');
 				}
