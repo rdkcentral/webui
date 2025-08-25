@@ -68,9 +68,11 @@ if( array_key_exists('URL', $blockedSiteInfo) ) {
 		}
 	}
 	if ($result == ""){
-		addTblObj("Device.X_Comcast_com_ParentalControl.ManagedSites.BlockedSite.");
-		$idArr = explode(",", getInstanceIds("Device.X_Comcast_com_ParentalControl.ManagedSites.BlockedSite."));
-		$index = array_pop($idArr);
+                // Getting the instance id directly from addTblObj as, addTblObj() returns the correct instance value.
+                // Since for 64 bit, the array alignment varies and array_pop($idArr) gets corrupted.
+		$index = addTblObj("Device.X_Comcast_com_ParentalControl.ManagedSites.BlockedSite.");
+		// $idArr = explode(",", getInstanceIds("Device.X_Comcast_com_ParentalControl.ManagedSites.BlockedSite."));
+		// $index = array_pop($idArr);
 		if ($blockedSiteInfo['alwaysBlock'] == 'true'){
 			$paramArray =
 			[
@@ -103,9 +105,11 @@ if( array_key_exists('URL', $blockedSiteInfo) ) {
 				];
 			$retStatus1 = DmExtSetStrsWithRootObj($rootObjName, true, $paramArray);
 			if($timeData[3]){
-				addTblObj($rootObjName);
-				$IDs=explode(",",getInstanceIDs($rootObjName));
-				$index=$IDs[count($IDs)-1];
+                                // Getting the instance id directly from addTblObj as, addTblObj() returns the correct instance value.
+                                // Since for 64 bit, the array alignment varies and $IDs[count($IDs)-1] gets corrupted.
+				$index=addTblObj($rootObjName);
+				// $IDs=explode(",",getInstanceIDs($rootObjName));
+				// $index=$IDs[count($IDs)-1];
 				$paramArray =
 					[
 						[$objPrefix+$index+".Site", "string", $blockedSiteInfo['URL']],
@@ -165,9 +169,11 @@ else{
 		}
 	}
 	if ($result == ""){
-		addTblObj("Device.X_Comcast_com_ParentalControl.ManagedSites.BlockedSite.");
-		$idArr = explode(",", getInstanceIds("Device.X_Comcast_com_ParentalControl.ManagedSites.BlockedSite."));
-		$index = array_pop($idArr);
+                // Getting the instance id directly from addTblObj as, addTblObj() returns the correct instance value.
+                // Since for 64 bit, the array alignment varies array_pop($idArr) gets corrupted.
+		$index = addTblObj("Device.X_Comcast_com_ParentalControl.ManagedSites.BlockedSite.");
+		// $idArr = explode(",", getInstanceIds("Device.X_Comcast_com_ParentalControl.ManagedSites.BlockedSite."));
+		// $index = array_pop($idArr);
 		if ($blockedSiteInfo['alwaysBlock'] == 'true'){
 			$paramArray =
 			[
@@ -200,9 +206,11 @@ else{
 				];
 			$retStatus1 = DmExtSetStrsWithRootObj($rootObjName, true, $paramArray);
 			if($timeData[3]){
-				addTblObj($rootObjName);
-				$IDs=explode(",",getInstanceIDs($rootObjName));
-				$index=$IDs[count($IDs)-1];
+                                // Getting the instance id directly from addTblObj as, addTblObj() returns the correct instance value.
+                                // Since for 64 bit, the array alignment varies and $IDs[count($IDs)-1] gets corrupted.
+				$index=addTblObj($rootObjName);
+				// $IDs=explode(",",getInstanceIDs($rootObjName));
+				// $index=$IDs[count($IDs)-1];
 				$paramArray =
 					[
 						[$objPrefix+$index+".Site", "string", $blockedSiteInfo['Keyword']],
