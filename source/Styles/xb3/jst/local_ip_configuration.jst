@@ -24,7 +24,9 @@
 <?% include('includes/userbar.jst'); ?>
 </div><!-- end #sub-header -->
 <?% include('includes/nav.jst'); ?>
-<?% 
+<?%
+$dhcp_client_interfaces = get_dhcp_client_interfaces();
+$dhcp_client_interface_v4 = $dhcp_client_interfaces.v4;
 $device_ctrl_param = {
 	"LanGwIP"	: "Device.X_CISCO_COM_DeviceControl.LanManagementEntry.1.LanIPAddress",
 	"DeviceMode"	: "Device.X_CISCO_COM_DeviceControl.DeviceMode",
@@ -48,7 +50,7 @@ $ula_size = count($ula_v6_prefix_arr);
 //CM GW IP Address
 $CM_GW_IP_Address = getStr("Device.X_CISCO_COM_CableModem.Gateway");
 //WAN GW IP Address (IPv4)
-$WAN_GW_IPv4_Address =getStr("Device.DHCPv4.Client.1.IPRouters");
+$WAN_GW_IPv4_Address =getStr($dhcp_client_interface_v4+".IPRouters");
 //Virtual LAN_GW_IPv4_Address
 $LAN_GW_IPv4_Address = "";
 $out={};

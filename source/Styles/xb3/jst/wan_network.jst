@@ -26,6 +26,8 @@
 </div><!-- end #sub-header -->
 <?% include('includes/nav.jst'); ?>
 <?%
+	$dhcp_client_interfaces = get_dhcp_client_interfaces();
+	$dhcp_client_interface_v6 = $dhcp_client_interfaces.v6;
 	$modelName= getStr("Device.DeviceInfo.ModelName");
 	$autoWanEnable= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_AutowanFeatureSupport");
 	$allowEthWan= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.AllowEthernetWAN");
@@ -35,7 +37,7 @@
 		die();
 	}
 	$mapT ="";
-	$mapT = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
+	$mapT = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapTransportMode");
 	$partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
 	//$mapT = "MAPT";
 	$jsMapEnable="false";
@@ -44,7 +46,7 @@
 	}
 	$fistUSif = getFirstUpstreamIpInterface();
 	if($jsMapEnable == "true")
-		$WANIPv4 = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
+		$WANIPv4 = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
 	else
 		$WANIPv4 = getStr($fistUSif+"IPv4Address.1.IPAddress");
 	$WANIPv6= getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IPv6");
