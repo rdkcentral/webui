@@ -346,30 +346,48 @@ $(document).ready(function(){
 		var network5_name 	= addslashes($("#WiFi5_Name").val());
 		var network5_password 	= addslashes($("#WiFi5_Password").val());
 		var jsConfig;
+		var retryToSave = true;
+		var retryCount = 0;
 		if($("#dualSettings").css('display') == "block" && !$("#selectSettings" ).is(":checked")){
 			jsConfig = '{"dualband":"true", "network_name":"'+network_name+'", "network_password":"'+network_password+'", "network5_name":"'+network5_name+'", "network5_password":"'+network5_password+'", "phoneNumber":"'+EMS_mobileNumber()+'"}';
 		}
 		else {
 			jsConfig = '{"dualband":"false", "network_name":"'+network_name+'", "network_password":"'+network_password+'", "phoneNumber":"'+EMS_mobileNumber()+'"}';
 		}
-		$.ajax({
-			type: "POST",
-			url: "actionHandler/ajaxSet_wireless_network_configuration_redirection.jst",
-			data: { rediection_Info: jsConfig,csrfp_token: token },
-			success: function (msg, status, jqXHR) {
-				//msg is the response
-				msg = JSON.parse(msg);
-				if(msg[0] == "outOfCaptivePortal")
-				{
-					setTimeout(function(){ 
-						location.href="index.jst"; 
-					}, 10000);
+		function postConfig(){
+			$.ajax({
+				type: "POST",
+				url: "actionHandler/ajaxSet_wireless_network_configuration_redirection.jst",
+				data: { rediection_Info: jsConfig, csrfp_token: token },
+				success: function (msg, status, jqXHR) {
+					//msg is the response
+					msg = JSON.parse(msg);
+					if(msg[0] == "outOfCaptivePortal") {
+						setTimeout(function(){
+							location.href="index.jst";
+						}, 10000);
+					}
+					if(connectionType != "WiFi"){
+						setTimeout(function(){ goToReady(); }, 25000);
+					}
+				},
+				error: function(xhr, status, error) {
+					// Handle error
+					console.log("Captiveportal AJAX Error:", error);
+					console.log("Captiveportal Retrying to Save. retryCount:"+retryCount);
+					if(retryToSave) {
+						if(retryCount === 3) {
+							retryToSave = false;
+						}
+						//Increment retryCount
+						retryCount++;
+						//retry after 3 sec
+						setTimeout(function(){ postConfig(); }, 3000);
+					}
 				}
-			}
-		});
-		if(connectionType != "WiFi"){
-			setTimeout(function(){ goToReady(); }, 25000);
+			});
 		}
+		postConfig();
 	}
 	var NameTimeout, PasswordTimeout, Name5Timeout, Password5Timeout, phoneNumberTimeout, agreementTimeout;
 	function messageHandler(target, topMessage, bottomMessage){
