@@ -96,6 +96,32 @@ $psmMode = $DeviceControl_value['psmMode'];
 			$LanGwIPv6 = $ipv6addr;
 		}
 	}
+
+        //$LanGwIPv6
+        $LanGwIP = [];
+        $LanGwIP['localAddr'] = '';
+        $LanGwIP['globalAddr'] = '';
+        $LanGwIP['ulaAddr'] = '';
+        if(strpos($partnerId, "sky-") !== false) {
+                $lan_ip = [];
+                $bin = exec("which ifconfig");
+                $xbin=$bin[0].replace(/ /g,'').replace(/\n/g,'');
+                $out = exec($xbin+" brlan0");
+                for($k in $out){
+                        $v = $out[$k];
+                        if (strpos($v, 'inet6 addr')){
+                                $tmp = explode('Scope', $v);
+                                $tmp = explode('addr:', $tmp[0]);
+                                $tmp = explode('%', $tmp[1]);
+                                $tmp = explode('/', $tmp[0]);
+                                if(strpos($v, 'inet6 addr: fe80')) $LanGwIP['localAddr'] = trim($tmp[0]);
+                                else if(strpos($v, 'inet6 addr: 2')) $LanGwIP['globalAddr'] = trim($tmp[0]);
+                                else $LanGwIP['ulaAddr'] = trim($tmp[0]);
+                        }
+                }
+                $LanGwIPv6 = $LanGwIP['ulaAddr'];
+        }
+
 if(!$isMSO) {
         setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_access",true);
 	//If Cloud redirection is set, then everything through local GW should be redirected
@@ -104,6 +130,23 @@ if(!$isMSO) {
 		header("Location: $Cloud_WebURL");
 		exit(0);
 	}*/
+
+        $SERVER_ADDR = $_SERVER['SERVER_ADDR'];
+        $ip_addr = strpos($SERVER_ADDR, ":") == false ? $LanGwIPv4 : $LanGwIPv6 ;
+        $SecWebUI = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SecureWebUI.Enable");
+        $LocFqdn = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SecureWebUI.LocalFqdn");
+        if(strpos($partnerId, "sky-") !== false) {
+                if (strcmp($SecWebUI, "true")==0) {
+                        if (strcmp($url, $LocFqdn)!=0) {
+                                if( (strcmp($url,$ip_addr)==0) || isLocalIPv6($url) )
+                                        header('Location:https://'+$LocFqdn);
+                        }
+                        else if ((strcmp($url, $LocFqdn)==0) && ($_SERVER["SERVER_PORT"]=="80"))
+                                header('Location:https://'+$LocFqdn);
+                }
+        }
+
+
 	if(!strcmp($CaptivePortalEnable, "true")) {
 		$SERVER_ADDR = $_SERVER['SERVER_ADDR'];
 		$ip_addr = strpos($SERVER_ADDR, ":") == false ? $LanGwIPv4 : $LanGwIPv6 ;
