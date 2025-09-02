@@ -105,12 +105,9 @@ fi
 
 #!/bin/sh
 
-CURRENT_MODE=$(syscfg get OAUTHAuthMode)
-echo "$(date '+%Y-%m-%d %H:%M:%S') Current OAUTHAuthMode: $CURRENT_MODE" >> /tmp/debug_log.txt
-echo "$(date '+%Y-%m-%d %H:%M:%S') Set OAUTHAuthMode to sso" >> /tmp/debug_log.txt
+echo "Set OAUTHAuthMode to sso"
 syscfg set OAUTHAuthMode sso
 syscfg commit
-
 
 # start lighttpd
 source /etc/utopia/service.d/log_capture_path.sh
