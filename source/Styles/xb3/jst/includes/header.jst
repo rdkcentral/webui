@@ -94,129 +94,6 @@ csrfProtector.init();
                 exit(0);
 
 	}
-        $modelName= getStr("Device.DeviceInfo.ModelName");
-                if (($modelName != "CGM4140COM") && ($modelName != "CGM4331COM") && ($modelName != "TG1682G") && ($modelName != "CGA4131COM") && ($modelName != "CGA4332COM") && ($modelName != "CGM4981COM") && ($modelName != "SG417DBCT") && ($modelName != "CGM601TCOM"))  {
-                    if (!isset($_SESSION['PREV_REMOTEADDR'])) {
-                        $_SESSION['PREV_REMOTEADDR'] = $_SERVER['REMOTE_ADDR'];
-                    }
-                    $curr_sessID = session_id();
-                    if ($_SERVER['REMOTE_ADDR'] != $_SESSION['PREV_REMOTEADDR']) {
-                        session_destroy(); // Destroy all data in session
-                        echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
-                        exit(0);
-                    }
-                    if (!isset($_SESSION['PREV_SESSID'])) {
-                        $_SESSION['PREV_SESSID'] = session_id();
-                    }
-                    
-                    if ($curr_sessID != $_SESSION['PREV_SESSID']) {
-                        session_destroy(); // Destroy all data in session
-                        echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
-                        exit(0);
-                    }
-                }
-                
-                if ($modelName == "TG1682G") {
-                    if (!isset($_SESSION['PREV_REMOTEADDR'])) {
-                        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-                            $_SESSION['PREV_REMOTEADDR'] = $_SERVER['HTTP_X_FORWARDED_FOR'];
-                        }
-                        else
-                        {
-                            $_SESSION['PREV_REMOTEADDR'] = $_SERVER['REMOTE_ADDR'];
-                        }
-                    }
-                    $curr_sessID = session_id();
-                    if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-                        $_SESSION['CURR_REMOTEADDR'] = $_SERVER['HTTP_X_FORWARDED_FOR'];
-                    }
-                    else
-                    {
-                        $_SESSION['CURR_REMOTEADDR'] = $_SERVER['REMOTE_ADDR'];
-                    }
-                    if ($_SESSION['CURR_REMOTEADDR'] != $_SESSION['PREV_REMOTEADDR']) {
-                        session_destroy(); // Destroy all data in session
-                        echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
-                        exit(0);
-                    }
-                 }
-                 if (($modelName == "CGM4140COM") || ($modelName == "CGM4331COM") || ($modelName == "CGM4981COM") || ($modelName == "SG417DBCT") || ($modelName == "CGM601TCOM") || ($modelName == "CGA4131COM") || ($modelName == "CGA4332COM")) {
-                 $curr_sessID = session_id();
-                 if ( strcmp($_SERVER['REMOTE_ADDR'], "172.31.255.45") == 0 ||
-		        strcasecmp($_SERVER['REMOTE_ADDR'], "fe80::ffff:ac1f:ff2d") == 0 ||
-		        strcasecmp($_SERVER['REMOTE_ADDR'], "fd00::ffff:ac1f:ff2d") == 0 ) {
-                        $SID = session_id();
-                        $FILEID = "/tmp/IPADDR";
-                        $FILEID += $SID;
-                        exec("/usr/bin/snmpget -v 2c -c private -t 0.5 -r 1 172.31.255.45 1.3.6.1.4.1.4413.2.2.2.1.2.12161.1.1.27.0 |  awk '/STRING/ {print}' | awk '{print $4,$7}' | sed 's/\"/\/' > "+ $FILEID);
-                        $fp=fopen($FILEID,"r");
-                        if($fp)
-                        {
-                                $pos = 0;
-                                $buffer=trim(substr(fgets($fp),$pos));
-                                fclose($fp);
-                                $OutIP = explode(" ", $buffer);
-                                exec("rm "+ $FILEID);
-                                $AcPort = $OutIP[1];
-                                if ($AcPort == (80 || 443))
-                                {
-                                    $IP_ADDR = $OutIP[0];
-                                    if (!isset($_SESSION['PREV_REMOTEADDR'])) {
-                                        $_SESSION['PREV_REMOTEADDR'] = $IP_ADDR;
-                                    }
-                                }
-                                else
-                                {
-                                    if (isset($_SESSION['PREV_REMOTEADDR'])) {
-                                        $IP_ADDR = $_SESSION['PREV_REMOTEADDR'];
-                                    }
-                                }
-                        }
-                    }
-                    else {
-                       $IP_ADDR = $_SERVER['REMOTE_ADDR'];
-                       if (!isset($_SESSION['PREV_REMOTEADDR'])) {
-                           $_SESSION['PREV_REMOTEADDR'] = $IP_ADDR;
-                       } 
-                    }
-                    if(isset($_SESSION['PREV_REMOTEADDR'])) {
-                        if ($IP_ADDR != $_SESSION['PREV_REMOTEADDR']) {
-                            session_destroy(); // Destroy all data in session
-                            echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
-                            exit(0);
-                        }
-                    }
-                    if (!isset($_SESSION['PREV_SESSID'])) {
-                        $_SESSION['PREV_SESSID'] = session_id();
-                    }
-                    
-                    if ($curr_sessID != $_SESSION['PREV_SESSID']) {
-                        session_destroy(); // Destroy all data in session
-                        echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
-                        exit(0);
-                    }   
-                 }
-                      
-                		
-	if($modelName == "X5001") {
-             $not_mso_pages_xf3 = ['network_setup.jst'];
-                         for ($m in $not_mso_pages_xf3) {
-                                $page = $not_mso_pages_xf3[$m];
-                            if (strstr($_SERVER['SCRIPT_FILENAME'], $page)) {
-                                echo( '<script type="text/javascript"> alert("Access Denied!"); location.href="home_loggedout.jst"; </script>');
-                                exit(0);
-                            }
-                       }
-         }else{
-                $not_xf3 = ['DPoE.jst'];
-                for($k in $not_xf3){
-                        $page = $not_xf3[$k];
-                        if (strstr($_SERVER['SCRIPT_FILENAME'], $page)) {
-                                echo( '<script type="text/javascript"> alert("Access Denied!"); history.back(); </script>');
-                                exit(0);
-                        }
-                }
-        }
 	/* demo flag in session */
 	/*if (!isset($_SESSION['_DEBUG'])) {
 		$_DEBUG = file_exists('/var/ui_dev_debug');
@@ -583,6 +460,126 @@ function isIE() {
 
 </script>
 <?%
+        $modelName= getStr("Device.DeviceInfo.ModelName");
+        if (($modelName != "CGM4140COM") && ($modelName != "CGM4331COM") && ($modelName != "TG1682G") && ($modelName != "CGA4131COM") && ($modelName != "CGA4332COM") && ($modelName != "CGM4981COM") && ($modelName != "SG417DBCT") && ($modelName != "CGM601TCOM"))  {
+            if (!isset($_SESSION['PREV_REMOTEADDR'])) {
+                $_SESSION['PREV_REMOTEADDR'] = $_SERVER['REMOTE_ADDR'];
+            }
+            $curr_sessID = session_id();
+            if ($_SERVER['REMOTE_ADDR'] != $_SESSION['PREV_REMOTEADDR']) {
+                session_destroy(); // Destroy all data in session
+                echo( '<script type="text/javascript">alertLoc("Please Login First!"); location.href="../index.jst";</script>');
+                exit(0);
+            }
+            if (!isset($_SESSION['PREV_SESSID'])) {
+                $_SESSION['PREV_SESSID'] = session_id();
+            }
+
+            if ($curr_sessID != $_SESSION['PREV_SESSID']) {
+                session_destroy(); // Destroy all data in session
+                echo( '<script type="text/javascript">alertLoc("Please Login First!"); location.href="../index.jst";</script>');
+                exit(0);
+            }
+        }
+		if ($modelName == "TG1682G") {
+                    if (!isset($_SESSION['PREV_REMOTEADDR'])) {
+                        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                            $_SESSION['PREV_REMOTEADDR'] = $_SERVER['HTTP_X_FORWARDED_FOR'];
+                        }
+                        else
+                        {
+                            $_SESSION['PREV_REMOTEADDR'] = $_SERVER['REMOTE_ADDR'];
+                        }
+                    }
+                    $curr_sessID = session_id();
+                    if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                        $_SESSION['CURR_REMOTEADDR'] = $_SERVER['HTTP_X_FORWARDED_FOR'];
+                    }
+                    else
+                    {
+                        $_SESSION['CURR_REMOTEADDR'] = $_SERVER['REMOTE_ADDR'];
+                    }
+                    if ($_SESSION['CURR_REMOTEADDR'] != $_SESSION['PREV_REMOTEADDR']) {
+                        session_destroy(); // Destroy all data in session
+                        echo( '<script type="text/javascript">alertLoc("Please Login First!"); location.href="../index.jst";</script>');
+                        exit(0);
+                    }
+                 }
+                 if (($modelName == "CGM4140COM") || ($modelName == "CGM4331COM") || ($modelName == "CGM4981COM") || ($modelName == "SG417DBCT") || ($modelName == "CGM601TCOM") || ($modelName == "CGA4131COM") || ($modelName == "CGA4332COM")) {
+                 $curr_sessID = session_id();
+                 if ( strcmp($_SERVER['REMOTE_ADDR'], "172.31.255.45") == 0 ||
+		        strcasecmp($_SERVER['REMOTE_ADDR'], "fe80::ffff:ac1f:ff2d") == 0 ||
+		        strcasecmp($_SERVER['REMOTE_ADDR'], "fd00::ffff:ac1f:ff2d") == 0 ) {
+                        $SID = session_id();
+                        $FILEID = "/tmp/IPADDR";
+                        $FILEID += $SID;
+                        exec("/usr/bin/snmpget -v 2c -c private -t 0.5 -r 1 172.31.255.45 1.3.6.1.4.1.4413.2.2.2.1.2.12161.1.1.27.0 |  awk '/STRING/ {print}' | awk '{print $4,$7}' | sed 's/\"/\/' > "+ $FILEID);
+                        $fp=fopen($FILEID,"r");
+                        if($fp)
+                        {
+                                $pos = 0;
+                                $buffer=trim(substr(fgets($fp),$pos));
+                                fclose($fp);
+                                $OutIP = explode(" ", $buffer);
+                                exec("rm "+ $FILEID);
+                                $AcPort = $OutIP[1];
+                                if ($AcPort == (80 || 443))
+                                {
+                                    $IP_ADDR = $OutIP[0];
+                                    if (!isset($_SESSION['PREV_REMOTEADDR'])) {
+                                        $_SESSION['PREV_REMOTEADDR'] = $IP_ADDR;
+                                    }
+                                }
+                                else
+                                {
+                                    if (isset($_SESSION['PREV_REMOTEADDR'])) {
+                                        $IP_ADDR = $_SESSION['PREV_REMOTEADDR'];
+                                    }
+                                }
+                        }
+                    }
+                    else {
+                       $IP_ADDR = $_SERVER['REMOTE_ADDR'];
+                       if (!isset($_SESSION['PREV_REMOTEADDR'])) {
+                           $_SESSION['PREV_REMOTEADDR'] = $IP_ADDR;
+                       }
+                    }
+                    if(isset($_SESSION['PREV_REMOTEADDR'])) {
+                        if ($IP_ADDR != $_SESSION['PREV_REMOTEADDR']) {
+                            session_destroy(); // Destroy all data in session
+                            echo( '<script type="text/javascript">alertLoc("Please Login First!"); location.href="../index.jst";</script>');
+                            exit(0);
+                        }
+                    }
+                    if (!isset($_SESSION['PREV_SESSID'])) {
+                        $_SESSION['PREV_SESSID'] = session_id();
+                    }
+
+                    if ($curr_sessID != $_SESSION['PREV_SESSID']) {
+                        session_destroy(); // Destroy all data in session
+                        echo( '<script type="text/javascript">alertLoc("Please Login First!"); location.href="../index.jst";</script>');
+                        exit(0);
+                    }
+                 }
+	if($modelName == "X5001") {
+             $not_mso_pages_xf3 = ['network_setup.jst'];
+                         for ($m in $not_mso_pages_xf3) {
+                                $page = $not_mso_pages_xf3[$m];
+                            if (strstr($_SERVER['SCRIPT_FILENAME'], $page)) {
+                                echo( '<script type="text/javascript"> alertLoc("Access Denied!"); location.href="home_loggedout.jst"; </script>');
+                                exit(0);
+                            }
+                       }
+         }else{
+                $not_xf3 = ['DPoE.jst'];
+                for($k in $not_xf3){
+                        $page = $not_xf3[$k];
+                        if (strstr($_SERVER['SCRIPT_FILENAME'], $page)) {
+                                echo( '<script type="text/javascript"> alertLoc("Access Denied!"); history.back(); </script>');
+                                exit(0);
+                        }
+                }
+        }
         if (!isset($_SESSION["loginuser"])) {
             if (!isset($_SESSION["JWT_VALID"]) || $_SESSION['JWT_VALID'] != true ) {
                 echo( '<script type="text/javascript">alertLoc("Please Login First!"); location.href="home_loggedout.jst";</script>');
