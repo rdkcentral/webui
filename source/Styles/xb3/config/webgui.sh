@@ -103,9 +103,12 @@ if [ ! -f /tmp/trpfizyanrln ];then
 fi
 fi
 
+CURRENT_MODE=$(syscfg get OAUTHAuthMode)
 echo "Set OAUTHAuthMode to sso"
-syscfg set OAUTHAuthMode sso
-syscfg commit
+if [ "$CURRENT_MODE" != "sso" ]; then
+    syscfg set OAUTHAuthMode sso
+    syscfg commit
+fi
 
 # start lighttpd
 source /etc/utopia/service.d/log_capture_path.sh
