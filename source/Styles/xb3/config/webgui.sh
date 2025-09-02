@@ -103,6 +103,14 @@ if [ ! -f /tmp/trpfizyanrln ];then
 fi
 fi
 
+# Set default AuthMode to SSO if not already set
+CURRENT_MODE=$(syscfg get OAUTHAuthMode)
+if [ -z "$CURRENT_MODE" ]; then
+    echo "$(date '+%Y-%m-%d %H:%M:%S') Setting default OAUTHAuthMode to sso" >> /tmp/debug_log.txt
+    syscfg set OAUTHAuthMode sso
+    syscfg commit
+fi
+
 # start lighttpd
 source /etc/utopia/service.d/log_capture_path.sh
 # setup non-root related file-permission for lighttpd
