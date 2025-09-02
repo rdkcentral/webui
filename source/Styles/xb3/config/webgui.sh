@@ -103,6 +103,10 @@ if [ ! -f /tmp/trpfizyanrln ];then
 fi
 fi
 
+echo "Set OAUTHAuthMode to sso"
+syscfg set OAUTHAuthMode sso
+syscfg commit
+
 # start lighttpd
 source /etc/utopia/service.d/log_capture_path.sh
 # setup non-root related file-permission for lighttpd
