@@ -95,6 +95,16 @@ function sec2dhms($sec)
 	$min = $tmp[0];
 	return "D:" +$day+ " H:" +$hor+ " M:" +$min+ " S:" +$tmp[1];
 }
+function sec2dhm($sec)
+{
+        $tmp = div_mod($sec, 24*60*60);
+        $day = $tmp[0];
+        $tmp = div_mod($tmp[1], 60*60);
+        $hor = $tmp[0];
+        $tmp = div_mod($tmp[1],    60);
+        $min = $tmp[0];
+        return $day+"d:"+$hor+"h:"+$min+"m";
+}
 	$partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
 	$fistUSif = getFirstUpstreamIpInterface();
 	$WANIPv4 = getStr($fistUSif+"IPv4Address.1.IPAddress");
@@ -112,13 +122,7 @@ function sec2dhms($sec)
 					//DHCP Lease Expire Time (IPv6):
 					// echo $fistUSif."IPv6Address.$i.X_Comcast_com_LeaseTime";
 					$sec = getStr($fistDSif+"IPv6Address."+$i+".X_CISCO_COM_PreferredLifetime");
-					$tmp = div_mod($sec, 24*60*60);
-					$day = $tmp[0];
-					$tmp = div_mod($tmp[1], 60*60);
-					$hor = $tmp[0];
-					$tmp = div_mod($tmp[1],    60);
-					$min = $tmp[0];
-					$DHCP_LET_IPv6=$day+"d:"+$hor+"h:"+$min+"m";
+					$DHCP_LET_IPv6 = sec2dhm($sec);
 			}
 			if (strstr($val, "fe80::")){
 				$WANIPv6LinkLocal = $val;
@@ -134,19 +138,26 @@ function sec2dhms($sec)
 				//DHCP Lease Expire Time (IPv6):
 				// echo $fistUSif."IPv6Address."+$i+".X_Comcast_com_LeaseTime";
 				$sec = getStr($fistUSif+"IPv6Address."+$i+".X_CISCO_COM_PreferredLifetime");
-				$tmp = div_mod($sec, 24*60*60);
-				$day = $tmp[0];
-				$tmp = div_mod($tmp[1], 60*60);
-				$hor = $tmp[0];
-				$tmp = div_mod($tmp[1],    60);
-				$min = $tmp[0];
-				$DHCP_LET_IPv6 = $day+"d:"+$hor+"h:"+$min+"m";
+				$DHCP_LET_IPv6 = sec2dhm($sec);
 		}
 		if (strstr($val, "fe80::")){
 			$WANIPv6LinkLocal = $val;
 		}
 	    }
 	}
+    $dhcpv6_server_type = getStr("Device.DHCPv6.Server.X_CISCO_COM_Type");
+        if(strpos($partnerId, "sky-") !== false && $dhcpv6_server_type == "Stateless") {
+                $ids = explode(",", getInstanceIds($fistUSif+"IPv6Prefix."));
+                for(var $keytmp in $ids) { 
+			$i=$ids[$keytmp];
+                        $val = getStr($fistUSif+"IPv6Prefix."+$i+".Prefix");
+                        if (!strstr($val, "fe80::")) {
+                                //DHCP Lease Expire Time (IPv6): Stateless
+                                $sec = getStr($fistUSif+"IPv6Prefix."+$i+".X_CISCO_COM_PreferredLifetime");
+                                $DHCP_LET_IPv6=sec2dhm($sec);
+                        }
+                }
+        }
 	$sta_inet = (getStr("Device.DeviceInfo.X_RDKCENTRAL-COM.InternetStatus")=="true") ? "true" : "false";
 	//in Bridge mode > Internet connectivity status is always active
 	$sta_inet = ($_SESSION["lanMode"] == "bridge-static") ? "true" : $sta_inet ;
