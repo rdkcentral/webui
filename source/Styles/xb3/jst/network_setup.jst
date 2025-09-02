@@ -866,7 +866,7 @@ if ($wanType == "DSL") {
   if(!$CM_value["CoreVersion"]){ $CM_value["CoreVersion"] = 'NA';}
 }?>
 <!-- Updating the CoreVersion value as 'NA' for RPI -->
-<?% if($device_value["ModelName"]=="RPI"){
+<?% if(($device_value["ModelName"]=="RPI") || ($device_value["ModelName"]=="BananapiBPI-R4")){
   if(!$CM_value["CoreVersion"]){ $CM_value["CoreVersion"] = 'NA';}
 }?>
 <div class="module forms">
