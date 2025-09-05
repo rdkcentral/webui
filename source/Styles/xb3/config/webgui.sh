@@ -65,7 +65,7 @@ if [ -z $1 ] && [ ! -f /tmp/webuifwbundle ]; then
     fi
 fi
 
-if [ "x$BOX_TYPE" != "xrpi" ] && [ "x$BOX_TYPE" != "xturris" ] && [ "x$BOX_TYPE" != "xemulator" ]; then
+if [ "x$BOX_TYPE" != "xrpi" ] && [ "x$BOX_TYPE" != "xbpi" ] && [ "x$BOX_TYPE" != "xturris" ] && [ "x$BOX_TYPE" != "xemulator" ]; then
 #upstreamed webgui_script_https_support.patch to Secure webui redirection as part of RDKB-42686.
 mkdir -p /tmp/.webui/
 ID="/tmp/trpfizyanrln"
@@ -101,6 +101,15 @@ if [ ! -f /tmp/trpfizyanrln ];then
 	echo "Error: Lighttpd key is not generated"
 	exit 1
 fi
+fi
+
+CURRENT_MODE=$(syscfg get OAUTHAuthMode)
+if [ "$CURRENT_MODE" != "sso" ]; then
+    echo "Set OAUTHAuthMode to sso"
+    syscfg set OAUTHAuthMode sso
+    syscfg commit
+else
+	echo "OAUTHAuthMode is sso"
 fi
 
 # start lighttpd
