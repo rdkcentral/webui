@@ -701,9 +701,11 @@ $.validator.addMethod("no_space", function(value, element, param) {
 	function generateEditPart($blockedInfo){
     $ID = $blockedInfo['InstanceID'];
     $st_time = explode(":", $blockedInfo['StartTime']);
+    if(!isset($blockedInfo['StartTime'])) $st_time = [0];
     $st_hour = $st_time['0'];
     $st_min  = isset($st_time['1'])? $st_time['1'] : "";
     $end_time = explode(":", $blockedInfo['EndTime']);
+    if(!isset($blockedInfo['EndTime'])) $end_time = [0];
     $end_hour = $end_time['0'];
     $end_min  = isset($end_time['1']) ? $end_time['1'] : "";
     $rel_st_hour = $st_hour>12 ? $st_hour-12 : $st_hour;
