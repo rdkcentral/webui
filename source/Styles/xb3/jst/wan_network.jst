@@ -33,7 +33,7 @@
 	$allowEthWan= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.AllowEthernetWAN");
 	$wanPort= getStr("Device.Ethernet.X_RDKCENTRAL-COM_WAN.Port");
 	$portNo= parseInt($wanPort)+1;
-	if(!((($autoWanEnable=="true") || ($allowEthWan=="true")) && (($modelName=="CGM4140COM") || ($modelName=="CGM4331COM") || ($modelName=="CGM4981COM") || ($modelName=="SG417DBCT") || ($modelName=="CGM601TCOM") || ($modelName=="TG4482A") || ($modelName=="RPI"))) ){
+	if(!((($autoWanEnable=="true") || ($allowEthWan=="true")) && (($modelName=="CGM4140COM") || ($modelName=="CGM4331COM") || ($modelName=="CGM4981COM") || ($modelName=="SG417DBCT") || ($modelName=="CGM601TCOM") || ($modelName=="CWA438TCOM") || ($modelName=="TG4482A") || ($modelName=="RPI"))) ){
 		die();
 	}
 	$mapT ="";
