@@ -179,36 +179,8 @@ else
                 exit(0);
             }
             $authmode=getStr( "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.OAUTH.AuthMode" );
-            if( $authmode == "sso" )
-            {
-                if (isset($_POST["password"]) && $_POST["password"] != "")
-                {
-                    LogStr(" : SSO FAILED ");
-                    session_destroy();
-                    sendError( '<script type="text/javascript"> alert($.i18n("SSO login rejected due to unexpected password input"));history.back(); </script>');
-                    exit(0);
-                }
-                $curPwd1 = "Invalid_PWD"; // trigger SSO login attempt
-            }
-            else
-            {
-                if( $authmode == "potd" || $_POST["password"] != "" )
-                {
-                    LogStr( " : Authentication = potd" );
-                    $pass_sha = SHA256($_POST["password"]);
-                    $pass_hex = asc2hex($pass_sha);
-                    $str = " : Attempted password = " + $pass_hex;
-                    LogStr( $str );
-                    //triggering password validation in back end if "potd" or "mixed" and a password is supplied
-                    $return_status = setStr("Device.Users.User.1.X_CISCO_COM_Password",$_POST["password"],true);
-                    sleep(1);
-                    $curPwd1 = getStr("Device.Users.User.1.X_CISCO_COM_Password");
-                }
-                else
-                {
-                    $curPwd1 = "Invalid_PWD";    // trigger SSO login attempt
-                }
-            }
+            LogStr(" : Authmode is $authmode");
+            $curPwd1 = "Invalid_PWD";    // trigger SSO login attempt
 	    if ( innerIP($client_ip) || ( (($iface == "rg_ip") || ($iface == "docsis_ip") ) && (strtolower($currentOpMode) !="ethernet") ) )
             {
                 LogStr( " : Interface check FAILED" );
