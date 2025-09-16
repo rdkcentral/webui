@@ -299,6 +299,7 @@ function div_sub($n, $m)
 }
 //hm_to_sec($time) converts H:M to sec
 function hm_to_sec($time){
+	if($time == null || $time == "") return 0;
 	var $newTime = explode(":",$time);
 	var $timeSec = $newTime[0]*60*60 + $newTime[1]*60;
 	return $timeSec;
