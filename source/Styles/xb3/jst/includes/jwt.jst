@@ -16,8 +16,12 @@ function VerifyToken($token)
     $tokendata = {};
     $tokensegs = explode('.', $token);
     $cnt = count($tokensegs);
+    LogStr("DEBUG: Verifying JWT token...");
+    LogStr("DEBUG: Raw token length = " + strlen($token));
+    LogStr("DEBUG: Segments found = " + $cnt);
     if( $cnt != 3) {
         $validtoken = false;
+        LogStr("ERROR: The JWT has an incorrect number of segments");
         throw new Exception('The JWT has an incorrect number of segments');
     }
     else
@@ -25,7 +29,9 @@ function VerifyToken($token)
         $validtoken = VerifySignature( $tokensegs[0], $tokensegs[1], $tokensegs[2] );
         if( $validtoken == true )
         {
+            LogStr("DEBUG: Signature verification PASSED");
             $decodeddata = base64decode_url( $tokensegs[1] );
+            LogStr("DEBUG: Decoded Payload (raw): " + $decodeddata);
             $decodeddata = trim( $decodeddata, "{}" );
             $decodeddata = str_replace( '{', '', $decodeddata);
             $decodeddata = str_replace( '}', '', $decodeddata);
@@ -36,8 +42,15 @@ function VerifyToken($token)
                 list = {};
                 list = explode( ':', temp, 2 );
                 $tokendata[list[0]] = list[1];
+                LogStr("DEBUG: Claim parsed -> " + list[0] + " = " + list[1]);
             }
+            LogStr("DEBUG: Final Parsed Claims = " + JSON.stringify($tokendata));
             $validtoken &= VerifyTokenData( $tokendata );
+            if ($validtoken) {
+                LogStr("DEBUG: VerifyTokenData() PASSED");
+            } else {
+                LogStr("ERROR: VerifyTokenData() FAILED");
+            }
         }
         else
         {
@@ -61,9 +74,10 @@ function VerifyToken($token)
 function VerifySignature($header, $payload, $sig)
 {
     $sigverified = false;
-
+    LogStr("DEBUG: Starting VerifySignature()");
     if( file_exists( $JWTdir ) || exec("mkdir "+$JWTdir) )
     {
+        LogStr("DEBUG: Fetching signing keys from " + $KeyURL);
         ccsp.getSignKeys( $KeyURL, $JWTkeyfile );    // always try to download new list of keys.
         // key output file is updated in above call only if curl worked successfully.
         // but even if previous curl failed, see if old key file is still there.
@@ -71,10 +85,12 @@ function VerifySignature($header, $payload, $sig)
         if( file_exists( $JWTkeyfile ) )
         {
             $modtimevalid = CheckModTimeValid( $JWTkeyfile );
+            LogStr("DEBUG: Key file modtime valid = " + $modtimevalid);
             if( $modtimevalid == true )
             {
                 $headerdecoded = base64decode_url( $header );
                 $headerarr = json_decode( $headerdecoded );
+                LogStr("DEBUG: JWT Header = " + JSON.stringify($headerarr));
     
                 $keyfile = file_get_contents( $JWTkeyfile );
                 if( $keyfile != "" )    // doubtful this would be possible but just in case
@@ -82,9 +98,11 @@ function VerifySignature($header, $payload, $sig)
                     $keyarr = json_decode( $keyfile );
                     if( $keyarr != false )
                     {
+                        LogStr("DEBUG: Found " + $keyarr['keys'].length + " keys in JWKS");
                         for( $n in $keyarr['keys'] )  {
                             $key = $keyarr['keys'][$n];
                             if( $key['kid'] == $headerarr['kid'] ) {
+                                LogStr("DEBUG: Matching key found for kid=" + $key['kid']);
                                 WritePubKey( $key['x5c'] );
                                 break;
                             }
@@ -96,7 +114,10 @@ function VerifySignature($header, $payload, $sig)
     
                         if( $sigvalid == 1 )
                         {
+                            LogStr("DEBUG: Signature verification PASSED");
                             $sigverified = true;
+                        } else {
+                            LogStr("ERROR: Signature verification FAILED");
                         }
                     }
                     else
@@ -154,11 +175,13 @@ function VerifyTokenData($tkdata)
     $tokeniat = parseInt( $tkdata['iat'] );
     $tokennbf = parseInt( $tkdata['nbf'] );
     $tokenexp = parseInt( $tkdata['exp'] );
-
+    LogStr("DEBUG: Checking token times cur=" + $curtime + ", iat=" + $tokeniat +
+           ", nbf=" + $tokennbf + ", exp=" + $tokenexp);
     if( ($curtime < $tokenexp)        // current time must be < expiration
         && ($curtime >= $tokennbf)    // current time must be >= not before time
         && ($curtime >= $tokeniat) )  // current time must be >= issued at time
     {
+        LogStr("DEBUG: Time validation PASSED");
         if( $tkdata['tid'] == $tid )
         {
             $retval = true;
@@ -280,12 +303,14 @@ function LogStr($str)
 
 function base64decode_url($string)
 {
+    LogStr("base64decode_url(): input=" + $string);
 	/* Need to map non-RFC-1421 characters in the URL to the proper base64 charset. */
 	$data = $string.split("-").join("+");
 	$data = $data.split("_").join("/");
+    LogStr("base64decode_url(): mapped=" + $data);
 	/* Decode input must be a multiple of 4 bytes so pad up with “=”. */
 	$mod4 = strlen($data) % 4;
-
+    LogStr("base64decode_url(): mod4=" + $mod4);
 	switch ($mod4)
 	{
 		case 1:
@@ -298,6 +323,7 @@ function base64decode_url($string)
 	 		 $data = $data+"=";
 	 		 break;
 	}
+     LogStr("base64decode_url(): padded=" + $data);
 	 return base64_decode($data);
 }
 ?>
