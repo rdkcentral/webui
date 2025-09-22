@@ -103,6 +103,7 @@ if [ ! -f /tmp/trpfizyanrln ];then
 fi
 fi
 
+
 # start lighttpd
 source /etc/utopia/service.d/log_capture_path.sh
 # setup non-root related file-permission for lighttpd
