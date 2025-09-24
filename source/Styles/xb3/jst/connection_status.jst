@@ -425,7 +425,7 @@ if(($allowEthWan=="true") || ($autoWanEnable=="true")) {
                           }else{
                             $wan_enable= getStr("Device.Ethernet.X_RDKCENTRAL-COM_WAN.Enabled");
                             $modelName = getStr("Device.DeviceInfo.ModelName");
-                            if($modelName=="RPI"){
+                            if(($modelName=="RPI") || ($modelName=="BananapiBPI-R4")){
                                 if($wan_enable=="true"){
                                     echo('<span class="value" id="actethwan">Active Ethernet WAN');
                                 }
