@@ -81,8 +81,10 @@ function sec2dhms($sec)
 }
 	$partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
 	$fistUSif = getFirstUpstreamIpInterface();
-	if($jsMapEnable == "true")
+	if($jsMapEnable == "true") {
 		$WANIPv4 = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
+		$WANIPv4 += '<span id="shrdMpT_ns"> (Shared using MAP-T)</span>';
+	}
 	else
 		$WANIPv4 = getStr($fistUSif+"IPv4Address.1.IPAddress");
 	$ids = explode(",", getInstanceIds($fistUSif+"IPv6Address."));
