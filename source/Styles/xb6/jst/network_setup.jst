@@ -91,8 +91,10 @@ function sec2dhm($sec)
 }
 	$partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
 	$fistUSif = getFirstUpstreamIpInterface();
-	if($jsMapEnable == "true")
+	if($jsMapEnable == "true") {
 		$WANIPv4 = getStr($dhcp_client_interface_v6+".X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
+		$WANIPv4 += '<span id="shrdMpT_ns"> (Shared using MAP-T)</span>';
+	}
 	else
 		$WANIPv4 = getStr($fistUSif+"IPv4Address.1.IPAddress");
 	$ids = explode(",", getInstanceIds($fistUSif+"IPv6Address."));
@@ -151,11 +153,6 @@ function sec2dhm($sec)
 	$sta_inet = (getStr("Device.DeviceInfo.X_RDKCENTRAL-COM.InternetStatus")=="true") ? "true" : "false";
 	//in Bridge mode > Internet connectivity status is always active
 	$sta_inet = ($_SESSION["lanMode"] == "bridge-static") ? "true" : $sta_inet ;
-
-    if($mapT == 'MAPT'){
-                 $WANIPv4 = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
-                 $WANIPv4 += '<span id="shrdMpT_ns"> (Shared using MAP-T)</span>';
-	}
 
 	//WAN details Fetching
 	$wan_Interface_obj = "Device.IP.Interface.";
