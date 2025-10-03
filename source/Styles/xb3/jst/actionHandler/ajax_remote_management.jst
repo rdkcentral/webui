@@ -26,7 +26,6 @@ if ($_SESSION["loginuser"] == "" || $_SESSION["loginuser"] == false || $_SESSION
 $result='';
 function PORTTEST($port,$arraySp,$arrayEp){
 	if ( (parseInt($port)>=parseInt($arraySp)) && (parseInt($port)<=parseInt($arrayEp)) ) return 1;
-	
 	else return 0;
 }
 if($_POST['http'] == 'false' || $_POST['https'] == 'false'){
@@ -60,47 +59,49 @@ if($validation) $validation = isValInArray($_POST['http'], ['true', 'false', 'no
 if($validation && ($_POST['httpport'] != 'notset') && !($_POST['httpport'] >= 1025 && $_POST['httpport'] <= 65535)) 
 	$validation = false;
 if($validation) {
-	$httpsport=$_POST['httpsport'];
-	$httpport=$_POST['httpport'];
-	 $rootObjName    = "Device.NAT.PortMapping.";
-        $paramNameArray = ["Device.NAT.PortMapping."];
-        $mapping_array  = ["Enable","ExternalPort", "ExternalPortEndRange"];
-        $portMappingValues = getParaValues($rootObjName, $paramNameArray, $mapping_array);
-        for(var $keytmp in $portMappingValues) {
-                        $key=$portMappingValues[$keytmp];
-                        if($key["Enable"]=="true"){
-                                        $arraySPort = $key["ExternalPort"];
-                                        $arrayEPort = $key["ExternalPortEndRange"];
-                                        $httpsportvalidation = PORTTEST($httpsport,$arraySPort,$arrayEPort);
-                                        $httpportvalidation = PORTTEST($httpport,$arraySPort,$arrayEPort);
-                                        if( ($httpportvalidation == 1) || ($httpsportvalidation == 1)){
-                                                $result ="Conflict with other port. Please use a different port!";
-                                                break;
-                                        }
+	$gotHttpPort 	= getStr("Device.X_CISCO_COM_DeviceControl.HTTPPort");
+	$gotHttpsPort 	=  getStr("Device.X_CISCO_COM_DeviceControl.HTTPSPort");
+	$httpport	= (($_POST['httpport'] == 'notset') && ($_POST['http'] == 'true')) ? $gotHttpPort : $_POST['httpport'];
+	$httpsport	= (($_POST['httpsport'] == 'notset') && ($_POST['https'] == 'true')) ? $gotHttpsPort : $_POST['httpsport'];
 
-                        }
-        }
+	$rootObjName    = "Device.NAT.PortMapping.";
+	$paramNameArray = ["Device.NAT.PortMapping."];
+	$mapping_array  = ["Enable","ExternalPort", "ExternalPortEndRange"];
+	$portMappingValues = getParaValues($rootObjName, $paramNameArray, $mapping_array);
+	for(var $keytmp in $portMappingValues) {
+	$key=$portMappingValues[$keytmp];
+		if($key["Enable"]=="true"){
+			$arraySPort = $key["ExternalPort"];
+			$arrayEPort = $key["ExternalPortEndRange"];
+			$httpsportvalidation = PORTTEST($httpsport,$key["ExternalPort"],$key["ExternalPortEndRange"]);
+			$httpportvalidation = PORTTEST($httpport,$key["ExternalPort"],$key["ExternalPortEndRange"]);
+			if( ($httpportvalidation == 1) || ($httpsportvalidation == 1)){
+				$result = "Conflict with other port. Please use a different port!";
+				break;
+			}
+		}
+	}
 
-        $rootObjName    = "Device.NAT.X_CISCO_COM_PortTriggers.Trigger.";
-        $paramNameArray = ["Device.NAT.X_CISCO_COM_PortTriggers.Trigger."];
-        $mapping_array  = ["Description", "TriggerProtocol", "TriggerPortStart", "TriggerPortEnd", "ForwardPortStart", "ForwardPortEnd"];
-        $portTriggerValues = getParaValues($rootObjName, $paramNameArray, $mapping_array);
-        for(var $keytmp in $portTriggerValues) {
-                $key=$portTriggerValues[$keytmp];
-                $arrayFsp = $key["TriggerPortStart"];
-                $arrayFep = $key["TriggerPortEnd"];
-                $arrayTsp = $key["ForwardPortStart"];
-                $arratTep = $key["ForwardPortEnd"];
-                $fphttptest=PORTTEST($httpport,$arrayFsp,$arrayFep);
-                $tphttptest=PORTTEST($httpport,$arrayTsp,$arratTep);
-                $fphttpstest=PORTTEST($httpsport,$arrayFsp,$arrayFep);
-                $tphttpstest=PORTTEST($httpsport,$arrayTsp,$arratTep);
-                //echo $fptest;
-                if ($fphttptest==1 || $tphttptest==1 || $fphttpstest==1 ||  $tphttpstest==1) {
-                        $result = "Conflict with other port123. Please use a different port!";
-                        break;
-                }
-        }
+	$rootObjName    = "Device.NAT.X_CISCO_COM_PortTriggers.Trigger.";
+	$paramNameArray = ["Device.NAT.X_CISCO_COM_PortTriggers.Trigger."];
+	$mapping_array  = ["Description", "TriggerProtocol", "TriggerPortStart", "TriggerPortEnd", "ForwardPortStart", "ForwardPortEnd"];
+	$portTriggerValues = getParaValues($rootObjName, $paramNameArray, $mapping_array);
+	for(var $keytmp in $portTriggerValues) {
+		$key=$portTriggerValues[$keytmp];
+		$arrayFsp = $key["TriggerPortStart"];
+		$arrayFep = $key["TriggerPortEnd"];
+		$arrayTsp = $key["ForwardPortStart"];
+		$arratTep = $key["ForwardPortEnd"];
+		$fphttptest=PORTTEST($httpport,$arrayFsp,$arrayFep);
+		$tphttptest=PORTTEST($httpport,$arrayTsp,$arratTep);
+		$fphttpstest=PORTTEST($httpsport,$arrayFsp,$arrayFep);
+		$tphttpstest=PORTTEST($httpsport,$arrayTsp,$arratTep);
+		//echo $fptest;
+		if ($fphttptest==1 || $tphttptest==1 || $fphttpstest==1 ||  $tphttpstest==1) {
+			$result = "Conflict with other port. Please use a different port!";
+			break;
+		}
+	}
 
 	if($result==""){
 		if ($_POST['allowtype']!="notset")	setStr("Device.UserInterface.X_CISCO_COM_RemoteAccess.FromAnyIP",$_POST['allowtype'],true);
