@@ -339,12 +339,22 @@ function sec2dhm($sec)
 				array_push($dns_v6, $val);
 			}
 		}
-		if (isset($dns_v4[0])) echo( $dns_v4[0]);
+ 		if($mapT == 'MAPT') {
+                echo ($dns_v4[0] = '-NA-');
+        } else {
+                if (isset($dns_v4[0])) echo( $dns_v4[0]);
+        }
 		?>
 		</span>
 	</div>	
 	<div class="form-row odd">
-		<span class="readonlyLabel">Secondary DNS Server (IPv4):</span> <span class="value"><?% if (isset($dns_v4[1])) echo( $dns_v4[1]);?></span>
+		<span class="readonlyLabel">Secondary DNS Server (IPv4):</span> 
+		<span class="value"><?% if($mapT == 'MAPT') {
+                    echo ($dns_v4[1] = '-NA-');
+        } else {
+                    if (isset($dns_v4[1])) echo( $dns_v4[1]);
+        }
+		?></span>
 	</div>
 	<div class="form-row ">
 		<span class="readonlyLabel">Primary DNS Server (IPv6):</span> <span class="value"><?% if (isset($dns_v6[0])) echo( $dns_v6[0]);?></span>
