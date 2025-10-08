@@ -46,7 +46,7 @@ $fistDSif	= getFirstDownstreamIpInterface();
 $DeviceMode	= $device_ctrl_value["DeviceMode"];
 $ula_prefix_arr = explode('::/', getStr("Device.X_RDKCENTRAL-COM_DeviceControl.LanManagementEntry.LanIpv6UlaPrefix"));
 $ula_v6_prefix_arr = explode(':', $ula_prefix_arr[0]);
-$ula_size = count($ula_v6_prefix_arr);
+$ula_size = isset($ula_v6_prefix_arr)?count($ula_v6_prefix_arr):0;
 //CM GW IP Address
 $CM_GW_IP_Address = getStr("Device.X_CISCO_COM_CableModem.Gateway");
 //WAN GW IP Address (IPv4)
