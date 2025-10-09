@@ -54,9 +54,14 @@ $('#btn1').click(function(e) {
 		var message2 = $.i18n('<strong>WARNING:</strong> Router will be rebooted!<br/>Incoming/outgoing call and internet connection will be interrupted!');
 	<?% } else { ?>
 		var message = ($(this).attr("title").length > 0) ? $.i18n('Are you sure you want to ') + $(this).attr("title") + "?" : $.i18n('Are you sure?');
-		var message2 = $.i18n('<strong>WARNING:</strong> Gateway will be rebooted!<br/>Incoming/outgoing call and internet connection will be interrupted!');
+                <?% if(is_voice_supported()) { ?>
+		    var message2 = $.i18n('<strong>WARNING:</strong> Gateway will be rebooted!<br/>Incoming/outgoing call and internet connection will be interrupted!');
+	        <?% } else { ?>
+		    var message2 = $.i18n('<strong>WARNING:</strong> Gateway will be rebooted!<br/>Internet connection will be interrupted!');
+	        <?% } ?>
 	<?% } ?>
 	var info = new Array("btn1", "Device");
+        <?% if(is_voice_supported()) { ?>
 	jConfirm(
 	message+"<br/><br/>"+message2
 	, $.i18n("Are you sure?")
@@ -91,7 +96,22 @@ $('#btn1').click(function(e) {
 		);
 	}
 	});	
+        <?% } else { ?>
+        jConfirm(
+        message+"<br/><br/>"+message2
+        , $.i18n("Are you sure?")
+        ,function(ret) {
+        if(ret) {
+                 setResetInfo(info);             //async
+                 setTimeout(function(){
+                        location.href = "home_loggedout.jst";
+                 }, 10000);
+                }
+
+        });
+        <?% } ?>
 });
+
 $('#btn2').click(function(e) {
 	e.preventDefault();
 	var href = $(this).attr("href");
@@ -145,9 +165,19 @@ $('#btn5').click(function(e) {
 	<?% if(is_device_router()) { ?>
 		var message2 = $.i18n('<strong>WARNING:</strong> Router will be rebooted!<br/>Incoming/outgoing call and internet connection will be interrupted!');
 	<?% } else { ?>
-		var message2 = $.i18n('<strong>WARNING:</strong> Gateway will be rebooted!<br/>Incoming/outgoing call and internet connection will be interrupted!');
+	        <?% if(is_voice_supported()) { ?>
+		    var message2 = $.i18n('<strong>WARNING:</strong> Gateway will be rebooted!<br/>Incoming/outgoing call and internet connection will be interrupted!');
+	        <?% } else { ?>
+		    var message2 = $.i18n('<strong>WARNING:</strong> Gateway will be rebooted!<br/>Internet connection will be interrupted!');
+	        <?% } ?>
 	<?% } ?>
+        <?% if(is_voice_supported()) { ?>
 	var info = new Array("btn5", "Router,Wifi,VoIP,Dect,MoCA");
+        <?% } else { ?>
+	var info = new Array("btn5", "Router,Wifi,Dect,MoCA");
+        <?% } ?>
+
+        <?% if(is_voice_supported()) { ?>
 	jConfirm(
 	message+"<br/><br/>"+message2
 	, $.i18n("Are you sure?")
@@ -182,6 +212,20 @@ $('#btn5').click(function(e) {
 		);
 	}
 	});	
+        <?% } else { ?>
+	jConfirm(
+        message+"<br/><br/>"+message2
+        , $.i18n("Are you sure?")
+        ,function(ret) {
+        if(ret) {
+                 setResetInfo(info);             //async
+                 setTimeout(function(){
+                        location.href = "home_loggedout.jst";
+                 }, 10000);
+                }
+        
+	});	
+        <?% } ?>
 });
 $('#btn6').click(function(e) {
 	e.preventDefault();
