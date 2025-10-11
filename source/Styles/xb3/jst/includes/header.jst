@@ -31,12 +31,6 @@ csrfProtector.init();
         header('X-robots-tag: noindex,nofollow');
 
 	session_start();
-        $passVal= getStr("Device.Users.User.3.X_RDKCENTRAL-COM_ComparePassword");
-        if($passVal=="Default_PWD" && $_SESSION['loginuser'] != 'mso'){
-                session_destroy(); // Destroy all data in session
-                echo( '<script type="text/javascript">alert("Access Denied!"); location.href="../index.jst";</script>');
-                exit(0);
-        }
     
 	/*
 	 * Set the Locale for the Web UI based on the LANG setting or current linux locale
