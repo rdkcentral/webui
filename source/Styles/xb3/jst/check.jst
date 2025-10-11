@@ -378,13 +378,23 @@ else
                    exec("/usr/bin/logger -t GUI -p local5.notice 'User:admin login'");
                    setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS","ui_success",true);
                    if($passVal=="Default_PWD"){
+                       create_session();
+                       $_SESSION["password_change"] = "default_pwd";
+                       sendError( '<script type="text/javascript"> \
+                           jAlert($.i18n("You are using default password. Please change the password."), "Alert", \
+                           function (ret) { \
+                               if(ret) \
+                                   { \
+                                       window.location = "user_password_change.jst"; \
+                                   } \
+                           }); \
+                       </script>') ;
                        LogStr("webui_login: default password used");
-                       LogStr( " : Default Password SUCCESS" );
                     }else{
                        LogStr( " : Password SUCCESS" );
+                       header("location:at_a_glance.jst");
+                       create_session();
                     }
-                    header("location:at_a_glance.jst");
-                    create_session();
                 }
             }
             $outStr = " : Failed attempts = " + $failedAttempt.toString();
