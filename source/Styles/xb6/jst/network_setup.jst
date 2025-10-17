@@ -701,6 +701,7 @@ if($_SESSION["loginuser"] == "mso"){
 	</div>
 </div>
 -->
+<?% if(is_voice_supported()) { ?>
 <?%
 if($_SESSION["loginuser"] == "mso"){
 	$mta_param = {
@@ -805,6 +806,7 @@ if($_SESSION["loginuser"] == "mso"){
 		<span class="value"><?% echo( $mta_value['DHCPOption8']);?></span>
 	</div>
 </div>
+<?% } ?>
 <?% } ?>
 <?%
 $device_value={};
