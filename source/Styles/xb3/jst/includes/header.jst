@@ -461,7 +461,7 @@ function isIE() {
 </script>
 <?%
         $modelName= getStr("Device.DeviceInfo.ModelName");
-        if (($modelName != "CGM4140COM") && ($modelName != "CGM4331COM") && ($modelName != "TG1682G") && ($modelName != "CGA4131COM") && ($modelName != "CGA4332COM") && ($modelName != "CGM4981COM") && ($modelName != "SG417DBCT") && ($modelName != "CGM601TCOM"))  {
+        if (($modelName != "CGM4140COM") && ($modelName != "CGM4331COM") && ($modelName != "TG1682G") && ($modelName != "CGA4131COM") && ($modelName != "CGA4332COM") && ($modelName != "CGM4981COM") && ($modelName != "SG417DBCT") && ($modelName != "CGM601TCOM") && ($modelName != "CWA438TCOM"))  {
             if (!isset($_SESSION['PREV_REMOTEADDR'])) {
                 $_SESSION['PREV_REMOTEADDR'] = $_SERVER['REMOTE_ADDR'];
             }
@@ -505,7 +505,7 @@ function isIE() {
                         exit(0);
                     }
                  }
-                 if (($modelName == "CGM4140COM") || ($modelName == "CGM4331COM") || ($modelName == "CGM4981COM") || ($modelName == "SG417DBCT") || ($modelName == "CGM601TCOM") || ($modelName == "CGA4131COM") || ($modelName == "CGA4332COM")) {
+                 if (($modelName == "CGM4140COM") || ($modelName == "CGM4331COM") || ($modelName == "CGM4981COM") || ($modelName == "SG417DBCT") || ($modelName == "CGM601TCOM") || ($modelName == "CWA438TCOM") || ($modelName == "CGA4131COM") || ($modelName == "CGA4332COM")) {
                  $curr_sessID = session_id();
                  if ( strcmp($_SERVER['REMOTE_ADDR'], "172.31.255.45") == 0 ||
 		        strcasecmp($_SERVER['REMOTE_ADDR'], "fe80::ffff:ac1f:ff2d") == 0 ||

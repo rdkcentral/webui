@@ -47,6 +47,8 @@ $(document).ready(function() {
 	   $BackendSoftwareVersion = "DSL";
         } else if (!is_docsis_supported()) {
            $BackendSoftwareVersion = "SDK";
+	} else if (!is_voice_supported()){
+           $BackendSoftwareVersion = "DOCSIS";
 	} else {
 	   $BackendSoftwareVersion = "eMTA & DOCSIS";
 	}
