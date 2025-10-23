@@ -125,7 +125,7 @@ $redirect_page = "https://"+$_SERVER["HTTP_HOST"] + $_SERVER["SCRIPT_NAME"];
 PHP_SESSION_ACTIVE = 2;
 $iface = "";
 $Device_IP = "";
-if (($modelName == "CGM4140COM") || ($modelName == "CGM4331COM") || ($modelName == "CGM4981COM") || ($modelName == "CGM601TCOM") || ($modelName == "SG417DBCT")) {
+if (($modelName == "CGM4140COM") || ($modelName == "CGM4331COM") || ($modelName == "CGM4981COM") || ($modelName == "CGM601TCOM") || ($modelName == "SG417DBCT") || ($modelName == "CWA438TCOM")) {
     $clientIp = client_IP();
 }
 else
@@ -360,7 +360,7 @@ else
                 }
                 if($flag==0){
 //                    session_destroy();
-                    sendError( '<script type="text/javascript"> alert($.i18n("Username or password is incorrect!"));history.back(); </script>');
+                    sendError( '<script type="text/javascript"> alert($.i18n("Authentication failed. The default password is printed on the bottom or back of your router - use this if you haven’t already changed it."));history.back(); </script>');
                 }
             }
             else
@@ -389,6 +389,7 @@ else
                                    } \
                            }); \
                        </script>') ;
+                       LogStr("webui_login: default password used");
                     }else{
                        LogStr( " : Password SUCCESS" );
                        header("location:at_a_glance.jst");
@@ -564,7 +565,7 @@ else
 	function create_session(){
 		session_create();
                 $modelName= getStr("Device.DeviceInfo.ModelName");
-                if (($modelName != "CGM4140COM") && ($modelName != "CGM4331COM") && ($modelName != "TG1682G") && ($modelName != "CGA4131COM") && ($modelName != "CGA4332COM") && ($modelName != "CGM4981COM") && ($modelName != "CGM601TCOM") && ($modelName != "SG417DBCT")) { 
+                if (($modelName != "CGM4140COM") && ($modelName != "CGM4331COM") && ($modelName != "TG1682G") && ($modelName != "CGA4131COM") && ($modelName != "CGA4332COM") && ($modelName != "CGM4981COM") && ($modelName != "CGM601TCOM") && ($modelName != "SG417DBCT") && ($modelName != "CWA438TCOM")) { 
                     // session IP binding
                     if (!isset($_SESSION['PREV_REMOTEADDR'])) {
                         //session_regenerate_id();
@@ -612,7 +613,7 @@ else
                         exit(0);
                     }
                  }
-                    if (($modelName == "CGM4140COM") || ($modelName == "CGM4331COM") || ($modelName == "CGM4981COM") || ($modelName == "SG417DBCT") || ($modelName == "CGM601TCOM") || ($modelName == "CGA4131COM") || ($modelName == "CGA4332COM")) {
+                    if (($modelName == "CGM4140COM") || ($modelName == "CGM4331COM") || ($modelName == "CGM4981COM") || ($modelName == "SG417DBCT") || ($modelName == "CGM601TCOM") || ($modelName == "CWA438TCOM") || ($modelName == "CGA4131COM") || ($modelName == "CGA4332COM")) {
                     $curr_sessID = session_id();
                     if ( strcmp($_SERVER['REMOTE_ADDR'], "172.31.255.45") == 0 ||
                         strcasecmp($_SERVER['REMOTE_ADDR'], "fe80::ffff:ac1f:ff2d") == 0 ||
