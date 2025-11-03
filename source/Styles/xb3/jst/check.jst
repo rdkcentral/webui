@@ -360,10 +360,6 @@ else
                 }
                 if($flag==0){
 //                    session_destroy();
-                   $partnersId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
-                   if (strpos($partnersId, "sky-") !== false) {
-                       sendError( '<script type="text/javascript"> alert($.i18n("Username or password is incorrect!"));history.back(); </script>');
-                   } else {
                     sendError( '<script type="text/javascript"> alert($.i18n("Authentication failed. The default password is printed on the bottom or back of your router - use this if you haven’t already changed it."));history.back(); </script>');
                 }
             }
