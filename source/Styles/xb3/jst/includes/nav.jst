@@ -91,7 +91,11 @@ if (isset($_SESSION['lanMode']) && $_SESSION["lanMode"] == "bridge-static") {
 	$port_triggering  	= false;
 	$hs_port_forwarding = false;
 	$wizard		 		= false;
-	$MoCA				= true;
+	if (is_moca_supported()) {
+        $MoCA = true;
+	} else {
+        $MoCA = false;
+	}
 	$moca_diagnostics   = false;
 	$wifi_spec_analyzer	= false;
 }
