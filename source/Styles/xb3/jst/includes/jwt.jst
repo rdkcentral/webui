@@ -11,6 +11,32 @@ $JWTkeyfile = $JWTdir + "keys";
 $KeyURL = "https://login.microsoftonline.com/906aefe9-76a7-4f65-b82d-5ec20775d5aa/discovery/v2.0/keys";
 $expected_issuer = "https://login.microsoftonline.com/" + $tid + "/v2.0";
 
+function GetExpectedAud()
+{
+    $configPath = "/tmp/aud_conf.json";
+
+    if (!file_exists($configPath)) {
+        LogStr("ERROR: Audience config file not found at " + $configPath);
+        return "";
+    }
+    $json = file_get_contents($configPath);
+    $config = json_decode($json, true);
+
+    if (!$config || !isset($config['prod'])) {
+        LogStr("ERROR: Invalid or missing 'prod' audience in config file");
+        return "";
+    }
+
+    $env = isset($config['current']) ? $config['current'] : 'prod';
+
+    if (isset($config[$env])) {
+        return $config[$env];
+    }
+
+    LogStr("WARNING: Environment '$env' not found, defaulting to 'prod'");
+    return $config['prod'];
+}
+
 function VerifyToken($token)
 {
 
@@ -169,7 +195,7 @@ function VerifyTokenData($tkdata)
             return false;
         }
         // Audience validation
-        $expected_aud = "";
+        $expected_aud = GetExpectedAudience();
         if( !isset($tkdata['aud']) || $tkdata['aud'] != $expected_aud )
         {
             LogStr(" : Error: Token fails audience validation");
