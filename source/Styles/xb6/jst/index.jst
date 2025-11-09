@@ -346,11 +346,9 @@ if($webuiIsEnabled == "false"){
 	<div class="form-btn"  id="login_btn">
 		<input type="submit" class="btn" value="Login" />
 	</div>
-    <div class="form-row">
-                <?% if(!$isMSO) { ?>
-                        <p id="index_helptext">Tip: The default password is printed on the bottom or back of your router - use this if you haven’t already changed .</
-                <?% } ?>
-    </div>
+        <?% if((!$isMSO) && (strpos($partnerId, "sky-") === false)){ ?>
+                <p id="index_helptext">Tip: The default password is printed on the bottom or back of your router - use this if you haven’t already changed .</
+        <?% } ?>
 <input type="hidden" name="locale" id="locale" value="<?% echo($locale); ?>">
 </form>
 </div>
