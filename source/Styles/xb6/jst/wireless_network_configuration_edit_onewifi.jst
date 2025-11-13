@@ -231,7 +231,7 @@ $dfsEnable= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.DFS.Enable");
 if(($id == 17) && ($OperatingChannelBandwidth == "6GHz") && (strpos($partnerId, "sky-") === false))
 $possible_channels = "5,37,69,101,133,165,197";
 $platformSupported = "false";
-if( ($modelName=="CGM4331COM") || ($modelName=="CGM4140COM") || ($modelName=="TG3482G") || ($modelName=="CGM4981COM") || ($modelName=="SG417DBCT") || ($modelName=="CGM601TCOM") || ($modelName=="TG4482A") || ($modelName=="SCER11BEL")){
+if( ($modelName=="CGM4331COM") || ($modelName=="CGM4140COM") || ($modelName=="TG3482G") || ($modelName=="CGM4981COM") || ($modelName=="SG417DBCT") || ($modelName=="CGM601TCOM") || ($modelName=="CWA438TCOM") || ($modelName=="TG4482A") || ($modelName=="SCER11BEL")){
         $platformSupported = "true";
 }
 $isPartnerSky = false;
@@ -583,6 +583,12 @@ $(document).ready(function() {
 			$("#security option").prop("disabled", false);
 		}
 		$("#security").change();
+
+		if ("ax"==$("#wireless_mode").val()) {
+            $("#channel_bandwidth7").prop("disabled", true);
+        } else if("ax,be"==$("#wireless_mode").val() || "be"==$("#wireless_mode").val()) {
+			$("#channel_bandwidth7").prop("disabled", false);
+		}
 	});
 	$("[name='channel_bandwidth1']").change(function() {
 		//enable all channel first
@@ -825,7 +831,7 @@ wpa2psk ==> 8 to 63 Ascii characters
 			securitymode: function() {
 				securitymode = "";
 				if("<?% echo( $id); ?>" == 17){
-					if((("<?% echo( $modelName); ?>"=="SG417DBCT") || ("<?% echo( $modelName); ?>"=="CGM601TCOM")) && "<?% echo($WPA3_compatibility_enable); ?>" == "true") {
+					if((("<?% echo( $modelName); ?>"=="SG417DBCT") || ("<?% echo( $modelName); ?>"=="CWA438TCOM") || ("<?% echo( $modelName); ?>"=="CGM601TCOM")) && "<?% echo($WPA3_compatibility_enable); ?>" == "true") {
 						securitymode = "WPA3-Personal Compatibility";
 					} else {
 						securitymode = "WPA3-Personal Only";
