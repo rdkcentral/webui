@@ -11,30 +11,39 @@ $JWTkeyfile = $JWTdir + "keys";
 $KeyURL = "https://login.microsoftonline.com/906aefe9-76a7-4f65-b82d-5ec20775d5aa/discovery/v2.0/keys";
 $expected_issuer = "https://login.microsoftonline.com/" + $tid + "/v2.0";
 
-function GetExpectedAud()
-{
-    $configPath = "/tmp/aud_conf.json";
+function GetExpectedAud() {
+    var file = "/tmp/aud_conf";
 
-    if (!file_exists($configPath)) {
-        LogStr("ERROR: Audience config file not found at " + $configPath);
-        return "";
-    }
-    $json = file_get_contents($configPath);
-    $config = json_decode($json, true);
-
-    if (!$config || !isset($config['prod'])) {
-        LogStr("ERROR: Invalid or missing 'prod' audience in config file");
+    if (!file_exists(file)) {
+        LogStr("aud_conf missing");
         return "";
     }
 
-    $env = isset($config['current']) ? $config['current'] : 'prod';
+    var lines = file_get_contents(file).split("\n");
+    var env = "prod";
+    var mapping = {};
 
-    if (isset($config[$env])) {
-        return $config[$env];
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (line == "" || line.indexOf("=") <= 0) continue;
+
+        var parts = line.split("=");
+        var key = parts[0].trim();
+        var val = parts[1].trim();
+        mapping[key] = val;
     }
 
-    LogStr("WARNING: Environment '$env' not found, defaulting to 'prod'");
-    return $config['prod'];
+    if (isset(mapping["env"])) {
+        env = mapping["env"];
+    }
+
+    var audKey = "aud_" + env;
+
+    if (!isset(mapping[audKey])) {
+        LogStr("No AUD for " + audKey);
+        return "";
+    }
+    return mapping[audKey];
 }
 
 function VerifyToken($token)
@@ -195,7 +204,7 @@ function VerifyTokenData($tkdata)
             return false;
         }
         // Audience validation
-        $expected_aud = GetExpectedAudience();
+        $expected_aud = GetExpectedAud();
         if( !isset($tkdata['aud']) || $tkdata['aud'] != $expected_aud )
         {
             LogStr(" : Error: Token fails audience validation");
