@@ -583,12 +583,6 @@ $(document).ready(function() {
 			$("#security option").prop("disabled", false);
 		}
 		$("#security").change();
-
-		if ("ax"==$("#wireless_mode").val()) {
-            $("#channel_bandwidth7").prop("disabled", true);
-        } else if("ax,be"==$("#wireless_mode").val() || "be"==$("#wireless_mode").val()) {
-			$("#channel_bandwidth7").prop("disabled", false);
-		}
 	});
 	$("[name='channel_bandwidth1']").change(function() {
 		//enable all channel first
