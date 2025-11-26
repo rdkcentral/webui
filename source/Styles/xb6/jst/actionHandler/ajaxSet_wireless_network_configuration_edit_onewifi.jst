@@ -33,7 +33,6 @@ $partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
 $Mesh_Enable 	= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_xOpsDeviceMgmt.Mesh.Enable");
 $Mesh_State 	= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_xOpsDeviceMgmt.Mesh.State");
 $Mesh_Mode = ($Mesh_Enable == 'true' && $Mesh_State == 'Full')? true : false;
-$HCM_Mode = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.MeshWifiOptimization.Mode");
 $OperatingChannelBandwidth ="";
 $RadioNumberOfEntries = getStr("Device.WiFi.RadioNumberOfEntries");
 if($RadioNumberOfEntries)
@@ -121,7 +120,6 @@ function security_mode($encrypt_mode, $encrypt_method) {
 }
 
 if($i != 1 && $i != 2 && $i != 17) $Mesh_Mode = false;
-if($i != 1 && $i != 2 && $i != 17) $HCM_Mode = "Disable";
 $response_message = '';
 //ssid 1,2 for all
 //ssid 3,4 for mso only
@@ -139,7 +137,7 @@ if ($i == 1 || $i == 2 || $i == 17) {
 			}
 		}
 		setStr("Device.WiFi.SSID."+$i+".Enable", $arConfig['radio_enable'], true);
-		if ("true" == $arConfig['radio_enable'] && (!$Mesh_Mode) && ($HCM_Mode != "Enable"))
+		if ("true" == $arConfig['radio_enable'] && (!$Mesh_Mode) )
 		{
 			$validation = true;
 			if(($arConfig['password_update']=="false") && ("mso" == $thisUser)){
