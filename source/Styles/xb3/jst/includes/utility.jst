@@ -633,12 +633,6 @@ function days_time_conversion_get($data, $type){
 //for $startTime, $endTime, $blockedDays parameters do local_to_UTC_Time($localTime)
 //$timeOffset can move this $blockedDays to Tomorrow or Yesterday
 function days_time_conversion_set($startTime, $endTime, $blockedDays){
-	if (
-		typeof $startTime === "undefined" &&
-		typeof $endTime === "undefined" &&
-		typeof $blockedDays === "undefined"
-	) return new Array('', '', '', false);
-
 	var $day_change = false;
 	var $startData 	= local_to_UTC_Time($startTime, 	$blockedDays);
 	var $endData 	= local_to_UTC_Time($endTime, 	$blockedDays);
