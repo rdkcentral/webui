@@ -40,7 +40,16 @@ $("#status_button").click(function(){
 
 $("#cmd_button").click(function(){
 	//Shell command execute logic
-	<?% exec("/bin/touch /tmp/Robert2.txt"); ?>
+	fetch('testCommands.php') // This calls a separate server file
+        .then(response => response.text())
+        .then(data => {
+            console.log(data);
+            alert(data); // Show the response message
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Could not execute command due to an error.');
+        });
 });
 </script>
 <?%
