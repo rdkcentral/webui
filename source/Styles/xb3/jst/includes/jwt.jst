@@ -12,10 +12,10 @@ $KeyURL = "https://login.microsoftonline.com/906aefe9-76a7-4f65-b82d-5ec20775d5a
 $expected_issuer = "https://login.microsoftonline.com/" + $tid + "/v2.0";
 
 function GetExpectedAud() {
-    var file = "/etc/aud.conf";
+    var file = "/etc/webui/aud.conf";
 
     if (!file_exists(file)) {
-        LogStr("aud_conf missing");
+        LogStr("aud.conf missing");
         return "";
     }
 
