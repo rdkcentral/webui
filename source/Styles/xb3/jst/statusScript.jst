@@ -27,9 +27,9 @@
 <script type="text/javascript">
 $(document).ready(function() {
     <?% if(is_device_router()) { ?>
-        gateway.page.init("Router > Test Script", "test-script");
+        gateway.page.init("Router > XER10 Status Report", "status-script");
     <?% } else { ?>
-        gateway.page.init("Gateway > Software", "test-script");
+        gateway.page.init("Gateway > XER10 Status Report", "status-script");
     <?% } ?>
 });
 </script>
@@ -37,16 +37,16 @@ $(document).ready(function() {
         $partnerId      = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
         $FirmwareName   = getStr("Device.DeviceInfo.X_CISCO_COM_FirmwareName");
         $ModelName      = getStr("Device.DeviceInfo.ModelName");
-        
+
 ?>
 <div id="content">
         <?% if(is_device_router()) { ?>
-                <h1 id="softhead_router">Router > Test Script</h1>
+                <h1 id="softhead_router">Router > XER10 Status Report</h1>
         <?% } else { ?>
-                <h1 id="softhead">Gateway > Test Script</h1>
+                <h1 id="softhead">Gateway > XER10 Status Report</h1>
         <?% } ?>
 
-	<?% exec("/bin/touch /tmp/Robert1.txt"); ?>
+        <?% exec("/bin/touch /tmp/Robert2.txt"); ?>
 
 </div><!-- end #content -->
 <?% include('includes/footer.jst'); ?>

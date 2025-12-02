@@ -167,8 +167,9 @@ echo( '<li class="nav-gateway">');
 	echo( '<ul>');
 	echo( '<li class="nav-at-a-glance"><a role="menuitem"  href="at_a_glance.jst" id="ataglanceloc">At a Glance</a></li>');
 	$file = file_exists("/tmp/factorydiag");
-    if($file) {
-		echo( '<li class="test-script"><a role="menuitem"  href="testScript.jst">Test Script</a></li>');
+    	if($file) {
+		echo( '<li class="test-script"><a role="menuitem"  href="testScript.jst">XER10 Test Script</a></li>');
+		echo( '<li class="status-script"><a role="menuitem"  href="statusScript.jst">XER10 Status Report</a></li>');
 	}
 	echo( '<li class="nav-connection"><a role="menuitem"  title="click to toggle sub menu"  href="javascript:;" id="connloc">Connection</a>');
 		echo( '<ul>');
