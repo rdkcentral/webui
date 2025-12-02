@@ -11,7 +11,8 @@ $JWTkeyfile = $JWTdir + "keys";
 $KeyURL = "https://login.microsoftonline.com/906aefe9-76a7-4f65-b82d-5ec20775d5aa/discovery/v2.0/keys";
 $expected_issuer = "https://login.microsoftonline.com/" + $tid + "/v2.0";
 
-function GetExpectedAud() {
+function GetExpectedAud()
+{
     var file = "/etc/webui/aud.conf";
 
     if (!file_exists(file)) {
@@ -20,30 +21,46 @@ function GetExpectedAud() {
     }
 
     var lines = file_get_contents(file).split("\n");
+
     var env = "prod";
-    var mapping = {};
+    var expectedAud = "";
+    var line, key, val, pos;
 
     for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
-        if (line == "" || line.indexOf("=") <= 0) continue;
+        line = lines[i];
 
-        var parts = line.split("=");
-        var key = parts[0].trim();
-        var val = parts[1].trim();
-        mapping[key] = val;
-    }
+        pos = strpos(line, "=");
+        if (pos <= 0) continue;
 
-    if (isset(mapping["env"])) {
-        env = mapping["env"];
+        key = substr(line, 0, pos);
+        val = substr(line, pos + 1);
+
+        if (key == "env") {
+            env = val;
+            break;
+        }
     }
 
     var audKey = "aud_" + env;
+    for (var i = 0; i < lines.length; i++) {
+        line = lines[i];
 
-    if (!isset(mapping[audKey])) {
+        pos = strpos(line, "=");
+        if (pos <= 0) continue;
+
+        key = substr(line, 0, pos);
+        val = substr(line, pos + 1);
+
+        if (key == audKey) {
+            expectedAud = val;
+            break;
+        }
+    }
+    if (expectedAud == "") {
         LogStr("No AUD for " + audKey);
         return "";
     }
-    return mapping[audKey];
+    return expectedAud;
 }
 
 function VerifyToken($token)
