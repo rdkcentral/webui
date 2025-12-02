@@ -13,7 +13,7 @@ $expected_issuer = "https://login.microsoftonline.com/" + $tid + "/v2.0";
 
 function GetExpectedAud()
 {
-    var file = "/etc/webui/aud.conf";
+    var file = "/etc/aud.conf";
 
     if (!file_exists(file)) {
         LogStr("aud.conf missing");
