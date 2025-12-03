@@ -204,10 +204,10 @@ if($locale=="it" || $locale=="en_GB"){
                 $onlinePrivateNetworkHost[$j.toString()]={};
 			        $onlinePrivateNetworkHost[$j.toString()]['instanceID'] = $i + 1;
 			        array_push($onlinePrivateInstanceArr, $onlinePrivateNetworkHost[$j.toString()]['instanceID']);
-			        if (($Host[$i]['HostName'] == "*") || (strlen($Host[$i]['HostName']) == 0)) 
-			        	$onlinePrivateNetworkHost[$j.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
-			        else
-			        	$onlinePrivateNetworkHost[$j.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
+					if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName']))
+                                    $onlinePrivateNetworkHost[$j.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
+                    else
+                                    $onlinePrivateNetworkHost[$j.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
 			        array_push($onlineHostNameArr, $onlinePrivateNetworkHost[$j.toString()]['HostName']);
                     $onlinePrivateNetworkHost[$j.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
                     // IPV6 link-local address
@@ -236,10 +236,10 @@ if($locale=="it" || $locale=="en_GB"){
 				$offlinePrivateNetworkHost[$k]={};
 			        $offlinePrivateNetworkHost[$k.toString()]['instanceID'] = $i + 1;
 				array_push($offlinePrivateInstanceArr, $offlinePrivateNetworkHost[$k.toString()]['instanceID']);
-			        if (($Host[$i]['HostName'] == "*") || (strlen($Host[$i]['HostName']) == 0)) 
-			        	$offlinePrivateNetworkHost[$k.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
-			        else
-			        	$offlinePrivateNetworkHost[$k.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
+				if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName'])) 
+						$offlinePrivateNetworkHost[$k.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
+			    else
+			        	$offlinePrivateNetworkHost[$k.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);	
 				array_push($offlineHostNameArr, $offlinePrivateNetworkHost[$k.toString()]['HostName']);				
                     $offlinePrivateNetworkHost[$k.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
                     // IPV6 link-local address
