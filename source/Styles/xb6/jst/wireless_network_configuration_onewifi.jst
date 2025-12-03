@@ -1869,7 +1869,9 @@ if($OperatingChannelBandwidth == "6GHz")
 	</div>
 	<div class="form-row">
 		<label for="guard_interval800ns" id="wiremess19">Guard Interval:</label>
-		<input type="radio"  name="guard_interval" value="400nsec"  id="guard_interval800ns" checked="checked" /><b>400ns</b>
+		<?% if ("g,n" == $wireless_mode) { ?>
+			<input type="radio"  name="guard_interval" value="400nsec"  id="guard_interval800ns" checked="checked" /><b>400ns</b>
+		<?% } ?>
 		<label for="guard_interval400ns" class="acs-hide"></label>
 		<input type="radio"  name="guard_interval" value="800nsec"  id="guard_interval400ns" <?% if ("800nsec"==$guard_interval) echo( 'checked="checked"');?> /><b>800ns</b>
 		<?% if (strstr($support_mode, "be")){ ?>
@@ -2121,7 +2123,9 @@ if($OperatingChannelBandwidth == "6GHz")
 	</div>
 	<div class="form-row odd">
 		<label for="guard_interval800ns1" id="wiremess19">Guard Interval:</label>
-		<input type="radio"  name="guard_interval1" value="400nsec"  id="guard_interval800ns1" checked="checked" /><b>400ns</b>
+		<?% if ("a,n" == $wireless_mode1 || "a,n,ac" == $wireless_mode1) { ?>
+			<input type="radio"  name="guard_interval1" value="400nsec"  id="guard_interval800ns1" checked="checked" /><b>400ns</b>
+		<?% } ?>
 		<label for="guard_interval400ns1" class="acs-hide"></label>
 		<input type="radio"  name="guard_interval1" value="800nsec"  id="guard_interval400ns1" <?% if ("800nsec"==$guard_interval1) echo('checked="checked"');?> /><b>800ns</b>
 		<?% if (strstr($support_mode_5g, "be")){ ?>
@@ -2314,7 +2318,6 @@ if($OperatingChannelBandwidth == "6GHz")
 	</div>
 	<div class="form-row odd">
 		<label for="guard_interval800ns1" id="wiremess19">Guard Interval:</label>
-		<input type="radio"  name="guard_interval3" value="400nsec"  id="guard_interval800ns1" checked="checked" /><b>400ns</b>
 		<label for="guard_interval400ns1" class="acs-hide"></label>
 		<input type="radio"  name="guard_interval3" value="800nsec"  id="guard_interval400ns1" <?% if ("800nsec"==$guard_interval3) echo('checked="checked"');?> /><b>800ns</b>
 		<?% if (strstr($support_mode_6g, "be")){ ?>    
