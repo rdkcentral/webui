@@ -9,6 +9,59 @@ $JWTdir = "/tmp/.jwt/";
 $PUBKEYFILE = $JWTdir + "pubkey.cer";
 $JWTkeyfile = $JWTdir + "keys";
 $KeyURL = "https://login.microsoftonline.com/906aefe9-76a7-4f65-b82d-5ec20775d5aa/discovery/v2.0/keys";
+$expected_issuer = "https://login.microsoftonline.com/" + $tid + "/v2.0";
+
+function GetExpectedAud()
+{
+    var file = "/etc/webui/aud.conf";
+
+    if (!file_exists(file)) {
+        LogStr("aud.conf missing");
+        return "";
+    }
+
+    var lines = file_get_contents(file).split("\n");
+
+    var env = "prod";
+    var expectedAud = "";
+    var line, key, val, pos;
+
+    for (var i = 0; i < lines.length; i++) {
+        line = lines[i];
+
+        pos = strpos(line, "=");
+        if (pos <= 0) continue;
+
+        key = substr(line, 0, pos);
+        val = substr(line, pos + 1);
+
+        if (key == "env") {
+            env = val;
+            break;
+        }
+    }
+
+    var audKey = "aud_" + env;
+    for (var i = 0; i < lines.length; i++) {
+        line = lines[i];
+
+        pos = strpos(line, "=");
+        if (pos <= 0) continue;
+
+        key = substr(line, 0, pos);
+        val = substr(line, pos + 1);
+
+        if (key == audKey) {
+            expectedAud = val;
+            break;
+        }
+    }
+    if (expectedAud == "") {
+        LogStr("No AUD for " + audKey);
+        return "";
+    }
+    return expectedAud;
+}
 
 function VerifyToken($token)
 {
@@ -26,16 +79,10 @@ function VerifyToken($token)
         if( $validtoken == true )
         {
             $decodeddata = base64decode_url( $tokensegs[1] );
-            $decodeddata = trim( $decodeddata, "{}" );
-            $decodeddata = str_replace( '{', '', $decodeddata);
-            $decodeddata = str_replace( '}', '', $decodeddata);
-            $decodeddata = $decodeddata.split('"').join('');
-            $pair = explode( ',', $decodeddata );
-            for ( $k in $pair ) {
-                temp = $pair[$k];
-                list = {};
-                list = explode( ':', temp, 2 );
-                $tokendata[list[0]] = list[1];
+            $tokendata = json_decode($decodeddata, true);
+            if ($tokendata === null) {
+                LogStr("ERROR: Failed to decode JWT payload JSON");
+                return false;
             }
             $validtoken &= VerifyTokenData( $tokendata );
         }
@@ -155,19 +202,32 @@ function VerifyTokenData($tkdata)
     $tokennbf = parseInt( $tkdata['nbf'] );
     $tokenexp = parseInt( $tkdata['exp'] );
 
-    if( ($curtime < $tokenexp)        // current time must be < expiration
-        && ($curtime >= $tokennbf)    // current time must be >= not before time
-        && ($curtime >= $tokeniat) )  // current time must be >= issued at time
+    $skew = 120; // 2-minute drift tolerance
+
+    if( ($curtime < ($tokenexp + $skew))
+        && ($curtime >= ($tokennbf - $skew))
+        && ($curtime >= ($tokeniat - $skew)) )
     {
-        if( $tkdata['tid'] == $tid )
+        // Tenant validation
+        if( $tkdata['tid'] != $tid )
         {
-            $retval = true;
+            LogStr(" : Error: Token fails Tenant ID ");
+            return false;
         }
-        else
+        // Issuer validation
+        if( !isset($tkdata['iss']) || $tkdata['iss'] != $expected_issuer )
         {
-            $errstr = " : Error: Token fails Tenant ID, tid=" + $tkdata['tid'];
-            LogStr( $errstr );
+            LogStr(" : Error: Token fails issuer validation ");
+            return false;
         }
+        // Audience validation
+        $expected_aud = GetExpectedAud();
+        if( !isset($tkdata['aud']) || $tkdata['aud'] != $expected_aud )
+        {
+            LogStr(" : Error: Token fails audience validation");
+            return false;
+        }
+        $retval = true;
     }
     else
     {
@@ -248,10 +308,9 @@ function LogBeginLoginAttempt()
 function LogTokenData($tkdata)
 {
 
-    $email = SHA256($tkdata['email']);
-    $strhex = asc2hex($email);
-    $str = " : OAUTH userId=" + $strhex;
-    $str = $str + "  JWT expiration=" + $tkdata['exp'] ;
+    $objId = SHA256($tkdata['oid']);
+    $strhex = asc2hex($objId);
+    $str = " : OAUTH objectId=" + $objId + "  JWT expiration=" + $tkdata['exp'];
 
     LogStr( $str );
 }
