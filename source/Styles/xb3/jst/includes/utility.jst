@@ -1276,4 +1276,14 @@ function get_dhcp_client_interfaces()
 	if($dhcp_client_interfaces.v6 == "") $dhcp_client_interfaces.v6 = "Device.DHCPv6.Client.1";
 	return $dhcp_client_interfaces;
 }
+
+/**
+* Description:
+* verifies the validity of client hostname
+* return true if patten match otherwise false
+*/
+function isValidHostname(hostname) {
+    var $hostnameRegex = /^[a-zA-Z0-9_-]{1,30}$/;
+    return $hostnameRegex.test(hostname);
+}
 ?>
