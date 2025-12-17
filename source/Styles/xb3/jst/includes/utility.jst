@@ -1237,20 +1237,18 @@ function current_operationalMode()
                   $selectedOperationalMode=getStr("Device.X_RDKCENTRAL-COM_EthernetWAN.SelectedOperationalMode");
 		  }
         else{
-		if(is_docsis_supported()) {
-                  $docsisEnable =getStr("Device.X_RDK_WanManager.Interface.1.Selection.Enable");
-                  $ethernetEnable =getStr("Device.X_RDK_WanManager.Interface.2.Selection.Enable");
-		} else {
-		  $ethernetEnable = getStr("Device.X_RDK_WanManager.Interface.1.Selection.Enable");
-		  $docsisEnable = "false";
-		}
-
-                  if(($ethernetEnable=="true") && ($docsisEnable=="false")){
-                         $selectedOperationalMode="Ethernet";
-                  }else if(($ethernetEnable=="false") && ($docsisEnable=="true")){
-                         $selectedOperationalMode="DOCSIS";
-                  }else if(($ethernetEnable=="true") && ($docsisEnable=="true")){
-                         $selectedOperationalMode="Auto";
+            $selectedOperationalMode = getStr("Device.X_RDK_WanManager.InterfaceAvailableStatus");
+            if ($selectedOperationalMode == "") {
+                $selectedOperationalMode = "unknown";
+            }
+            else if ($selectedOperationalMode.includes("|")) {
+                //If more than a single WAN is configured
+                $selectedOperationalMode = "auto";
+            }
+            else {
+                // Split the string by comma and extract the first part
+                $parts = $selectedOperationalMode.split(",");
+                $selectedOperationalMode = $parts[0];
             }
         }
          return $selectedOperationalMode;
@@ -1277,5 +1275,15 @@ function get_dhcp_client_interfaces()
 	if($dhcp_client_interfaces.v4 == "") $dhcp_client_interfaces.v4 = "Device.DHCPv4.Client.1";
 	if($dhcp_client_interfaces.v6 == "") $dhcp_client_interfaces.v6 = "Device.DHCPv6.Client.1";
 	return $dhcp_client_interfaces;
+}
+
+/**
+* Description:
+* verifies the validity of client hostname
+* return true if patten match otherwise false
+*/
+function isValidHostname(hostname) {
+    var $hostnameRegex = /^[a-zA-Z0-9_-]{1,30}$/;
+    return $hostnameRegex.test(hostname);
 }
 ?>
