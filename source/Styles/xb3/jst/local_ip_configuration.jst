@@ -1320,12 +1320,12 @@ $('#restore_ipv6').click(function(e) {
 			</div>
     	   <div class="form-row odd">
 			    <?%
-			      //2040::/64, 2040:1::/64, 2040:1:2::/64 and 2040:1:2:3::/64
-                  $prefix_arr = explode('::/', getStr("Device.IP.Interface.1.IPv6Prefix.1.Prefix"));
-                  $ipv6_prefix_arr = explode(':', $prefix_arr[0]);
-                  $ipa_size = count($ipv6_prefix_arr);
-			      $v6_begin_addr = $dhcpv6_value["v6_begin_addr"];
-			      $v6_beg_add_arr = explode(':', $v6_begin_addr);
+				//2040::/64, 2040:1::/64, 2040:1:2::/64 and 2040:1:2:3::/64
+				$prefix_arr = explode('::/', getStr("Device.IP.Interface.1.IPv6Prefix.1.Prefix"));
+				$ipv6_prefix_arr = explode(':', $prefix_arr[0]);
+				$ipa_size = isset($ipv6_prefix_arr)?count($ipv6_prefix_arr):0;
+				$v6_begin_addr = $dhcpv6_value["v6_begin_addr"];
+				$v6_beg_add_arr = explode(':', $v6_begin_addr);
 			    ?>
 				<label for="DBA_1"  id="localipmess9">DHCPv6 Beginning Address:</label>
 				<input type="text"  class="ipv6-input-local" size="2" maxlength="4"  id="DBA_1" name="DBA_1" disabled="disabled" value="<?% echo( $ipv6_prefix_arr[0]); ?>" />
