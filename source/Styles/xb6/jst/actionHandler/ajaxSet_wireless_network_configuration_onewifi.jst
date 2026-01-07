@@ -208,6 +208,9 @@ else
 				if (("2" != $i) && ("20MHz" != $arConfig['channel_bandwidth'])){
 					setStr("Device.WiFi.Radio."+$r+".ExtensionChannel", $arConfig['ext_channel'], false);	
 				}
+                                if (("400nsec" == $arConfig['guard_interval']) && isValInArray($arConfig['wireless_mode'], ["g,n,ax,be", "g,n,ax", "a,n,ac,ax,be", "a,n,ac,ax"])) {
+                                    setStr("Device.WiFi.Radio."+$r+".GuardInterval", "Auto", false);
+                                }
 				//apply once
 				// setStr("Device.WiFi.Radio."+$r+".X_CISCO_COM_ApplySetting", "true", true);
                                 setStr("Device.WiFi.ApplyRadioSettings", "true", true);
