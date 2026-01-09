@@ -419,10 +419,8 @@ if(($allowEthWan=="true") || ($autoWanEnable=="true")) {
                             	 echo('<span class="value" id="actethwan">Active Ethernet WAN');
                             }else if(strtolower($selectedOperationalMode)=="docsis"){
 				echo('<span class="value" id="actdocwan">Active Docsis WAN');
-                            }else if($selectedOperationalMode == "auto"){
-				echo('<span class="value" id="actautwan">Active Auto WAN');
                             }else{
-                                echo('<span class="value" id="unknown">Unknown WAN');
+				echo('<span class="value" id="actautwan">Active Auto WAN');
                             }
                           }else{
                             $wan_enable= getStr("Device.Ethernet.X_RDKCENTRAL-COM_WAN.Enabled");
