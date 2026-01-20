@@ -65,7 +65,7 @@ if [ -z $1 ] && [ ! -f /tmp/webuifwbundle ]; then
     fi
 fi
 
-if [ "x$BOX_TYPE" != "xrpi" ] && [ "x$BOX_TYPE" != "xbpi" ] && [ "x$BOX_TYPE" != "xturris" ] && [ "x$BOX_TYPE" != "xemulator" ]; then
+if [ "x$BOX_TYPE" != "xrpi" ] && [ "x$BOX_TYPE" != "xbpi" ] && [ "x$BOX_TYPE" != "xturris" ] && [ "x$BOX_TYPE" != "xemulator" ] && [ "x$BOX_TYPE" != "xipq" ]; then
 #upstreamed webgui_script_https_support.patch to Secure webui redirection as part of RDKB-42686.
 mkdir -p /tmp/.webui/
 ID="/tmp/trpfizyanrln"
@@ -294,7 +294,7 @@ fi
 
 if [ "$WIFIUNCONFIGURED" = "true" ]
 then
-	if [ "$NETWORKRESPONSEVALUE" = "204" ] && [ "$SET_CONFIGURE_FLAG" = "true" ]
+	if [[ "$NETWORKRESPONSEVALUE" = "204" && ( "$SET_CONFIGURE_FLAG" = "true" || "$SET_CONFIGURE_FLAG" = "TRUE" ) ]]
 	then
 		while : ; do
 		echo "WEBGUI : Waiting for PandM to initalize completely to set ConfigureWiFi flag"
