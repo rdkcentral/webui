@@ -483,7 +483,13 @@ $('#device').click(function(){
 </script>
 <?%
 	$ipv6_prefix_arr = explode(':', $prefix_arr[0]);
-	$ipa_size = count($ipv6_prefix_arr);
+	if($ipv6_prefix_arr == undefined)
+	{
+		$ipa_size = 0;
+		$ipv6_prefix_arr = 0;
+	}
+	else
+		$ipa_size = count($ipv6_prefix_arr);
 ?>
 <?% if($CloudUIEnable == "true"){ ?>
 <div id="content">

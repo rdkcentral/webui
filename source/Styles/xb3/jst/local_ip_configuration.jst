@@ -1323,7 +1323,13 @@ $('#restore_ipv6').click(function(e) {
 			      //2040::/64, 2040:1::/64, 2040:1:2::/64 and 2040:1:2:3::/64
                   $prefix_arr = explode('::/', getStr("Device.IP.Interface.1.IPv6Prefix.1.Prefix"));
                   $ipv6_prefix_arr = explode(':', $prefix_arr[0]);
-                  $ipa_size = count($ipv6_prefix_arr);
+                  if($ipv6_prefix_arr == undefined)
+                  {
+                      $ipa_size = 0;
+                      $ipv6_prefix_arr = 0;
+                  }
+                  else
+                      $ipa_size = count($ipv6_prefix_arr);
 			      $v6_begin_addr = $dhcpv6_value["v6_begin_addr"];
 			      $v6_beg_add_arr = explode(':', $v6_begin_addr);
 			    ?>
