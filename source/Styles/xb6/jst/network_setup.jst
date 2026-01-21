@@ -936,27 +936,28 @@ for($i=1;$i<$ds_tab.length;$i++){
 	}
 }
 
-
 // Find the primary ChannelID from $ds_ofdm_tab
-let primaryChannelID = null;
-for (let i = 0; i < $ds_ofdm_tab.length; i++) {
-	const ind = ($ds_ofdm_tab[i]?.ChanIndicator || '').toLowerCase();
-	if (ind == 'primary') {
-		primaryChannelID = ($ds_ofdm_tab[i]?.ChannelID);
+var $primaryChannelID = "NULL";
+for ($i=1; $i< $ds_ofdm_tab.length; $i++){
+	var $ind = $ds_ofdm_tab[$i]['ChanIndicator'].toLowerCase();
+	if ($ind == 'primary') {
+		$primaryChannelID = $ds_ofdm_tab[$i]['ChannelID'];
 		break; // only one primary
 	}
 }
 
-if (primaryChannelID != null) {
-	// Find the primaryChannelID occurrence in $ds_tab
-	const idx = $ds_tab.findIndex(row => (row?.ChannelID) == primaryChannelID);
+if ($primaryChannelID != "NULL") {
+	// Find the $primaryChannelID occurrence in $ds_tab
+	const $idx = $ds_tab.findIndex(function($row) {
+		return $row['ChannelID'] == $primaryChannelID;
+	});
 
 	// Move that entry to the front (keep $ds_ids aligned)
-	if (idx > 0) {
-		const tabItem = $ds_tab.splice(idx, 1)[0];
-		const idItem  = $ds_ids.splice(idx, 1)[0];
-		$ds_tab.unshift(tabItem);
-		$ds_ids.unshift(idItem);
+	if ($idx > 0) {
+		const $tabItem = $ds_tab.splice($idx, 1)[0];
+		const $idItem  = $ds_ids.splice($idx, 1)[0];
+		$ds_tab.unshift($tabItem);
+		$ds_ids.unshift($idItem);
 	}
 }
 
