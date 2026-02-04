@@ -894,30 +894,30 @@ $ds_ofdm_tab = []/*p2j-array*/;
 for ($i=1, $j=1; $i<count($ds_ofdm_ids); $i++)
 {
 	$ds_ofdm_tab[$i]={};
-        $ds_ofdm_tab[$i]['ChannelID']                    = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['ChanIndicator']                = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['SubcarrierZeroFreq']           = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['FirstActiveSubcarrierNum']     = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['LastActiveSubcarrierNum']      = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['NumActiveSubcarriers']         = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['SubcarrierSpacing']            = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['CyclicPrefix']                 = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['RollOffPeriod']                = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['PlcFreq']                      = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['NumPilots']                    = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['TimeInterleaverDepth']         = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['SNRLevel']                     = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['PowerLevel']                   = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['PlcTotalCodewords']            = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['PlcUnreliableCodewords']       = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['NcpTotalFields']               = $ds_ofdm_val[$j++][1];
-        $ds_ofdm_tab[$i]['NcpFieldCrcFailures']          = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['ChannelID']                    = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['ChanIndicator']                = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['SubcarrierZeroFreq']           = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['FirstActiveSubcarrierNum']     = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['LastActiveSubcarrierNum']      = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['NumActiveSubcarriers']         = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['SubcarrierSpacing']            = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['CyclicPrefix']                 = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['RollOffPeriod']                = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['PlcFreq']                      = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['NumPilots']                    = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['TimeInterleaverDepth']         = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['SNRLevel']                     = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['PowerLevel']                   = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['PlcTotalCodewords']            = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['PlcUnreliableCodewords']       = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['NcpTotalFields']               = $ds_ofdm_val[$j++][1];
+	$ds_ofdm_tab[$i]['NcpFieldCrcFailures']          = $ds_ofdm_val[$j++][1];
 
-        if($ds_ofdm_tab[$i]['SubcarrierZeroFreq']) {
-            $ds_ofdm_tab[$i]['LockStatus'] = 'Locked';
-        } else {
-            $ds_ofdm_tab[$i]['LockStatus'] = 'Not Locked';
-        }
+	if($ds_ofdm_tab[$i]['SubcarrierZeroFreq']) {
+		$ds_ofdm_tab[$i]['LockStatus'] = 'Locked';
+	} else {
+		$ds_ofdm_tab[$i]['LockStatus'] = 'Not Locked';
+	}
 }
 
 $channel_id=[];
@@ -926,22 +926,36 @@ for ($i=1; $i< $ds_ofdm_tab.length; $i++){
 }
 
 for($i=1;$i<$ds_tab.length;$i++){
-    if($ds_tab[$i]['Modulation']=='OFDM'){
-                $ds_tab.splice($i,1);
-        	$ds_ids.splice($i,1);
-   		$i--;
-            	
-    }else{
-    
-              for ($j=0; $j<$channel_id.length; $j++){
-                if($channel_id[$j]==$ds_tab[$i]['ChannelID']){
-	        $ds_tab.splice($i,1);
-        	$ds_ids.splice($i,1);
-		$i--;            	
-		break;
+	if($ds_tab[$i]['Modulation']=='OFDM'){
+		$ds_tab.splice($i,1);
+		$ds_ids.splice($i,1);
+		$i--;
+	}else{
+		for ($j=0; $j<$channel_id.length; $j++){
+			if($channel_id[$j]==$ds_tab[$i]['ChannelID']){
+				$ds_tab.splice($i,1);
+				$ds_ids.splice($i,1);
+				$i--;
+				break;
         	}
-    	    }
-    }
+		}
+	}
+}
+
+// Find the primary ChannelID from $ds_ofdm_tab
+for ($i=1; $i< $ds_ofdm_tab.length; $i++){
+	var $chanIndicator = $ds_ofdm_tab[$i]['ChanIndicator'].toLowerCase();
+	if ($chanIndicator == 'primary') {
+		// Move Primary $ds_ofdm_tab entry to the front of $ds_tab
+		const $tabItem = $ds_ofdm_tab.splice($i, 1)[0];
+		$ds_ofdm_ids.splice($i, 1);
+		$ds_tab.splice(1, 0, $tabItem);
+		$ds_ids.push($ds_ids.length);
+		//Add Frequency & Modulation
+		$ds_tab[1]['Frequency'] = $tabItem['PlcFreq'];
+		$ds_tab[1]['Modulation'] = ($tabItem['LockStatus']=='Locked')?'OFDM':'UNSUPPORTED';
+		break; // only one primary
+	}
 }
 
 ?>
@@ -951,7 +965,7 @@ for($i=1;$i<$ds_tab.length;$i++){
 	<thead>
 		<tr>
 			<td class="row-label acs-th"><div class="netWidth">Downstream</div></td>
-			<td class="row-label acs-th" colspan="<?% echo( count($ds_ids));?>">Channel Bonding Value</td>
+			<td class="row-label acs-th" colspan="<?% echo(count($ds_ids)+count($ds_ofdm_ids));?>">Channel Bonding Value</td>
 		</tr>
 	</thead>
 	<tbody>
