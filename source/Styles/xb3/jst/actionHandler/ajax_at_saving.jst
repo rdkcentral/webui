@@ -21,6 +21,122 @@ if ($_SESSION["loginuser"] == "" || $_SESSION["loginuser"] == false || $_SESSION
 	echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
 	exit(0);
 }
+
+function sanitize_html(input) {
+  // keepAttrs:       true  -> keep attributes for allowed tags (default)
+  // stripDangerous:  true -> remove on* handlers and javascript: urls
+  var KEEP_ATTRS      = true;
+  var STRIP_DANGEROUS = true;
+
+  var ALLOWED_TAGS = ["H2", "DIV", "TABLE", "TBODY", "TR", "TH", "TD"];
+
+  function isAllowed(tagName) {
+    for (var i = 0; i < ALLOWED_TAGS.length; i++) {
+      if (tagName === ALLOWED_TAGS[i]) return true;
+    }
+    return false;
+  }
+
+  // Optional lightweight attribute filter (only used if STRIP_DANGEROUS = true)
+  function filterAttributes(attrText) {
+    // Parse attributes in a conservative way: name[=value]
+    // Keeps spacing as minimal as possible when reconstructing.
+    var out = [];
+    var re = /([^\s=\/"'>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+    var m;
+    while ((m = re.exec(attrText)) !== null) {
+      var name = (m[1] || '').toLowerCase();
+      var val  = (m[2] != null) ? m[2] : (m[3] != null ? m[3] : (m[4] != null ? m[4] : ''));
+
+      // Drop obvious dangerous attributes
+      if (name.indexOf('on') === 0) continue;       // onclick, onload, ...
+      if (name === 'style') continue;               // inline CSS often abused
+
+      // Disallow javascript: and data: in URLish attributes
+      if (name === 'href' || name === 'src' || name === 'xlink:href') {
+        var v = String(val).replace(/^\s+|\s+$/g, '').toLowerCase();
+        if (!v || v.indexOf('javascript:') === 0 || v.indexOf('data:') === 0) continue;
+      }
+
+      // Reconstruct attribute (quote with double-quotes)
+      if (val === '') out.push(name);
+      else out.push(name + '="' + val.replace(/"/g, '&quot;') + '"');
+    }
+    return out.length ? ' ' + out.join(' ') : '';
+  }
+
+  var result = "";
+  var i = 0;
+  var lowerInput = input.toLowerCase();
+
+  while (i < input.length) {
+    if (input[i] === '<') {
+      var start = i;
+      var end = input.indexOf('>', start);
+      if (end === -1) { 
+        // no closing '>' — append the rest and stop
+        result += input.slice(i);
+        break;
+      }
+
+      // Raw tag content between '<' and '>'
+      var raw = input.substring(start + 1, end);
+      var tagContent = raw.replace(/^\s+|\s+$/g, '');
+      var isClosing = tagContent.charAt(0) === '/';
+
+      // Separate tag name and attributes (for opening tags)
+      var namePart = isClosing ? tagContent.slice(1) : tagContent;
+      var spaceIdx = namePart.indexOf(' ');
+      var tagName = (spaceIdx === -1 ? namePart : namePart.slice(0, spaceIdx)).toUpperCase();
+      var attrsPart = (spaceIdx === -1 || isClosing) ? '' : namePart.slice(spaceIdx);
+
+      // Detect self-closing "/>" (rare for your table tags but harmless to support)
+      var selfClosing = /\/\s*$/.test(tagContent) && !isClosing;
+
+      if (isAllowed(tagName)) {
+        var tn = tagName.toLowerCase();
+        if (isClosing) {
+          result += "</" + tn + ">";
+        } else {
+          var attrsOut = '';
+          if (KEEP_ATTRS) {
+            attrsOut = STRIP_DANGEROUS ? filterAttributes(attrsPart) : (attrsPart || '');
+          }
+          // Normalize: ensure a leading space before attributes when present and not already spaced
+          if (attrsOut && !STRIP_DANGEROUS) {
+            // If original attrsPart doesn't start with space, add one
+            if (!/^\s/.test(attrsOut)) attrsOut = ' ' + attrsOut;
+          }
+          result += "<" + tn + (attrsOut || '') + (selfClosing ? "/>" : ">");
+        }
+        i = end + 1;
+        continue;
+      }
+
+      // Not allowed tag
+      if (!isClosing) {
+        // Strip the entire element including its content until the matching closing tag
+        // (simple depth-1 removal; good enough for this whitelist)
+        var closing = "</" + tagName.toLowerCase() + ">";
+        var nextClosing = lowerInput.indexOf(closing, end);
+        if (nextClosing !== -1) {
+          i = nextClosing + closing.length;
+          continue;
+        }
+      }
+
+      // For disallowed closing tags or unmatched structures, just skip the tag itself
+      i = end + 1;
+    } else {
+      result += input[i++];
+    }
+  }
+
+  return result;
+}
+
+$configInfo = sanitize_html($_POST['configInfo']);
+
 $myfile = fopen("/var/tmp/Wifi_Spectrum_Analyzer_Table.html", "w");
 fwrite($myfile, "<style>table th tr {}</style>");
 fwrite($myfile, "<style>");
@@ -29,7 +145,7 @@ fwrite($myfile, "table { border-collapse: collapse; clear: both; width: 100%; ba
 fwrite($myfile, "th { background: #39baf1; color: #fff; }");
 fwrite($myfile, "td { border: 1px solid white; }");
 fwrite($myfile, "</style>");
-fwrite($myfile, $_POST['configInfo']);
+fwrite($myfile, $configInfo);
 fclose($myfile);
 echo( htmlspecialchars(json_encode({"status": "success"}), ENT_NOQUOTES, 'UTF-8'));
 ?>
