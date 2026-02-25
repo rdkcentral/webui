@@ -898,10 +898,10 @@ function updateURL(url){
 * return: returns $brandName+' '+$productName
 */
 function getBrandProductName(){
-        $modelName = getStr("Device.DeviceInfo.ModelName");
+	$modelName = getStr("Device.DeviceInfo.ModelName");
 	$brandName = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.CloudUI.brandname");
 	$productName = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.CloudUI.productname");
-	$ret = $brandName+' '+$productName;
+	$ret = '<span>'+$brandName+' '+$productName+'</span>';
 	return $ret;
 }
 
