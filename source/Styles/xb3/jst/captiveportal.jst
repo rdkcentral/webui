@@ -367,9 +367,6 @@ $(document).ready(function(){
 							location.href="index.jst";
 						}, 10000);
 					}
-					if(connectionType != "WiFi"){
-						setTimeout(function(){ goToReady(); }, 25000);
-					}
 				},
 				error: function(xhr, status, error) {
 					// Handle error
@@ -388,6 +385,9 @@ $(document).ready(function(){
 			});
 		}
 		postConfig();
+		if(connectionType != "WiFi"){
+			setTimeout(function(){ goToReady(); }, 25000);
+		}
 	}
 	var NameTimeout, PasswordTimeout, Name5Timeout, Password5Timeout, phoneNumberTimeout, agreementTimeout;
 	function messageHandler(target, topMessage, bottomMessage){
