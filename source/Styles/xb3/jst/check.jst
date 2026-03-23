@@ -543,6 +543,7 @@ else
 			$httpsRemotePort= getStr("Device.UserInterface.X_CISCO_COM_RemoteAccess.HttpsPort");
 			$server_port = $_SERVER["SERVER_PORT"];
 			$server_ip      = parseIP($_SERVER["SERVER_ADDR"]);
+			$wanStatus = getStr("Device.X_RDK_WanManager.InterfaceActiveStatus");
 			$adminOnlyMode = "true";
 			if(strtolower($currentOpMode) =="ethernet"){
 				$remote_ip=get_ips("erouter0");
@@ -556,6 +557,19 @@ else
 					return "rm_ip";
 				}
 				return "eth_ip";
+			}else if(strstr($wanStatus,"WANOE,1") || strstr($wanStatus,"EPON,1") || strstr($wanStatus,"XGSPON,1")){
+                                $currentIface = getStr("Device.X_RDK_WanManager.CurrentActiveInterface");
+                                $remote_ip=get_ips($currentIface);                                                     
+                                if (in_array($server_ip,$remote_ip)){             
+                                        $adminOnlyMode= "false";                     
+                                        if( $remoteAcess && ($httpRemoteEnable || $httpsRemoteEnable) && (($server_port==$httpRemotePort)|| ($server_port==$httpsRemotePort))){
+                                                return "rm_ip";
+                                        }
+                                }                              
+                                if(($lanMode=="bridge-static")&&($adminOnlyMode=="true")){
+                                        return "rm_ip";
+                                }
+                                return "eth_ip"; 
 			}else if(!$currentOpMode || strtolower($currentOpMode) =="docsis"){
                          	return "docsis_ip";
 			}else{
