@@ -1188,7 +1188,18 @@ function setResetInfo(info) {
 				<?%
 				if($id == 17)
 				{?>
-					<option value="WPA3-Personal Only" id="secmode4" title="WPA requires an 8-63 ASCII character password or a 64 hex character password. Hex means only the following characters can be used: ABCDEF0123456789." <?% if ("WPA3-Personal Only"==$security)  echo( "selected");?> >WPA3-Personal Only</option>
+                                <?%
+                                if($WPA3_enable == "true" && $WPA3_compatibility_enable == "true"){
+                                ?>
+                                <option value="WPA3-Personal Compatibility"  <?% if ("WPA3-Personal Compatibility"==$security) echo( "selected");?> >WPA3-Personal Compatibility (Recommended)</option>
+				<option value="WPA3-Personal Only" id="secmode4" title="WPA requires an 8-63 ASCII character password or a 64 hex character password. Hex means only the following characters can be used: ABCDEF0123456789." <?% if ("WPA3-Personal Only"==$security)  echo( "selected");?> >WPA3-Personal Only</option>
+                                <?%
+                                 } else {
+                                ?>
+                                <option value="WPA3-Personal Only" id="secmode4" title="WPA requires an 8-63 ASCII character password or a 64 hex character password. Hex means only the following characters can be used: ABCDEF0123456789." <?% if ("WPA3-Personal Only"==$security)  echo( "selected");?> >WPA3-Personal Only</option>
+                                <?%
+                                }
+                                ?>
 				<?%
                                  }else{?>
 				<option value="None" id="secopenmode" title="Open networks do not have a password." <?% if ("None"==$security) echo( "selected");?> >Open (risky)</option>
