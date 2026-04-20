@@ -102,9 +102,6 @@ $(document).ready(function() {
 	});
 });
 </script>
-<?%
-        $voice_lines    = getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
-?>
 <div id="content">
     <?% if(is_device_router()) { ?>
 	<h1>Router > Connection > Voice Quality Metrics</h1>
@@ -121,9 +118,7 @@ $(document).ready(function() {
 		<td>
 			<select id="line_number">
 				<option value="1" selected="selected">1</option>
-				<?% if(Number($voice_lines) > 1) { ?>
-					<option value="2">2</option>
-				<?% } ?>
+				<?% for ($k=2; $k<=$LineNumberCount; $k++) echo( '<option value="'+$k+'">'+$k+'</option>'); ?>
 			</select>
 		</td>
 		<td>Call Number</td>

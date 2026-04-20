@@ -33,9 +33,6 @@ $(document).ready(function() {
     <?% } ?>
 });
 </script>
-<?%
-	$voice_lines	= getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
-?>
 <div id="content">
 	<?% if(is_device_router()) { ?>
 		<h1 id="mtalinstathead_router">Router > Connection > MTA > Line Status</h1>
@@ -47,16 +44,17 @@ $(document).ready(function() {
 	</div>
 	<div class="module forms">
 		<h2 id="mtalinstatmess1">MTA Line Status</h2>
-		<div class="form-row">
-			<span class="readonlyLabel" id="mtalinstatmess2">Line 1 Status:</span> 
-			<span class="value"><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.1.Status"));?></span>
-		</div>
-	<?% if(Number($voice_lines) > 1) { ?>
-		<div class="form-row odd">
-			<span class="readonlyLabel" id="mtalinstatmess3">Line 2 Status:</span>
-			<span class="value"><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.2.Status"));?></span>
-		</div>
-	<?% } ?>
+		<?%
+			$LineTableNumberOfEntries = getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
+			for ($i = 1; $i <= $LineTableNumberOfEntries; $i++) {
+				var $status = getStr("Device.X_CISCO_COM_MTA.LineTable." + $i + ".Status");
+				var $rowClass = ($i % 2 == 0) ? "form-row odd" : "form-row";
+				echo('<div class="' + $rowClass + '">');
+					echo('<span class="readonlyLabel">Line ' + $i + ' Status:</span>');
+					echo('<span class="value">' + $status + '</span>');
+				echo('</div>');
+			}
+		?>
 	</div>
 </div> <!-- end .module -->
 <!-- Page Specific Script -->
