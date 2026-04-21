@@ -2243,7 +2243,6 @@ if($OperatingChannelBandwidth == "6GHz")
 		<select name="wireless_mode3" id="wireless_mode3">
 		<?% if (strstr($support_mode_6g, "ax")){ ?>
                 	<?% if (strstr($support_mode_6g, "be")){ ?>
-                        <option value="be"      <?% if ("be" == $wireless_mode3) echo( 'selected="selected"');?> >802.11 be</option>
                         <option value="ax,be"      <?% if ("ax,be" == $wireless_mode3) echo( 'selected="selected"');?> >802.11 ax/be</option>
                         <?% }  ?>
                 	<option value="ax"	<?% if ("ax" == $wireless_mode3) echo( 'selected="selected"');?> >802.11 ax</option>
