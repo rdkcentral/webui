@@ -1,8 +1,8 @@
 # WebUI
 
-WebUI is an RDK-B component that provides a device-local, browser-based management portal implemented primarily in PHP and served by `lighttpd` via FastCGI (`php-cgi`). It includes multiple major areas: a PHP C extension that exposes CCSP message bus data-model operations to PHP, a PHP API wrapper around that extension, and the UI implementation itself (pages, templates, JavaScript, CSS, and localization resources) organized under style/theme directories.
+WebUI is an RDK-B component that provides a device-local, browser-based management portal implemented in two parallel server-side rendering stacks: a **PHP** stack served by `lighttpd` via FastCGI (`php-cgi`), and a **JST/Duktape** stack served by `lighttpd` via a Duktape-based CGI handler. It includes multiple major areas: a PHP C extension that exposes CCSP message bus data-model operations to PHP, a PHP API wrapper around that extension, the UI implementation itself (pages, templates, JavaScript, CSS, and localization resources) organized under style/theme directories, and a parallel JST-based UI layer using JavaScript templates evaluated server-side by the Duktape engine.
 
-Within this repository, WebUI functionality is implemented across several top-level source folders. The CCSP data model integration is provided by the PHP extension under `source/CcspPhpExtension/` (implemented in `cosa.c`) and the PHP wrapper functions under `source/CcspPhpApi/` (for example, `ccspdm.php`). The server-rendered UI pages, common includes, JavaScript/CSS assets, and device-side webserver configuration scripts are organized under `source/Styles/` (with device/theme-specific subtrees such as `xb3/` and `xb6/`).
+Within this repository, WebUI functionality is implemented across several top-level source folders. The CCSP data model integration is provided by the PHP extension under `source/CcspPhpExtension/` (implemented in `cosa.c`) and the PHP wrapper functions under `source/CcspPhpApi/` (for example, `ccspdm.php`). The server-rendered PHP pages, common includes, JavaScript/CSS assets, and device-side webserver configuration scripts are organized under `source/Styles/` (with device/theme-specific subtrees such as `xb3/` and `xb6/`). The JST/Duktape rendering layer is provided separately under `webui-lp/`, containing `.jst` template pages, action handler scripts, shared includes, and client-side assets that mirror the PHP stack.
 
 ```mermaid
 graph LR
@@ -56,14 +56,52 @@ graph LR
 - **Session, locale, and role-based access gating**: Common includes (for example, `source/Styles/xb3/code/includes/header.php`) start sessions, set locale based on `LANG`, enforce authentication via session variables (including a JWT flag path), and deny access to specific page groups depending on the logged-in user type.
 - **Built-in request-hardening utilities**: Action handlers share validation utilities in `source/Styles/xb3/code/includes/actionHandlerUtility.php`, including strict input validation helpers (MAC, IP, port, URL patterns) and SSID naming constraints.
 - **CSRF protection initialization**: Common includes and action handler utilities initialize a CSRF protection library via `csrfprotector_rdkb::init()` using `source/Styles/xb3/code/CSRF-Protector-PHP/libs/csrf/csrfprotector_rdkb.php` and its configuration under `source/Styles/xb3/code/CSRF-Protector-PHP/libs/config.php`.
+- **JST/Duktape server-side rendering layer**: A parallel UI stack in `webui-lp/` contains `.jst` files (JavaScript templates with `<?%...%>` delimiters) evaluated server-side by the Duktape engine. The layer reuses the same CCSP data-model access APIs (`getStr()`, `getInstanceIds()`, `DmExtGetStrsWithRootObj()`), session handling, CSRF protection, and JWT verification, all implemented in JavaScript. PHP-compatibility shims in `webui-lp/includes/php.jst` re-implement common PHP built-in functions in JavaScript, preserving the same calling conventions across both stacks.
 
 ## Design
+
+WebUI follows a server-rendered architecture. The PHP stack places page rendering and workflow logic in PHP, while JavaScript handles client-side form handling and AJAX requests. An equivalent JST/Duktape stack provides the same pages and handlers using server-side JavaScript templates. Both stacks share the same CCSP/TR-181 data-model access, the same session/CSRF/JWT security primitives, and the same navigation and validation logic; they differ in the template language and the server-side runtime used.
+
+### PHP Rendering Stack
 
 WebUI follows a server-rendered PHP architecture where page rendering and most workflow logic live in PHP, while JavaScript is used for client-side form handling and AJAX requests to `actionHandler` endpoints. A shared header include (`includes/header.php`) bootstraps core concerns such as session management, locale initialization, CSRF library initialization, and access checks; a shared navigation include (`includes/nav.php`) computes menu visibility based on device state and partner identifiers; and shared utilities (`includes/utility.php`, `includes/actionHandlerUtility.php`) centralize data-model access helpers and validation logic.
 
 For data access and configuration, the UI relies on CCSP/TR-181 parameter operations exposed into PHP. In the header, WebUI uses `DmExtGetStrsWithRootObj()` to retrieve multiple parameter values in a single call. Across the UI and handlers, `getStr()` and related functions (published from the `cosa.so` extension) are used to fetch device state and apply configuration changes. This design tightly couples the UI to the CCSP data model rather than a separate REST layer.
 
 Northbound interaction is HTTP/HTTPS traffic from a browser to `lighttpd`. Southbound interaction is the PHP extension's communication to the CCSP message bus (and thereby to the underlying RDK-B components that own the TR-181 parameters). The webserver layer uses the `lighttpd` configuration and startup script under `source/Styles/xb3/config/`, where `lighttpd` is configured to route PHP through FastCGI and to use `/index.php` as the 404 handler.
+
+### JST/Duktape Rendering Layer
+
+WebUI includes a second, parallel server-side rendering stack based on **JST (JavaScript Templates)** evaluated by the **Duktape** embeddable JavaScript engine. This stack is implemented in the `webui-lp/` directory and provides equivalent UI pages and action handlers to the PHP-based stack, targeting device configurations where a Duktape-based CGI handler is used instead of `php-cgi`.
+
+**Template syntax**: JST files use the `<?% ... %>` delimiter (analogous to PHP's `<?php ... ?>`) to embed server-side JavaScript logic within HTML output. Static HTML is emitted directly; dynamic content is generated inside `<?% ... %>` blocks using `echo()` or inline expressions, which are processed by the Duktape engine at request time.
+
+**Directory structure of `webui-lp/`**:
+
+| Path                  | Contents                                                                                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `*.jst` (top-level)   | Per-page UI templates (for example, `wifi.jst`, `lan.jst`, `firewall_settings_ipv4.jst`, `wan_network.jst`)                                                              |
+| `actionHandler/*.jst` | AJAX action handler endpoints (`ajaxSet_*.jst`, `ajax_*.jst`)                                                                                                            |
+| `includes/`           | Shared includes: `header.jst`, `nav.jst`, `footer.jst`, `userbar.jst`, `utility.jst`, `php.jst`, `actionHandlerUtility.jst`, `jwt.jst`, `hash.jst`, `eng.jst`, `fre.jst` |
+| `cmn/`                | Client-side assets: CSS, JavaScript, images, and syndication resources                                                                                                   |
+| `locale/`             | jQuery i18n localization files (`it.json`, `global.js`, etc.)                                                                                                            |
+| `test/`               | Test resources                                                                                                                                                           |
+
+**Data model access**: JST pages and action handlers call the same CCSP data-model access functions as the PHP stack: `getStr()`, `getInstanceIds()`, and `DmExtGetStrsWithRootObj()`. These are provided as Duktape built-ins rather than a PHP C extension, but they interact with the same CCSP message bus and TR-181 parameter space.
+
+**PHP compatibility shims** (`includes/php.jst`): Because the original WebUI pages were written with PHP idioms (`$`-prefixed variables, `print_r`, `htmlspecialchars`, `isset`, `empty`, `array_*` functions, string helpers), `php.jst` re-implements these common PHP functions in JavaScript so that JST pages can use the same function names and variable conventions without wholesale rewriting. Notable shims include `htmlspecialchars()`, `print_r()`, `json_encode()`, `str_replace()`, `explode()`, `implode()`, `preg_match()`, `preg_replace()`, and `isset()`/`empty()` guards.
+
+**Session handling**: JST pages call `session_start()` and use `$_SESSION` globals that map to Duktape session management built-ins. The session initialization in `includes/header.jst` mirrors `header.php` in reading locale from `getenv("LANG")`, enforcing login via `$_SESSION["loginuser"]`, and storing device mode flags such as `$_SESSION["lanMode"]` and `$_SESSION["psmMode"]` read from TR-181 parameters.
+
+**CSRF protection**: `csrfprotector.jst` re-implements the CSRF protector as a JavaScript object (`csrfProtector`) with an `init()` method, replacing the PHP class `csrfprotector_rdkb`. Both `includes/header.jst` and `includes/actionHandlerUtility.jst` include `csrfprotector.jst` and call `csrfProtector.init()`.
+
+**JWT verification**: `includes/jwt.jst` provides a JavaScript implementation of JWT signature verification and token data validation, calling into `includes/hash.jst` for a pure-JavaScript SHA256 implementation. This parallels `includes/jwt.php` in the PHP stack.
+
+**Navigation**: `includes/nav.jst` reads partner and model identity via `getStr()` and uses the session-stored `lanMode` to build the navigation menu, hiding page groups in bridge mode and adapting content for user roles (`admin` vs `mso`), identical in behavior to `nav.php` in the PHP stack.
+
+**Localization**: The JST layer uses jQuery i18n under `locale/` rather than PHP gettext. Locale string tables for English and French captive portal text are defined in `includes/eng.jst` and `includes/fre.jst` respectively. `includes/header.jst` sets `$_SESSION['language']` based on `getenv("LANG")`.
+
+**Input validation** (`includes/actionHandlerUtility.jst`): The same validation helper functions present in the PHP stack's `actionHandlerUtility.php` are re-implemented in JavaScript: `printableCharacters()`, `validIPAddr()`, `validMAC()`, `validPort()`, `validLink()`, `isValInRange()`, and companions, called by action handlers before applying any configuration change.
 
 ### Operational Execution Model
 
@@ -142,6 +180,7 @@ This repository contains a PHP extension under `source/CcspPhpExtension/` (for e
 **Web Server Configuration:**
 
 The `lighttpd` configuration at `source/Styles/xb3/config/lighttpd.conf` includes:
+
 - `server.document-root = "/fss/gw" + "/usr/www/"`
 - `server.error-handler-404 = "/index.php"`
 - FastCGI mapping for `.php` with `php-cgi` launched using `-c /fss/gw/etc/php.ini`.
@@ -153,6 +192,7 @@ The `lighttpd` configuration at `source/Styles/xb3/config/lighttpd.conf` include
 **PHP Extension Build Dependencies:**
 
 `source/CcspPhpExtension/config.m4` shows the extension build checks for:
+
 - `libccsp_common.so` in `$CCSP_COMMON_LIB`
 - include paths under `$CCSP_DEP_HEADER`, `$CCSP_COMMON_SRC`, and `$CCSP_COMMON_BOARD_INC`
 - libraries `crypto`, `ssl`, and `ccsp_common`.
@@ -280,17 +320,24 @@ sequenceDiagram
 
 WebUI’s repository structure provides clear module boundaries aligned to source folders and common include points.
 
-| Module/Class | Description | Key Files |
-|-------------|------------|-----------|
-| UI Pages | Server-rendered PHP pages representing the management portal screens. Pages typically include shared header/nav/footer and call data-model functions to render current state. | `source/Styles/xb3/code/*.php`, `source/Styles/xb6/code/*.php` |
-| Common Includes | Shared bootstrapping and UI infrastructure, including session initialization, locale, access control gates, and menu generation. | `source/Styles/xb3/code/includes/header.php`, `source/Styles/xb3/code/includes/nav.php`, `source/Styles/xb3/code/includes/utility.php` |
-| Action Handlers | AJAX endpoints that validate input and apply configuration changes or return data for dynamic UI elements. | `source/Styles/xb3/code/actionHandler/*.php` |
-| Action Handler Utilities | Shared input-validation utilities and helper functions used by action handlers; includes CSRF initialization. | `source/Styles/xb3/code/includes/actionHandlerUtility.php` |
-| CSRF Protection Library | CSRF protection wrapper and configuration used by includes and handlers, initialized via `csrfprotector_rdkb::init()`. | `source/Styles/xb3/code/CSRF-Protector-PHP/libs/csrf/csrfprotector_rdkb.php`, `source/Styles/xb3/code/CSRF-Protector-PHP/libs/config.php` |
-| JWT Verification Helpers | JWT verification utilities used by authentication/session flows (for example, referenced by `check.php`). | `source/Styles/xb3/code/includes/jwt.php` |
-| CCSP PHP API Wrapper | Higher-level PHP API functions that delegate to extension functions for get/set/add/delete of objects/parameters. | `source/CcspPhpApi/ccspdm.php` |
-| CCSP PHP Extension | C-based PHP extension exposing CCSP data-model operations to PHP. | `source/CcspPhpExtension/cosa.c`, `source/CcspPhpExtension/config.m4` |
-| Server Configuration / Startup | Device-side webserver configuration and startup logic for `lighttpd` and PHP. | `source/Styles/xb3/config/lighttpd.conf`, `source/Styles/xb3/config/php.ini`, `source/Styles/xb3/config/webgui.sh` |
+| Module/Class                   | Description                                                                                                                                                                             | Key Files                                                                                                                                                     |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UI Pages                       | Server-rendered PHP pages representing the management portal screens. Pages typically include shared header/nav/footer and call data-model functions to render current state.           | `source/Styles/xb3/code/*.php`, `source/Styles/xb6/code/*.php`                                                                                                |
+| Common Includes                | Shared bootstrapping and UI infrastructure, including session initialization, locale, access control gates, and menu generation.                                                        | `source/Styles/xb3/code/includes/header.php`, `source/Styles/xb3/code/includes/nav.php`, `source/Styles/xb3/code/includes/utility.php`                        |
+| Action Handlers                | AJAX endpoints that validate input and apply configuration changes or return data for dynamic UI elements.                                                                              | `source/Styles/xb3/code/actionHandler/*.php`                                                                                                                  |
+| Action Handler Utilities       | Shared input-validation utilities and helper functions used by action handlers; includes CSRF initialization.                                                                           | `source/Styles/xb3/code/includes/actionHandlerUtility.php`                                                                                                    |
+| CSRF Protection Library        | CSRF protection wrapper and configuration used by includes and handlers, initialized via `csrfprotector_rdkb::init()`.                                                                  | `source/Styles/xb3/code/CSRF-Protector-PHP/libs/csrf/csrfprotector_rdkb.php`, `source/Styles/xb3/code/CSRF-Protector-PHP/libs/config.php`                     |
+| JWT Verification Helpers       | JWT verification utilities used by authentication/session flows (for example, referenced by `check.php`).                                                                               | `source/Styles/xb3/code/includes/jwt.php`                                                                                                                     |
+| CCSP PHP API Wrapper           | Higher-level PHP API functions that delegate to extension functions for get/set/add/delete of objects/parameters.                                                                       | `source/CcspPhpApi/ccspdm.php`                                                                                                                                |
+| CCSP PHP Extension             | C-based PHP extension exposing CCSP data-model operations to PHP.                                                                                                                       | `source/CcspPhpExtension/cosa.c`, `source/CcspPhpExtension/config.m4`                                                                                         |
+| Server Configuration / Startup | Device-side webserver configuration and startup logic for `lighttpd` and PHP.                                                                                                           | `source/Styles/xb3/config/lighttpd.conf`, `source/Styles/xb3/config/php.ini`, `source/Styles/xb3/config/webgui.sh`                                            |
+| JST UI Pages                   | Server-rendered JST template pages (Duktape-evaluated JavaScript) representing the management portal screens, mirroring the PHP-based UI pages.                                         | `webui-lp/*.jst` (for example, `wifi.jst`, `lan.jst`, `firewall_settings_ipv4.jst`)                                                                           |
+| JST Common Includes            | Shared JST bootstrapping and UI infrastructure for session, locale, CSRF, menu, and access gating in the Duktape rendering layer.                                                       | `webui-lp/includes/header.jst`, `webui-lp/includes/nav.jst`, `webui-lp/includes/utility.jst`, `webui-lp/includes/footer.jst`, `webui-lp/includes/userbar.jst` |
+| JST Action Handlers            | AJAX endpoint scripts that validate input and apply configuration via CCSP data-model calls in the Duktape environment.                                                                 | `webui-lp/actionHandler/ajaxSet_*.jst`, `webui-lp/actionHandler/ajax_*.jst`                                                                                   |
+| JST Action Handler Utilities   | Input-validation helpers and CSRF initialization for JST action handlers; parallels `actionHandlerUtility.php`.                                                                         | `webui-lp/includes/actionHandlerUtility.jst`                                                                                                                  |
+| PHP Compatibility Shims        | JavaScript re-implementations of PHP built-in functions (`htmlspecialchars`, `print_r`, `preg_match`, `isset`, `json_encode`, etc.) enabling JST pages to use PHP-style function names. | `webui-lp/includes/php.jst`                                                                                                                                   |
+| JST CSRF Protection            | CSRF protection re-implemented as a JavaScript object (`csrfProtector`) for the Duktape environment.                                                                                    | `webui-lp/csrfprotector.jst`                                                                                                                                  |
+| JST JWT Verification           | JWT signature verification and token validation implemented in JavaScript for the Duktape layer, including a pure-JavaScript SHA256 implementation.                                     | `webui-lp/includes/jwt.jst`, `webui-lp/includes/hash.jst`                                                                                                     |
 
 ```mermaid
 graph LR
@@ -361,14 +408,14 @@ graph LR
 
 ### Interaction Matrix
 
-| Target Component/Layer | Interaction Purpose | Key APIs/Endpoints |
-|------------------------|-------------------|------------------|
-| **Web Server Layer** | Serve PHP pages and route requests to FastCGI. | `source/Styles/xb3/config/lighttpd.conf` (`fastcgi.server` for `.php`, `server.error-handler-404 = "/index.php"`) |
-| **PHP runtime configuration** | Configure PHP runtime behavior and load the CCSP PHP extension. | `source/Styles/xb3/config/php.ini` (`extension_dir`, `extension=cosa.so`) |
-| **CCSP Data Model (via message bus)** | Read and write TR-181 parameters and table instances used by pages and handlers. | Extension functions published in `source/CcspPhpExtension/cosa.c` (for example, `DmExtGetStrsWithRootObj`, `DmExtSetStrsWithRootObj`, `DmExtGetInstanceIds`) and PHP wrapper in `source/CcspPhpApi/ccspdm.php` (`DmGetStrsWithRootObj`, `DmSetStrsWithRootObj`, `DmGetInstanceIds`) |
-| **Session/auth and access gating** | Enforce login requirements and page access restrictions by role and device mode. | `source/Styles/xb3/code/includes/header.php`, `source/Styles/xb3/code/check.php` |
-| **CSRF protection** | Initialize CSRF protection for UI pages and action handlers. | `csrfprotector_rdkb::init()` in `source/Styles/xb3/code/includes/header.php` and `source/Styles/xb3/code/includes/actionHandlerUtility.php`; config in `source/Styles/xb3/code/CSRF-Protector-PHP/libs/config.php` |
-| **Device startup orchestration** | Prepare runtime state, logs, optional captive portal logic, and start `lighttpd`. | `source/Styles/xb3/config/webgui.sh` (starts `lighttpd -f /etc/lighttpd.conf`) |
+| Target Component/Layer                | Interaction Purpose                                                               | Key APIs/Endpoints                                                                                                                                                                                                                                                                  |
+| ------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Web Server Layer**                  | Serve PHP pages and route requests to FastCGI.                                    | `source/Styles/xb3/config/lighttpd.conf` (`fastcgi.server` for `.php`, `server.error-handler-404 = "/index.php"`)                                                                                                                                                                   |
+| **PHP runtime configuration**         | Configure PHP runtime behavior and load the CCSP PHP extension.                   | `source/Styles/xb3/config/php.ini` (`extension_dir`, `extension=cosa.so`)                                                                                                                                                                                                           |
+| **CCSP Data Model (via message bus)** | Read and write TR-181 parameters and table instances used by pages and handlers.  | Extension functions published in `source/CcspPhpExtension/cosa.c` (for example, `DmExtGetStrsWithRootObj`, `DmExtSetStrsWithRootObj`, `DmExtGetInstanceIds`) and PHP wrapper in `source/CcspPhpApi/ccspdm.php` (`DmGetStrsWithRootObj`, `DmSetStrsWithRootObj`, `DmGetInstanceIds`) |
+| **Session/auth and access gating**    | Enforce login requirements and page access restrictions by role and device mode.  | `source/Styles/xb3/code/includes/header.php`, `source/Styles/xb3/code/check.php`                                                                                                                                                                                                    |
+| **CSRF protection**                   | Initialize CSRF protection for UI pages and action handlers.                      | `csrfprotector_rdkb::init()` in `source/Styles/xb3/code/includes/header.php` and `source/Styles/xb3/code/includes/actionHandlerUtility.php`; config in `source/Styles/xb3/code/CSRF-Protector-PHP/libs/config.php`                                                                  |
+| **Device startup orchestration**      | Prepare runtime state, logs, optional captive portal logic, and start `lighttpd`. | `source/Styles/xb3/config/webgui.sh` (starts `lighttpd -f /etc/lighttpd.conf`)                                                                                                                                                                                                      |
 
 **Events Published by WebUI:**
 
@@ -415,9 +462,9 @@ WebUI’s core logic is primarily organized around these patterns:
 
 ### Key Configuration Files
 
-| Configuration File | Purpose | Override Mechanisms |
-|--------------------|---------|--------------------|
-| `source/Styles/xb3/config/lighttpd.conf` | `lighttpd` configuration including document root, modules, 404 handler, and FastCGI mapping for PHP. | Started by `webgui.sh` as `lighttpd -f /etc/lighttpd.conf`; integration is responsible for placing an appropriate `lighttpd.conf` at `/etc/lighttpd.conf`. |
-| `source/Styles/xb3/config/php.ini` | PHP runtime configuration used by `php-cgi`, including loading `cosa.so` from `/fss/gw/usr/ccsp`. | Referenced by `lighttpd.conf` FastCGI `bin-path` as `php-cgi -c /fss/gw/etc/php.ini`. |
-| `source/Styles/xb3/config/webgui.sh` | Startup/orchestration script that prepares logs/state and launches `lighttpd`, including captive portal related logic and environment setup. | Invoked by device integration/service manager; behavior changes based on device properties and flags read via CLI tools. |
-| `source/Styles/xb3/code/CSRF-Protector-PHP/libs/config.php` | CSRF protector configuration options (token and logging related settings). | Used by the CSRF protector library; loaded when initialized by PHP includes. |
+| Configuration File                                          | Purpose                                                                                                                                      | Override Mechanisms                                                                                                                                        |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `source/Styles/xb3/config/lighttpd.conf`                    | `lighttpd` configuration including document root, modules, 404 handler, and FastCGI mapping for PHP.                                         | Started by `webgui.sh` as `lighttpd -f /etc/lighttpd.conf`; integration is responsible for placing an appropriate `lighttpd.conf` at `/etc/lighttpd.conf`. |
+| `source/Styles/xb3/config/php.ini`                          | PHP runtime configuration used by `php-cgi`, including loading `cosa.so` from `/fss/gw/usr/ccsp`.                                            | Referenced by `lighttpd.conf` FastCGI `bin-path` as `php-cgi -c /fss/gw/etc/php.ini`.                                                                      |
+| `source/Styles/xb3/config/webgui.sh`                        | Startup/orchestration script that prepares logs/state and launches `lighttpd`, including captive portal related logic and environment setup. | Invoked by device integration/service manager; behavior changes based on device properties and flags read via CLI tools.                                   |
+| `source/Styles/xb3/code/CSRF-Protector-PHP/libs/config.php` | CSRF protector configuration options (token and logging related settings).                                                                   | Used by the CSRF protector library; loaded when initialized by PHP includes.                                                                               |
