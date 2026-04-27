@@ -1262,24 +1262,18 @@ function current_operationalMode()
 */
 function get_dhcp_client_interfaces()
 {
-	$dhcpmgr_enabled = file_exists("/tmp/dhcpmgr_initialized");
 	var $dhcp_client_interfaces = { v4: "", v6: "" };
-	if($dhcpmgr_enabled) {
-		$ids = explode(",", getInstanceIds("Device.X_RDK_WanManager.Interface."));
-		wanInterfaceLoop: for($key in $ids) { $j = $ids[$key];
-			$status = getStr("Device.X_RDK_WanManager.Interface."+$j+".Status");
-			if($status == "true" || $status == "Up" || $status == "Active"){
-				$dhcp_client_interfaces.v4 = getStr("Device.X_RDK_WanManager.Interface."+$j+".VirtualInterface.1.IP.DHCPv4Interface");
-				$dhcp_client_interfaces.v6 = getStr("Device.X_RDK_WanManager.Interface."+$j+".VirtualInterface.1.IP.DHCPv6Interface");
-				break wanInterfaceLoop;
-			}
+	$ids = explode(",", getInstanceIds("Device.X_RDK_WanManager.Interface."));
+	wanInterfaceLoop: for($key in $ids) { $j = $ids[$key];
+		$status = getStr("Device.X_RDK_WanManager.Interface."+$j+".Status");
+		if($status == "true" || $status == "Up" || $status == "Active"){
+			$dhcp_client_interfaces.v4 = getStr("Device.X_RDK_WanManager.Interface."+$j+".VirtualInterface.1.IP.DHCPv4Interface");
+			$dhcp_client_interfaces.v6 = getStr("Device.X_RDK_WanManager.Interface."+$j+".VirtualInterface.1.IP.DHCPv6Interface");
+			break wanInterfaceLoop;
 		}
-		if($dhcp_client_interfaces.v4 == "") $dhcp_client_interfaces.v4 = "Device.DHCPv4.Client.1";
-		if($dhcp_client_interfaces.v6 == "") $dhcp_client_interfaces.v6 = "Device.DHCPv6.Client.1";
-	} else {
-		$dhcp_client_interfaces.v4 = "Device.DHCPv4.Client.1";
-		$dhcp_client_interfaces.v6 = "Device.DHCPv6.Client.1";
 	}
+	if($dhcp_client_interfaces.v4 == "") $dhcp_client_interfaces.v4 = "Device.DHCPv4.Client.1";
+	if($dhcp_client_interfaces.v6 == "") $dhcp_client_interfaces.v6 = "Device.DHCPv6.Client.1";
 	return $dhcp_client_interfaces;
 }
 
