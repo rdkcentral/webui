@@ -143,7 +143,6 @@ function set_config(jsConfig)
 			<?%
 				$LineTableNumberOfEntries = getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
 				for ($i = 1; $i <= $LineTableNumberOfEntries; $i++) {
-					var $status = getStr("Device.X_CISCO_COM_MTA.LineTable." + $i + ".Status");
 					var $rowClass = ($i % 2 == 0) ? "odd" : "";
 					echo('<tr class="' + $rowClass + '">');
 						echo('<td>' + $i + '</td>');

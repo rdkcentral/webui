@@ -33,7 +33,7 @@ if (isset($_GET['line']))
 	//line only 1, 2 are allowed
 	//call only 1, 50 are allowed
 	//action only display, clear_line, clear_all are allowed
-	if	(($_GET['line'] == '1' || $_GET['line'] == '2') &&
+	if ((isset($_GET['line']) && $_GET['line'] >= 1 && $_GET['line'] <= getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries")) &&
 			((preg_match('/^(50|[1234][0-9]|[1-9])$/', $_GET['call'])) || $_GET['call'] == 'all' || $_GET['call'] == 'table') &&
 				($_GET['action'] == 'display' || $_GET['action'] == 'clear_line' || $_GET['action'] == 'clear_all')
 	){

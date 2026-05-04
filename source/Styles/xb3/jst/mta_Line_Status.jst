@@ -50,7 +50,7 @@ $(document).ready(function() {
 				var $status = getStr("Device.X_CISCO_COM_MTA.LineTable." + $i + ".Status");
 				var $rowClass = ($i % 2 == 0) ? "form-row odd" : "form-row";
 				echo('<div class="' + $rowClass + '">');
-					echo('<span class="readonlyLabel">Line ' + $i + ' Status:</span>');
+					echo('<span class="readonlyLabel" id="mtalinstatmess' + $i + '">Line ' + $i + ' Status:</span>');
 					echo('<span class="value">' + $status + '</span>');
 				echo('</div>');
 			}
