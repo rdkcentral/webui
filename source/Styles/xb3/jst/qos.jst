@@ -146,9 +146,9 @@ function set_config(jsConfig)
 					var $rowClass = ($i % 2 == 0) ? "odd" : "";
 					echo('<tr class="' + $rowClass + '">');
 						echo('<td>' + $i + '</td>');
-						echo('<td>'+ getStr("Device.X_CISCO_COM_MTA.LineTable.$i.CALLP.LCState") +'</td>');
-						echo('<td>'+ getStr("Device.X_CISCO_COM_MTA.LineTable.$i.CALLP.CallPState") +'</td>');
-						echo('<td>'+ getStr("Device.X_CISCO_COM_MTA.LineTable.$i.CALLP.LoopCurrent") +'</td>');
+						echo('<td>'+ getStr("Device.X_CISCO_COM_MTA.LineTable."+$i+".CALLP.LCState") +'</td>');
+						echo('<td>'+ getStr("Device.X_CISCO_COM_MTA.LineTable."+$i+".CALLP.CallPState") +'</td>');
+						echo('<td>'+ getStr("Device.X_CISCO_COM_MTA.LineTable."+$i+".CALLP.LoopCurrent") +'</td>');
 					echo('</tr>');
 			   }
 			?>
