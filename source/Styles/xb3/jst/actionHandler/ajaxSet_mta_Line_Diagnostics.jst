@@ -28,7 +28,7 @@ if (isset($_GET['get_statusx']))
 {
 	$linexhook = "On-Hook";
 	for ($i = 1; $i <= $LineTableNumberOfEntries; $i++) {
-		$lineHook = getStr("Device.X_CISCO_COM_MTA.LineTable.$i.Status");
+		$lineHook = getStr("Device.X_CISCO_COM_MTA.LineTable."+$i+".Status");
 		if ($lineHook === "Off-Hook") {
 			$linexhook = "Off-Hook";
 			break; // no need to check further
@@ -41,54 +41,56 @@ else {
 	$line = null;
 	$action = null;
 
-	/* Detect action and line number dynamically */
-	foreach ($_GET as $key => $value) {
-		if (preg_match('/^(get_status|start_diagnostics)([1-8])$/', $key, $matches)) {
-			$action = $matches[1]; // get_status or start_diagnostics
-			$line   = (int)$matches[2];
-			break;
+	/* Detect line number */
+	for($key in $_GET) {
+		if ($key.startsWith("get_status")) {
+			$line = $key.slice("get_status".length);
+			$action = "get_status";
+		} else if ($key.startsWith("start_diagnostics")) {
+			$line = $key.slice("start_diagnostics".length);
+			$action = "start_diagnostics";
 		}
 	}
 
 	if ($line !== null && $action !== null) {
 
 		/* ===== GET STATUS ===== */
-		if ($action === "get_status") {
+		if ($action == "get_status") {
 
-			$linehook = getStr("Device.X_CISCO_COM_MTA.LineTable.$line.Status");
+			$linehook = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".Status");
 			sleep(2);
 
-			$arConfig = array(
-				"line{$line}hook" => $linehook
-			); /*p2j-array*/
+			$arConfig = {
+				["line" + $line + "hook"]: $linehook
+			}/*p2j-array*/;
 		}
 
 		/* ===== START DIAGNOSTICS ===== */
-		else if ($action === "start_diagnostics") {
+		else if ($action == "start_diagnostics") {
 
 			setStr(
-				"Device.X_CISCO_COM_MTA.LineTable.$line.TriggerDiagnostics",
+				"Device.X_CISCO_COM_MTA.LineTable."+$line+".TriggerDiagnostics",
 				"true",
 				true
 			);
 
-			LogStr(" : webui_event:MTA_line{$line}_diag");
+			LogStr(" : webui_event:MTA_line"+$line+"_diag");
 
 			sleep(15);
 
-			$hp   = getStr("Device.X_CISCO_COM_MTA.LineTable.$line.HazardousPotential");
-			$femf = getStr("Device.X_CISCO_COM_MTA.LineTable.$line.ForeignEMF");
-			$rf   = getStr("Device.X_CISCO_COM_MTA.LineTable.$line.ResistiveFaults");
-			$roh  = getStr("Device.X_CISCO_COM_MTA.LineTable.$line.ReceiverOffHook");
-			$re   = getStr("Device.X_CISCO_COM_MTA.LineTable.$line.RingerEquivalency");
+			$hp   = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".HazardousPotential");
+			$femf = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".ForeignEMF");
+			$rf   = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".ResistiveFaults");
+			$roh  = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".ReceiverOffHook");
+			$re   = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".RingerEquivalency");
 
-			$arConfig = array(
-				"line{$line}hp"   => $hp,
-				"line{$line}femf" => $femf,
-				"line{$line}rf"   => $rf,
-				"line{$line}roh"  => $roh,
-				"line{$line}re"   => $re
-			); /*p2j-array*/
+			$arConfig = {
+				["line"+$line+"hp"]   : $hp,
+				["line"+$line+"femf"] : $femf,
+				["line"+$line+"rf"]   : $rf,
+				["line"+$line+"roh"]  : $roh,
+				["line"+$line+"re"]   : $re
+			}; /*p2j-array*/
 		}
 	}
 }

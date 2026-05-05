@@ -47,7 +47,7 @@ $(document).ready(function() {
 
 		$.get(
 			"actionHandler/ajaxSet_mta_Line_Diagnostics.jst",
-			{ "get_status"+line: "true" },
+			{ ["get_status"+line]: "true" },
 			function (msg) {
 				jHide();
 
@@ -74,7 +74,7 @@ $(document).ready(function() {
 
 		$.get(
 			"actionHandler/ajaxSet_mta_Line_Diagnostics.jst",
-			{ "start_diagnostics"+line: "true" },
+			{ ["start_diagnostics"+line]: "true" },
 			function (msg) {
 				["hp", "femf", "rf", "roh", "re"].forEach(function (item) {
 					document.getElementById("line" + line + item).value =
@@ -98,7 +98,7 @@ $(document).ready(function() {
 </div>
 <?%
 	$voice_lines    = getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
-	for ($i=0; $i <= Number($voice_lines); $i++) {
+	for ($i=1; $i <= Number($voice_lines); $i++) {
 ?>
 <div class="module forms">
 	<input type="hidden" value="mta_line_diagnostics" name="file"/>
