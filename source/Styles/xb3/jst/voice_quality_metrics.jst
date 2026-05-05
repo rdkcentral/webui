@@ -33,7 +33,7 @@ if (isset($_GET['line']))
 	//line only 1, 2 are allowed
 	//call only 1, 50 are allowed
 	//action only display, clear_line, clear_all are allowed
-	if	(($_GET['line'] == '1' || $_GET['line'] == '2') &&
+	if ((isset($_GET['line']) && Number($_GET['line']) >= 1 && Number($_GET['line']) <= Number(getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries"))) &&
 			((preg_match('/^(50|[1234][0-9]|[1-9])$/', $_GET['call'])) || $_GET['call'] == 'all' || $_GET['call'] == 'table') &&
 				($_GET['action'] == 'display' || $_GET['action'] == 'clear_line' || $_GET['action'] == 'clear_all')
 	){
@@ -102,9 +102,6 @@ $(document).ready(function() {
 	});
 });
 </script>
-<?%
-        $voice_lines    = getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
-?>
 <div id="content">
     <?% if(is_device_router()) { ?>
 	<h1>Router > Connection > Voice Quality Metrics</h1>
@@ -121,9 +118,10 @@ $(document).ready(function() {
 		<td>
 			<select id="line_number">
 				<option value="1" selected="selected">1</option>
-				<?% if(Number($voice_lines) > 1) { ?>
-					<option value="2">2</option>
-				<?% } ?>
+				<?%
+					$LineNumberCount = getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
+					for ($k=2; $k<=$LineNumberCount; $k++) echo( '<option value="'+$k+'">'+$k+'</option>');
+				?>
 			</select>
 		</td>
 		<td>Call Number</td>
@@ -147,8 +145,10 @@ $(document).ready(function() {
 		</td>
 		</tr>
 		</table>
-		<div name="show_hide" id="msg_no_data1" class="hidden"><br/>There is no data to display for Line 1.</div>
-		<div name="show_hide" id="msg_no_data2" class="hidden"><br/>There is no data to display for Line 2.</div>
+		<?%
+			$msgLineCount = Number(getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries"));
+			for ($m=1; $m<=$msgLineCount; $m++) echo( '<div name="show_hide" id="msg_no_data'+$m+'" class="hidden"><br/>There is no data to display for Line '+$m+'.</div>');
+		?>
 	</div>
 <?%
 $locale = []/*p2j-array*/;

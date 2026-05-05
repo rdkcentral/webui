@@ -140,20 +140,18 @@ function set_config(jsConfig)
 				<th id="qosmess3">CallP State</th>
 				<th id="qosmess4">Loop Current</th>
 			</tr>
-			<tr>
-				<td>1</td>
-				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.1.CALLP.LCState")); ?></td>
-				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.1.CALLP.CallPState")); ?></td>
-				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.1.CALLP.LoopCurrent")); ?></td>
-			</tr>
-			<?% if(Number($voice_lines) > 1) { ?>
-			<tr class="odd">
-				<td>2</td>
-				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.2.CALLP.LCState")); ?></td>
-				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.2.CALLP.CallPState")); ?></td>
-				<td><?% echo( getStr("Device.X_CISCO_COM_MTA.LineTable.2.CALLP.LoopCurrent")); ?></td>
-			</tr>
-			<?% } ?>
+			<?%
+				$LineTableNumberOfEntries = getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
+				for ($i = 1; $i <= $LineTableNumberOfEntries; $i++) {
+					var $rowClass = ($i % 2 == 0) ? "odd" : "";
+					echo('<tr class="' + $rowClass + '">');
+						echo('<td>' + $i + '</td>');
+						echo('<td>'+ getStr("Device.X_CISCO_COM_MTA.LineTable."+$i+".CALLP.LCState") +'</td>');
+						echo('<td>'+ getStr("Device.X_CISCO_COM_MTA.LineTable."+$i+".CALLP.CallPState") +'</td>');
+						echo('<td>'+ getStr("Device.X_CISCO_COM_MTA.LineTable."+$i+".CALLP.LoopCurrent") +'</td>');
+					echo('</tr>');
+			   }
+			?>
 		</table>
     </div> <!-- end .module -->
 	<div class="btn-group">
