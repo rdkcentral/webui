@@ -154,6 +154,11 @@ function sec2dhm($sec)
 	//in Bridge mode > Internet connectivity status is always active
 	$sta_inet = ($_SESSION["lanMode"] == "bridge-static") ? "true" : $sta_inet ;
 
+        if($mapT == 'MAPT'){
+                 $WANIPv4 = getStr("Device.DHCPv6.Client.1.X_RDKCENTRAL-COM_RcvOption.MapIpv4Address");
+                 $WANIPv4 += '<span id="shrdMpT_ns"> (Shared using MAP-T)</span>';
+	}
+
 	//WAN details Fetching
 	$wan_Interface_obj = "Device.IP.Interface.";
 	$wan_Interface_ids =  DmExtGetInstanceIds($wan_Interface_obj);
