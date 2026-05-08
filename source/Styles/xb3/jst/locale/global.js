@@ -644,7 +644,7 @@ $("#refresh").prop("value", $.i18n('Refresh'));
 $("#mtalinhead").text($.i18n("Gateway > Connection > MTA > Line Diagnostics"));
 $("#mtalintip1").text($.i18n("Information related to the MTA Line Diagnostics."));
 $("[id^='mtalinmess2']").text($.i18n("Hazardous Potential:"));
-$("[id^='line'][id$='hp'],[id^='line'][id$='femf'],[id^='line'][id$='rf'],[id^='line'][id$='roh'],[id^='line'][id$='re']").text($.i18n("Not Started"));
+$("[id^='line'][id$='hp'],[id^='line'][id$='femf'],[id^='line'][id$='rf'],[id^='line'][id$='roh'],[id^='line'][id$='re']").val($.i18n("Not Started"));
 $("[id^='mtalinmess3']").text($.i18n("Foreign EMF:"));
 $("[id^='mtalinmess4']").text($.i18n("Receiver Off Hook:"));
 $("[id^='mtalinmess5']").text($.i18n("Ringer Equivalency:"));

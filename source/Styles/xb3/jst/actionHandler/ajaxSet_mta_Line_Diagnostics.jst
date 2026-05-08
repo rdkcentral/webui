@@ -22,7 +22,7 @@ if ($_SESSION["loginuser"] == "" || $_SESSION["loginuser"] == false || (!isset($
 	echo( '<script type="text/javascript">alert("Please Login First!"); location.href="../index.jst";</script>');
 	exit(0);
 }
-var $LineTableNumberOfEntries = getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
+var $LineTableNumberOfEntries = Number(getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries"));
 var $arConfig = {};
 if (isset($_GET['get_statusx']))
 {
@@ -41,14 +41,16 @@ else {
 	$line = null;
 	$action = null;
 
-	/* Detect line number */
-	for($key in $_GET) {
-		if ($key.startsWith("get_status")) {
-			$line = $key.slice("get_status".length);
+	/* Detect line number using explicit isset checks (ES5-compatible) */
+	for ($i = 1; $i <= $LineTableNumberOfEntries; $i++) {
+		if (isset($_GET["get_status"+$i])) {
+			$line = $i;
 			$action = "get_status";
-		} else if ($key.startsWith("start_diagnostics")) {
-			$line = $key.slice("start_diagnostics".length);
+			break;
+		} else if (isset($_GET["start_diagnostics"+$i])) {
+			$line = $i;
 			$action = "start_diagnostics";
+			break;
 		}
 	}
 
@@ -60,9 +62,7 @@ else {
 			$linehook = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".Status");
 			sleep(2);
 
-			$arConfig = {
-				["line" + $line + "hook"]: $linehook
-			}/*p2j-array*/;
+			$arConfig["line"+$line+"hook"] = $linehook;
 		}
 
 		/* ===== START DIAGNOSTICS ===== */
@@ -78,19 +78,11 @@ else {
 
 			sleep(15);
 
-			$hp   = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".HazardousPotential");
-			$femf = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".ForeignEMF");
-			$rf   = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".ResistiveFaults");
-			$roh  = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".ReceiverOffHook");
-			$re   = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".RingerEquivalency");
-
-			$arConfig = {
-				["line"+$line+"hp"]   : $hp,
-				["line"+$line+"femf"] : $femf,
-				["line"+$line+"rf"]   : $rf,
-				["line"+$line+"roh"]  : $roh,
-				["line"+$line+"re"]   : $re
-			}; /*p2j-array*/
+			$arConfig["line"+$line+"hp"]   = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".HazardousPotential");
+			$arConfig["line"+$line+"femf"] = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".ForeignEMF");
+			$arConfig["line"+$line+"rf"]   = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".ResistiveFaults");
+			$arConfig["line"+$line+"roh"]  = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".ReceiverOffHook");
+			$arConfig["line"+$line+"re"]   = getStr("Device.X_CISCO_COM_MTA.LineTable."+$line+".RingerEquivalency");
 		}
 	}
 }

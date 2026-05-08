@@ -33,10 +33,11 @@ $(document).ready(function() {
 	gateway.page.init("Gateway > Connection > MTA > Line Diagnostics", "nav-mta-line-diagnostics");
     <?% } ?>
 
+	var voiceLines = <?% echo(Number(getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries"))); ?>;
 	$("[id^='start_diagnostics']").on("click", function () {
-		const line = this.id.replace("start_diagnostics", ""); // 1–8
+		var line = parseInt(this.id.replace("start_diagnostics", ""), 10);
 
-		if (line < 1 || line > 8) return;
+		if (isNaN(line) || line < 1 || line > voiceLines) return;
 
 		// Set all fields to InProgress
 		["hp", "femf", "rf", "roh", "re"].forEach(function (item) {
