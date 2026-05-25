@@ -91,35 +91,39 @@ function KeyExtGet($root, $param)
 //return a string of encryption type
 function encrypt_map($mode, $method)
 {
-	$method = str_replace("AES+TKIP", "TKIP/AES", $method);
+	if ($method == "AES+TKIP") {
+		$method = "TKIP/AES";
+	} elseif ($method == "AES+GCMP") {
+		$method = "GCMP/AES";
+	}
 	switch ($mode)
 	{
-	case "None":
-		return "Open (risky)";
-	case "WEP-64":
-		return "WEP 64 (risky)";
-	case "WEP-128":
-		return "WEP 128 (risky)";
-	case "WPA-Personal":
-		return "WPA-PSK ("+$method+")"; 
-	case "WPA2-Personal":
-		return "WPA2-PSK ("+$method+")"; 
-	case "WPA-WPA2-Personal":
-		return "WPAWPA2-PSK ("+$method+")"; 
-	case "WPA-Enterprise":
-		return "WPA ("+$method+")"; 
-	case "WPA2-Enterprise":
-		return "WPA2 ("+$method+")"; 
-	case "WPA-WPA2-Enterprise":
-		return "WPAWPA2 ("+$method+")"; 
-	case "WPA3-Personal":
-		return "WPA3-Personal Only";
-	case "WPA3-Personal-Transition":
-                return "WPA3-Personal Transition";
-        case "WPA3-Personal-Compatibility":
-                return "WPA3-Personal Compatibility";
-	default:
-		return "WPAWPA2-PSK (TKIP/AES)";
+		case "None":
+			return "Open (risky)";
+		case "WEP-64":
+			return "WEP 64 (risky)";
+		case "WEP-128":
+			return "WEP 128 (risky)";
+		case "WPA-Personal":
+			return "WPA-PSK ("+$method+")";
+		case "WPA2-Personal":
+			return "WPA2-PSK ("+$method+")";
+		case "WPA-WPA2-Personal":
+			return "WPAWPA2-PSK ("+$method+")";
+		case "WPA-Enterprise":
+			return "WPA ("+$method+")";
+		case "WPA2-Enterprise":
+			return "WPA2 ("+$method+")";
+		case "WPA-WPA2-Enterprise":
+			return "WPAWPA2 ("+$method+")";
+		case "WPA3-Personal":
+			return "WPA3-Personal Only";
+		case "WPA3-Personal-Transition":
+			return "WPA3-Personal Transition";
+		case "WPA3-Personal-Compatibility":
+			return "WPA3-Personal Compatibility";
+		default:
+			return "WPAWPA2-PSK (TKIP/AES)";
 	}
 }
 /**

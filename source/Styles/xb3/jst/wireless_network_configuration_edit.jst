@@ -157,40 +157,8 @@ if ("false" == $wifi_value['Radio_'+$rf+'_Enable']){
 $supported_mode		= $wifi_value['SupportedStandards'];
 if ("1-11"==$possible_channels)
 $possible_channels = "1,2,3,4,5,6,7,8,9,10,11";
-$security = "None";
-if ("WEP-64" == $encrypt_mode){
-		$security = "WEP_64";
-		$network_password = $network_pass_64;
-}
-else if ("WEP-128" == $encrypt_mode){
-		$security = "WEP_128";
-		$network_password = $network_pass_128;
-}
-else if ("WPA-Personal" == $encrypt_mode){
-	if ("TKIP" == $encrypt_method){
-		$security = "WPA_PSK_TKIP";
-	}
-	else{
-		$security = "WPA_PSK_AES";
-	}
-}
-else if ("WPA2-Personal" == $encrypt_mode){
-	if ("TKIP" == $encrypt_method){
-		$security = "WPA2_PSK_TKIP";
-	}
-	else if ("AES" == $encrypt_method){
-		$security = "WPA2_PSK_AES";
-	}
-	else{
-		$security = "WPA2_PSK_TKIPAES";
-	}
-}
-else if ("WPA-WPA2-Personal" == $encrypt_mode){
-		$security = "WPAWPA2_PSK_TKIPAES";
-}
-else{
-		$security = "None";
-}
+$security = encrypt_map($encrypt_mode, $encrypt_method);
+
 //for SSID 1 and 2 don't show password for mso user
 $password_mso_user = !(($id == 1 || $id == 2) && ($_SESSION["loginuser"] == "mso"));
 ?>
