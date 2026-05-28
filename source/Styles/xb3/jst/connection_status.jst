@@ -171,25 +171,12 @@ if($OperatingChannelBandwidth == "6GHz")
 //-----------------------WAN IPv6 Address - Start
     $WANIPv6 = "";
     $fistUSif = getFirstUpstreamIpInterface();
-    $partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
-    if (strpos($partnerId, "sky-") !== false) {
-        $ids = explode(",", getInstanceIds($fistDSif+"IPv6Address."));
-        for(var $keytmp in $ids) { $i=$ids[$keytmp];/*p2j-foreach*/
-            $val = getStr($fistDSif+"IPv6Address."+$i+".IPAddress");
-            if (!strstr($val, "fe80::")){
-                $WANIPv6=$val;
-                break;
-            }else{$WANIPv6='';}
-        }
-    }
-    else {
-        $ids = explode(",", getInstanceIds($fistUSif+"IPv6Address."));
-        for(var $keytmp in $ids) { $i=$ids[$keytmp];/*p2j-foreach*/
-            $val = getStr($fistUSif+"IPv6Address."+$i+".IPAddress");
-                if (!strstr($val, "fe80::")){
-                $WANIPv6 = $val;
-		break;
-            }
+    $ids = explode(",", getInstanceIds($fistUSif+"IPv6Address."));
+    for(var $keytmp in $ids) { $i=$ids[$keytmp];/*p2j-foreach*/
+        $val = getStr($fistUSif+"IPv6Address."+$i+".IPAddress");
+        if (!strstr($val, "fe80::")){
+            $WANIPv6 = $val;
+            break;
         }
     }
 //-----------------------WAN IPv6 Address - End
