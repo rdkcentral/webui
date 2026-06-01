@@ -117,7 +117,7 @@ if($locale=="it" || $locale=="en_GB"){
 	}
 	$rootObjName    = "Device.Hosts.Host.";
 	$paramNameArray = ["Device.Hosts.Host."]/*p2j-array*/;
-	$mapping_array  = ["PhysAddress", "IPAddress", "Layer1Interface", "HostName", "Active", "AddressSource", "X_CISCO_COM_RSSI", "Comments", "IPv4Address.1.IPAddress", "IPv6Address.1.IPAddress", "IPv6Address.2.IPAddress", "IPv6Address.3.IPAddress", "X_RDKCENTRAL-COM_Parent", "X_RDKCENTRAL-COM_DeviceType"]/*p2j-array*/;
+	$mapping_array  = ["PhysAddress", "IPAddress", "Layer1Interface", "HostName", "Active", "AddressSource", "X_CISCO_COM_RSSI", "Comments", "IPv4Address.1.IPAddress", "IPv6Address.1.IPAddress", "IPv6Address.2.IPAddress", "IPv6Address.3.IPAddress", "X_RDKCENTRAL-COM_Parent", "X_RDKCENTRAL-COM_DeviceType", "X_RDK-MldClient", "X_RDK-MloLinkNumberofEntries"]/*p2j-array*/;
 	$HostIndexArr = DmExtGetInstanceIds("Device.Hosts.Host.");
 	$HostNum = 0;
 	if(0 == $HostIndexArr[0]){  
@@ -185,29 +185,58 @@ if($locale=="it" || $locale=="en_GB"){
 			}
 		    //This for loop aims to construct online and offline network host arrays based on $Host		    
 		    for ($i=0,$j=0,$k=0,$x=0; $i < $HostNum; $i++) { 
-                $Host[$i.toString()]['instanceID'] = $i + 1;
+				$Host[$i.toString()]['instanceID'] = $HostIndexArr[$i + 1];
                 $Host[$i]['HostName'] = htmlspecialchars($Host[$i]['HostName'], ENT_NOQUOTES, 'UTF-8');
                 $Host[$i]['Comments'] = htmlspecialchars($Host[$i]['Comments'], ENT_NOQUOTES, 'UTF-8');
+				$selectedLayer1Interface = $Host[$i.toString()]['Layer1Interface'];
+				$selectedRSSI = "";
+				$hasMloRSSI = false;
+				if (!strcasecmp("true", $Host[$i.toString()]['X_RDK-MldClient'])) {
+					$mloLinkNum = parseInt($Host[$i.toString()]['X_RDK-MloLinkNumberofEntries'], 10);
+					if (isNaN($mloLinkNum)) {
+						$mloLinkNum = 0;
+					}
+					if ($mloLinkNum > 0) {
+						$bestMloRSSI = -9999;
+						for ($m=1; $m <= $mloLinkNum; $m++) {
+							$mloBaseObj = "Device.Hosts.Host." + $Host[$i.toString()]['instanceID'] + ".MloLink." + $m + ".";
+							$mloLayer1Interface = getStr($mloBaseObj + "X_RDK-Layer1Interface");
+							$mloRSSI = getStr($mloBaseObj + "X_RDK-RSSI");
+							if ("" != $mloLayer1Interface) {
+								$selectedLayer1Interface = $mloLayer1Interface;
+							}
+							$mloRSSIValue = parseInt($mloRSSI, 10);
+							if (!isNaN($mloRSSIValue) && ($mloRSSIValue > $bestMloRSSI)) {
+								$bestMloRSSI = $mloRSSIValue;
+								$selectedRSSI = $mloRSSIValue;
+								$hasMloRSSI = true;
+								if ("" != $mloLayer1Interface) {
+									$selectedLayer1Interface = $mloLayer1Interface;
+								}
+							}
+						}
+					}
+				}
 				//for WiFi Extended device
 				$isExtendedDevice = false;
 				if (array_key_exists($Host[$i.toString()]['X_RDKCENTRAL-COM_Parent'], $NetworkExtender)){
 					$isExtendedDevice = true;
 					$extDeviceConnType = $NetworkExtender[$Host[$i.toString()]['X_RDKCENTRAL-COM_Parent']];
 				}
-                $tmpHost = ProcessLay1Interface( $Host[$i.toString()]['Layer1Interface']);
+                $tmpHost = ProcessLay1Interface($selectedLayer1Interface);
 		    	if ($tmpHost['networkType'] == "Private"){
 		      	//construct private network host info
 		      	if ( !strcasecmp("true", $Host[$i.toString()]['Active']) ) {
 		      		//construct online private network host info
 					$onlinePrivateNetworkHost['hostNum'] += 1;
-              if(!isset($onlinePrivateNetworkHost[$j.toString()]))
-                $onlinePrivateNetworkHost[$j.toString()]={};
-			        $onlinePrivateNetworkHost[$j.toString()]['instanceID'] = $i + 1;
-			        array_push($onlinePrivateInstanceArr, $onlinePrivateNetworkHost[$j.toString()]['instanceID']);
+					if(!isset($onlinePrivateNetworkHost[$j.toString()]))
+						$onlinePrivateNetworkHost[$j.toString()]={};
+					$onlinePrivateNetworkHost[$j.toString()]['instanceID'] = $i + 1;
+					array_push($onlinePrivateInstanceArr, $onlinePrivateNetworkHost[$j.toString()]['instanceID']);
 					if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName']))
-                                    $onlinePrivateNetworkHost[$j.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
-                    else
-                                    $onlinePrivateNetworkHost[$j.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
+						$onlinePrivateNetworkHost[$j.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
+					else
+						$onlinePrivateNetworkHost[$j.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
 			        array_push($onlineHostNameArr, $onlinePrivateNetworkHost[$j.toString()]['HostName']);
                     $onlinePrivateNetworkHost[$j.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
                     // IPV6 link-local address
@@ -220,10 +249,22 @@ if($locale=="it" || $locale=="en_GB"){
                     $onlinePrivateNetworkHost[$j.toString()]['Connection'] = ($isExtendedDevice) ? $extDeviceConnType+' '+$tmpHost['connectionType'] : $tmpHost['connectionType'];
 					$onlinePrivateNetworkHost[$j.toString()]['X_RDKCENTRAL-COM_DeviceType'] = $Host[$i.toString()]['X_RDKCENTRAL-COM_DeviceType'];                    
 					$onlinePrivateNetworkHost[$j.toString()]['Comments'] = $Host[$i.toString()]['Comments'];
-                    if (stristr($tmpHost['connectionType'], 'Wi-Fi'))
-                    	$onlinePrivateNetworkHost[$j]['RSSI'] = $clients_RSSI[strtoupper($Host[$i.toString()]['PhysAddress'])]+" dBm";
-                    else
-                    	$onlinePrivateNetworkHost[$j]['RSSI'] = "NA";
+					if (stristr($tmpHost['connectionType'], 'Wi-Fi')) {
+						if ($hasMloRSSI) {
+							$onlinePrivateNetworkHost[$j]['RSSI'] = $selectedRSSI + " dBm";
+						}
+						else if (typeof($clients_RSSI[strtoupper($Host[$i.toString()]['PhysAddress'])]) != "undefined") {
+							$onlinePrivateNetworkHost[$j]['RSSI'] = $clients_RSSI[strtoupper($Host[$i.toString()]['PhysAddress'])] + " dBm";
+						}
+						else if ("" != $Host[$i.toString()]['X_CISCO_COM_RSSI']) {
+							$onlinePrivateNetworkHost[$j]['RSSI'] = $Host[$i.toString()]['X_CISCO_COM_RSSI'] + " dBm";
+						}
+						else {
+							$onlinePrivateNetworkHost[$j]['RSSI'] = "NA";
+						}
+					}
+				    else
+				    	$onlinePrivateNetworkHost[$j]['RSSI'] = "NA";
                     if(in_array(strtolower($onlinePrivateNetworkHost[$j.toString()]['PhysAddress']), $arrayBlockMAC)){
 						$onlinePrivateNetworkHost[$j.toString()]['Blocked'] = true;
 					} else {
