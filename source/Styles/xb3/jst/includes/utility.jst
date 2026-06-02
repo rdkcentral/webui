@@ -91,36 +91,84 @@ function KeyExtGet($root, $param)
 //return a string of encryption type
 function encrypt_map($mode, $method)
 {
-	$method = str_replace("AES+TKIP", "TKIP/AES", $method);
+	if ($method == "AES+TKIP") {
+		$method = "TKIP/AES";
+	} else if ($method == "AES+GCMP") {
+		$method = "GCMP/AES";
+	}
 	switch ($mode)
 	{
-	case "None":
-		return "Open (risky)";
-	case "WEP-64":
-		return "WEP 64 (risky)";
-	case "WEP-128":
-		return "WEP 128 (risky)";
-	case "WPA-Personal":
-		return "WPA-PSK ("+$method+")"; 
-	case "WPA2-Personal":
-		return "WPA2-PSK ("+$method+")"; 
-	case "WPA-WPA2-Personal":
-		return "WPAWPA2-PSK ("+$method+")"; 
-	case "WPA-Enterprise":
-		return "WPA ("+$method+")"; 
-	case "WPA2-Enterprise":
-		return "WPA2 ("+$method+")"; 
-	case "WPA-WPA2-Enterprise":
-		return "WPAWPA2 ("+$method+")"; 
-	case "WPA3-Personal":
-		return "WPA3-Personal Only";
-	case "WPA3-Personal-Transition":
-                return "WPA3-Personal Transition";
-        case "WPA3-Personal-Compatibility":
-                return "WPA3-Personal Compatibility";
-	default:
-		return "WPAWPA2-PSK (TKIP/AES)";
+		case "None":
+			return "Open (risky)";
+		case "WEP-64":
+			return "WEP 64 (risky)";
+		case "WEP-128":
+			return "WEP 128 (risky)";
+		case "WPA-Personal":
+			return "WPA-PSK ("+$method+")";
+		case "WPA2-Personal":
+			return "WPA2-PSK ("+$method+")";
+		case "WPA-WPA2-Personal":
+			return "WPAWPA2-PSK ("+$method+")";
+		case "WPA-Enterprise":
+			return "WPA ("+$method+")";
+		case "WPA2-Enterprise":
+			return "WPA2 ("+$method+")";
+		case "WPA-WPA2-Enterprise":
+			return "WPAWPA2 ("+$method+")";
+		case "WPA3-Personal":
+			return "WPA3-Personal Only";
+		case "WPA3-Personal-Transition":
+			return "WPA3-Personal Transition";
+		case "WPA3-Personal-Compatibility":
+			return "WPA3-Personal Compatibility";
+		default:
+			return "WPAWPA2-PSK (TKIP/AES)";
 	}
+}
+
+// return internal security mode value used by edit-page <select> options
+function security_mode_map($encrypt_mode, $encrypt_method)
+{
+	$security = "None";
+	if ("WEP-64" == $encrypt_mode){
+		$security = "WEP_64";
+	}
+	else if ("WEP-128" == $encrypt_mode){
+		$security = "WEP_128";
+	}
+	else if ("WPA-Personal" == $encrypt_mode){
+		if ("TKIP" == $encrypt_method){
+			$security = "WPA_PSK_TKIP";
+		}
+		else {
+			$security = "WPA_PSK_AES";
+		}
+	}
+	else if ("WPA2-Personal" == $encrypt_mode){
+		if ("TKIP" == $encrypt_method){
+			$security = "WPA2_PSK_TKIP";
+		}
+		else if ("AES" == $encrypt_method){
+			$security = "WPA2_PSK_AES";
+		}
+		else {
+			$security = "WPA2_PSK_TKIPAES";
+		}
+	}
+	else if ("WPA-WPA2-Personal" == $encrypt_mode){
+		$security = "WPAWPA2_PSK_TKIPAES";
+	}
+	else if ("WPA3-Personal" == $encrypt_mode){
+		$security = "WPA3-Personal Only";
+	}
+	else if ("WPA3-Personal-Transition" == $encrypt_mode){
+		$security = "WPA3-Personal Transition";
+	}
+	else if ("WPA3-Personal-Compatibility" == $encrypt_mode){
+		$security = "WPA3-Personal Compatibility";
+	}
+	return $security;
 }
 /**
  * Discription: 

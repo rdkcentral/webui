@@ -71,51 +71,6 @@ $get_encrypt_mode	= getStr("Device.WiFi.AccessPoint."+$i+".Security.ModeEnabled"
 $get_encrypt_method	= getStr("Device.WiFi.AccessPoint."+$i+".Security.X_CISCO_COM_EncryptionMethod");
 $WifiPersonalizationEnable = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_WiFiNeedsPersonalization");
 
-// security_mode from $encrypt_mode & $encrypt_method
-function security_mode($encrypt_mode, $encrypt_method) {
-	$security = "None";
-	if ("WEP-64" == $encrypt_mode){
-		$security = "WEP_64";
-	}
-	else if ("WEP-128" == $encrypt_mode){
-		$security = "WEP_128";
-	}
-	else if ("WPA-Personal" == $encrypt_mode){
-		if ("TKIP" == $encrypt_method){
-			$security = "WPA_PSK_TKIP";
-		}
-		else {
-			$security = "WPA_PSK_AES";
-		}
-	}
-	else if ("WPA2-Personal" == $encrypt_mode){
-		if ("TKIP" == $encrypt_method){
-			$security = "WPA2_PSK_TKIP";
-		}
-		else if ("AES" == $encrypt_method){
-			$security = "WPA2_PSK_AES";
-		}
-		else {
-			$security = "WPA2_PSK_TKIPAES";
-		}
-	}
-	else if ("WPA-WPA2-Personal" == $encrypt_mode){
-		$security = "WPAWPA2_PSK_TKIPAES";
-	}
-	else if ("WPA3-Personal" == $encrypt_mode){
-		if ("AES" == $encrypt_method)
-			$security = "WPA3-Personal Only";
-	}
-	else if ("WPA3-Personal-Transition" == $encrypt_mode){
-		if ("AES" == $encrypt_method)
-			$security = "WPA3-Personal Transition";
-	}
-	else {
-		$security = "None";
-	}
-	return $security;
-}
-
 if($i != 1 && $i != 2 && $i != 17) $Mesh_Mode = false;
 if($i != 1 && $i != 2 && $i != 17) $HCM_Mode = "Disable";
 $response_message = '';

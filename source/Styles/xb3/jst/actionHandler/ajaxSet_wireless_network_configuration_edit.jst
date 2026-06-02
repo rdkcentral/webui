@@ -55,42 +55,6 @@ function MiniApplySSID($ssid) {
 	setStr("Device.WiFi.Radio."+$apply_rf+".X_CISCO_COM_ApplySettingSSID", $apply_id, false);
 	setStr("Device.WiFi.Radio."+$apply_rf+".X_CISCO_COM_ApplySetting", "true", true);
 }
-// security_mode from encrypt_mode & encrypt_method
-function security_mode($encrypt_mode, $encrypt_method) {
-	$security = "None";
-	if ("WEP-64" == $encrypt_mode){
-		$security = "WEP_64";
-	}
-	else if ("WEP-128" == $encrypt_mode){
-		$security = "WEP_128";
-	}
-	else if ("WPA-Personal" == $encrypt_mode){
-		if ("TKIP" == $encrypt_method){
-			$security = "WPA_PSK_TKIP";
-		}
-		else{
-			$security = "WPA_PSK_AES";
-		}
-	}
-	else if ("WPA2-Personal" == $encrypt_mode){
-		if ("TKIP" == $encrypt_method){
-			$security = "WPA2_PSK_TKIP";
-		}
-		else if ("AES" == $encrypt_method){
-			$security = "WPA2_PSK_AES";
-		}
-		else{
-			$security = "WPA2_PSK_TKIPAES";
-		}
-	}
-	else if ("WPA-WPA2-Personal" == $encrypt_mode){
-		$security = "WPAWPA2_PSK_TKIPAES";
-	}
-	else{
-		$security = "None";
-	}
-	return $security;
-}
 $response_message = '';
 //ssid 1,2 for all
 //ssid 3,4 for mso only
