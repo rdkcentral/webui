@@ -157,7 +157,7 @@ if ("false" == $wifi_value['Radio_'+$rf+'_Enable']){
 $supported_mode		= $wifi_value['SupportedStandards'];
 if ("1-11"==$possible_channels)
 $possible_channels = "1,2,3,4,5,6,7,8,9,10,11";
-$security = encrypt_map($encrypt_mode, $encrypt_method);
+$security = security_mode_map($encrypt_mode, $encrypt_method);
 
 //for SSID 1 and 2 don't show password for mso user
 $password_mso_user = !(($id == 1 || $id == 2) && ($_SESSION["loginuser"] == "mso"));
