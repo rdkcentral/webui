@@ -687,17 +687,23 @@ function resolve_IPV6_global_address($address1, $address3){
 
 /**
  * Description:
- * Return Layer1Interface resolved with MLO link interface (when applicable)
+ * Return MLO-aware Layer1Interface and MLO RSSI metadata
  *
  * arguments:
  *  $hostData: host table row with keys including Layer1Interface,
  *             X_RDK-MldClient, X_RDK-MloLinkNumberofEntries
  *  $instanceID: Device.Hosts.Host instance id
  *
- * return: selected Layer1Interface string
+ * return: {
+ *   Layer1Interface: string,
+ *   HasMloRSSI: bool,
+ *   BestMloRSSI: string|number
+ * }
  */
-function getMloAwareLayer1Interface($hostData, $instanceID){
+function getMloLayer1Info($hostData, $instanceID){
 	var $selectedLayer1Interface = "";
+	var $hasMloRSSI = false;
+	var $selectedRSSI = "";
 	if (typeof($hostData['Layer1Interface']) != "undefined") {
 		$selectedLayer1Interface = $hostData['Layer1Interface'];
 	}
@@ -710,16 +716,40 @@ function getMloAwareLayer1Interface($hostData, $instanceID){
 			$mloLinkNum = 0;
 		}
 		if ($mloLinkNum > 0 && "" != $instanceID) {
+			$bestMloRSSI = -9999;
 			for ($m=1; $m <= $mloLinkNum; $m++) {
 				$mloBaseObj = "Device.Hosts.Host." + $instanceID + ".MloLink." + $m + ".";
 				$mloLayer1Interface = getStr($mloBaseObj + "X_RDK-Layer1Interface");
+				$mloRSSI = getStr($mloBaseObj + "X_RDK-RSSI");
 				if ("" != $mloLayer1Interface) {
 					$selectedLayer1Interface = $mloLayer1Interface;
+				}
+				$mloRSSIValue = parseInt($mloRSSI, 10);
+				if (!isNaN($mloRSSIValue) && ($mloRSSIValue > $bestMloRSSI)) {
+					$bestMloRSSI = $mloRSSIValue;
+					$selectedRSSI = $mloRSSIValue;
+					$hasMloRSSI = true;
+					if ("" != $mloLayer1Interface) {
+						$selectedLayer1Interface = $mloLayer1Interface;
+					}
 				}
 			}
 		}
 	}
-	return $selectedLayer1Interface;
+	return {
+		'Layer1Interface': $selectedLayer1Interface,
+		'HasMloRSSI': $hasMloRSSI,
+		'BestMloRSSI': $selectedRSSI
+	};
+}
+
+/**
+ * Description:
+ * Compatibility wrapper returning only Layer1Interface
+ */
+function getMloLayer1Interface($hostData, $instanceID){
+	$mloInfo = getMloLayer1Info($hostData, $instanceID);
+	return $mloInfo['Layer1Interface'];
 }
 /**
  * Discription:

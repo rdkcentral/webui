@@ -389,7 +389,7 @@ else
 			$actualTableInstance = getParaValues($rootObjName, $paramNameArray, $mapping_array, true);
 			for ($j=0; $j<count($actualTableInstance); $j++)
 			{
-				$selectedLayer1Interface = getMloAwareLayer1Interface($actualTableInstance[$j.toString()], $actualTableInstance[$j.toString()]["__id"]);
+				$selectedLayer1Interface = getMloLayer1Interface($actualTableInstance[$j.toString()], $actualTableInstance[$j.toString()]["__id"]);
 				$host = explode(".", $selectedLayer1Interface);
 				// $host = explode(".", "Device.WiFi.SSID.1.");
 				if (in_array("WiFi", $host))

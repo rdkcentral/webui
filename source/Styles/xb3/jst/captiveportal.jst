@@ -222,7 +222,7 @@
 		if(!empty($Host)){
 			for($key in $Host) { $value=$Host[$key];/*p2j-foreach*/
 				if(stristr($value["IPAddress"], $clientIP)){
-					$selectedLayer1Interface = getMloAwareLayer1Interface($value, $value["__id"]);
+					$selectedLayer1Interface = getMloLayer1Interface($value, $value["__id"]);
 					if(stristr($selectedLayer1Interface, "Ethernet")){ $connectionType = "Ethernet"; }
 					else if(stristr($selectedLayer1Interface, "WiFi.SSID.1")){ $connectionType = "WiFi"; }//WiFi 2.4GHz
 					else if(stristr($selectedLayer1Interface, "WiFi.SSID.2")){ $connectionType = "WiFi"; }//WiFi 5GHz

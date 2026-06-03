@@ -140,7 +140,7 @@ if($locale=="it" || $locale=="en_GB"){
 		$NetworkExtender          = {}/*p2j-array*/;
 		$offlinePrivateNetworkHost['hostNum'] = 0;
 		$PublicNetworkHost['hostNum']  = 0;
-		$Host = getParaValues($rootObjName, $paramNameArray, $mapping_array);
+		$Host = getParaValues($rootObjName, $paramNameArray, $mapping_array, true);
 		if(!empty($Host)){
 			//check if online device is there in Blocked Devices List using MAC Address
 			//if it's there remove 'X' button for "Online Blocked Devices"
@@ -188,35 +188,10 @@ if($locale=="it" || $locale=="en_GB"){
 				$Host[$i.toString()]['instanceID'] = $HostIndexArr[$i + 1];
                 $Host[$i]['HostName'] = htmlspecialchars($Host[$i]['HostName'], ENT_NOQUOTES, 'UTF-8');
                 $Host[$i]['Comments'] = htmlspecialchars($Host[$i]['Comments'], ENT_NOQUOTES, 'UTF-8');
-				$selectedLayer1Interface = $Host[$i.toString()]['Layer1Interface'];
-				$selectedRSSI = "";
-				$hasMloRSSI = false;
-				if (!strcasecmp("true", $Host[$i.toString()]['X_RDK-MldClient'])) {
-					$mloLinkNum = parseInt($Host[$i.toString()]['X_RDK-MloLinkNumberofEntries'], 10);
-					if (isNaN($mloLinkNum)) {
-						$mloLinkNum = 0;
-					}
-					if ($mloLinkNum > 0) {
-						$bestMloRSSI = -9999;
-						for ($m=1; $m <= $mloLinkNum; $m++) {
-							$mloBaseObj = "Device.Hosts.Host." + $Host[$i.toString()]['instanceID'] + ".MloLink." + $m + ".";
-							$mloLayer1Interface = getStr($mloBaseObj + "X_RDK-Layer1Interface");
-							$mloRSSI = getStr($mloBaseObj + "X_RDK-RSSI");
-							if ("" != $mloLayer1Interface) {
-								$selectedLayer1Interface = $mloLayer1Interface;
-							}
-							$mloRSSIValue = parseInt($mloRSSI, 10);
-							if (!isNaN($mloRSSIValue) && ($mloRSSIValue > $bestMloRSSI)) {
-								$bestMloRSSI = $mloRSSIValue;
-								$selectedRSSI = $mloRSSIValue;
-								$hasMloRSSI = true;
-								if ("" != $mloLayer1Interface) {
-									$selectedLayer1Interface = $mloLayer1Interface;
-								}
-							}
-						}
-					}
-				}
+				$mloInfo = getMloLayer1Info($Host[$i.toString()], $Host[$i.toString()]['__id']);
+				$selectedLayer1Interface = $mloInfo['Layer1Interface'];
+				$selectedRSSI = $mloInfo['BestMloRSSI'];
+				$hasMloRSSI = $mloInfo['HasMloRSSI'];
 				//for WiFi Extended device
 				$isExtendedDevice = false;
 				if (array_key_exists($Host[$i.toString()]['X_RDKCENTRAL-COM_Parent'], $NetworkExtender)){
