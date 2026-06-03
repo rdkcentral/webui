@@ -745,6 +745,66 @@ function getMloLayer1Info($hostData, $instanceID){
 
 /**
  * Description:
+ * Return all available Layer1Interface values for a host, including MLO links
+ */
+function getMloLayer1Interfaces($hostData, $instanceID){
+	$interfaces = []/*p2j-array*/;
+	if (
+		typeof($hostData['Layer1Interface']) != "undefined" &&
+		"" != $hostData['Layer1Interface']
+	) {
+		array_push($interfaces, $hostData['Layer1Interface']);
+	}
+	if (
+		typeof($hostData['X_RDK-MldClient']) != "undefined" &&
+		!strcasecmp("true", $hostData['X_RDK-MldClient'])
+	) {
+		$mloLinkNum = parseInt($hostData['X_RDK-MloLinkNumberofEntries'], 10);
+		if (isNaN($mloLinkNum)) {
+			$mloLinkNum = 0;
+		}
+		if ($mloLinkNum > 0 && "" != $instanceID) {
+			for ($m=1; $m <= $mloLinkNum; $m++) {
+				$mloBaseObj = "Device.Hosts.Host." + $instanceID + ".MloLink." + $m + ".";
+				$mloLayer1Interface = getStr($mloBaseObj + "X_RDK-Layer1Interface");
+				if ("" != $mloLayer1Interface && !in_array($mloLayer1Interface, $interfaces)) {
+					array_push($interfaces, $mloLayer1Interface);
+				}
+			}
+		}
+	}
+	return $interfaces;
+}
+
+/**
+ * Description:
+ * Match Layer1Interface against a given WiFi SSID index
+ */
+function isLayer1InterfaceOnSsid($layer1Interface, $ssid){
+	if ("" == $layer1Interface || "" == $ssid) {
+		return false;
+	}
+	$ssidPattern = "WiFi.SSID." + $ssid + ".";
+	return stristr($layer1Interface, $ssidPattern);
+}
+
+/**
+ * Description:
+ * Return true if any host Layer1Interface (including MLO links) maps to target SSID
+ */
+function hasMloSsidMatch($hostData, $instanceID, $ssid){
+	$interfaces = getMloLayer1Interfaces($hostData, $instanceID);
+	for (var $idx in $interfaces) {
+		$layer1Interface = $interfaces[$idx];/*p2j-foreach*/
+		if (isLayer1InterfaceOnSsid($layer1Interface, $ssid)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Description:
  * Compatibility wrapper returning only Layer1Interface
  */
 function getMloLayer1Interface($hostData, $instanceID){
