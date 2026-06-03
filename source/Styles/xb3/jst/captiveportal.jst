@@ -360,23 +360,15 @@ $(document).ready(function(){
 			$.ajax({
 				type: "POST",
 				url: "actionHandler/ajaxSet_wireless_network_configuration_redirection.jst",
-				timeout: 20000,
 				data: { rediection_Info: jsConfig, csrfp_token: token },
 				success: function (msg, status, jqXHR) {
-					// msg can be a JSON string or parsed object/array
-					try {
-						if (typeof msg === "string") {
-							msg = JSON.parse(msg);
-						}
-					} catch (e) {
-						console.log("Captiveportal response parse warning:", e);
+					//msg is the response
+					msg = JSON.parse(msg);
+					if(msg[0] == "outOfCaptivePortal") {
+						setTimeout(function(){
+							location.href="index.jst";
+						}, 10000);
 					}
-
-					// On successful save response, proceed quickly to index.
-					// Keep a small delay to allow backend apply operations to settle.
-					setTimeout(function(){
-						location.href="index.jst";
-					}, 1500);
 				},
 				error: function(xhr, status, error) {
 					// Handle error
@@ -388,8 +380,8 @@ $(document).ready(function(){
 						}
 						//Increment retryCount
 						retryCount++;
-						// retry after 2 sec
-						setTimeout(function(){ postConfig(); }, 2000);
+						//retry after 3 sec
+						setTimeout(function(){ postConfig(); }, 3000);
 					}
 				}
 			});
