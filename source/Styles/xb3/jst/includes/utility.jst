@@ -684,6 +684,43 @@ function resolve_IPV6_global_address($address1, $address3){
 	}
 	return $IPV6_Addresses;
 }
+
+/**
+ * Description:
+ * Return Layer1Interface resolved with MLO link interface (when applicable)
+ *
+ * arguments:
+ *  $hostData: host table row with keys including Layer1Interface,
+ *             X_RDK-MldClient, X_RDK-MloLinkNumberofEntries
+ *  $instanceID: Device.Hosts.Host instance id
+ *
+ * return: selected Layer1Interface string
+ */
+function getMloAwareLayer1Interface($hostData, $instanceID){
+	var $selectedLayer1Interface = "";
+	if (typeof($hostData['Layer1Interface']) != "undefined") {
+		$selectedLayer1Interface = $hostData['Layer1Interface'];
+	}
+	if (
+		typeof($hostData['X_RDK-MldClient']) != "undefined" &&
+		!strcasecmp("true", $hostData['X_RDK-MldClient'])
+	) {
+		$mloLinkNum = parseInt($hostData['X_RDK-MloLinkNumberofEntries'], 10);
+		if (isNaN($mloLinkNum)) {
+			$mloLinkNum = 0;
+		}
+		if ($mloLinkNum > 0 && "" != $instanceID) {
+			for ($m=1; $m <= $mloLinkNum; $m++) {
+				$mloBaseObj = "Device.Hosts.Host." + $instanceID + ".MloLink." + $m + ".";
+				$mloLayer1Interface = getStr($mloBaseObj + "X_RDK-Layer1Interface");
+				if ("" != $mloLayer1Interface) {
+					$selectedLayer1Interface = $mloLayer1Interface;
+				}
+			}
+		}
+	}
+	return $selectedLayer1Interface;
+}
 /**
  * Discription:
  *     This function determines what the WAN type is

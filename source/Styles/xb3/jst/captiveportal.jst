@@ -210,7 +210,7 @@
 	$connectionType = "none";
 	$rootObjName    = "Device.Hosts.Host.";
 	$paramNameArray = ["Device.Hosts.Host."]/*p2j-array*/;
-	$mapping_array  = ["IPAddress", "Layer1Interface"]/*p2j-array*/;
+	$mapping_array  = ["IPAddress", "Layer1Interface", "X_RDK-MldClient", "X_RDK-MloLinkNumberofEntries"]/*p2j-array*/;
 	$HostIndexArr = DmExtGetInstanceIds("Device.Hosts.Host.");
 	$HostNum = 0;
 	if(0 == $HostIndexArr[0]){  
@@ -218,15 +218,17 @@
 		$HostNum = count($HostIndexArr) - 1;
 	}
 	if(!empty($HostNum)){
-		$Host = getParaValues($rootObjName, $paramNameArray, $mapping_array);
+		$Host = getParaValues($rootObjName, $paramNameArray, $mapping_array, true);
 		if(!empty($Host)){
 			for($key in $Host) { $value=$Host[$key];/*p2j-foreach*/
 				if(stristr($value["IPAddress"], $clientIP)){
-					if(stristr($value["Layer1Interface"], "Ethernet")){ $connectionType = "Ethernet"; }
-					else if(stristr($value["Layer1Interface"], "WiFi.SSID.1")){ $connectionType = "WiFi"; }//WiFi 2.4GHz
-					else if(stristr($value["Layer1Interface"], "WiFi.SSID.2")){ $connectionType = "WiFi"; }//WiFi 5GHz
-					else if(stristr($value["Layer1Interface"], "Public")){ $connectionType = "WiFi"; }//WiFi Public
+					$selectedLayer1Interface = getMloAwareLayer1Interface($value, $value["__id"]);
+					if(stristr($selectedLayer1Interface, "Ethernet")){ $connectionType = "Ethernet"; }
+					else if(stristr($selectedLayer1Interface, "WiFi.SSID.1")){ $connectionType = "WiFi"; }//WiFi 2.4GHz
+					else if(stristr($selectedLayer1Interface, "WiFi.SSID.2")){ $connectionType = "WiFi"; }//WiFi 5GHz
+					else if(stristr($selectedLayer1Interface, "Public")){ $connectionType = "WiFi"; }//WiFi Public
 					else { $connectionType = "Ethernet"; }
+					break;
 				}
 			}
 		}//end of if empty host
@@ -358,15 +360,23 @@ $(document).ready(function(){
 			$.ajax({
 				type: "POST",
 				url: "actionHandler/ajaxSet_wireless_network_configuration_redirection.jst",
+				timeout: 20000,
 				data: { rediection_Info: jsConfig, csrfp_token: token },
 				success: function (msg, status, jqXHR) {
-					//msg is the response
-					msg = JSON.parse(msg);
-					if(msg[0] == "outOfCaptivePortal") {
-						setTimeout(function(){
-							location.href="index.jst";
-						}, 10000);
+					// msg can be a JSON string or parsed object/array
+					try {
+						if (typeof msg === "string") {
+							msg = JSON.parse(msg);
+						}
+					} catch (e) {
+						console.log("Captiveportal response parse warning:", e);
 					}
+
+					// On successful save response, proceed quickly to index.
+					// Keep a small delay to allow backend apply operations to settle.
+					setTimeout(function(){
+						location.href="index.jst";
+					}, 1500);
 				},
 				error: function(xhr, status, error) {
 					// Handle error
@@ -378,8 +388,8 @@ $(document).ready(function(){
 						}
 						//Increment retryCount
 						retryCount++;
-						//retry after 3 sec
-						setTimeout(function(){ postConfig(); }, 3000);
+						// retry after 2 sec
+						setTimeout(function(){ postConfig(); }, 2000);
 					}
 				}
 			});
