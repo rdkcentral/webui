@@ -189,90 +189,146 @@ if($locale=="it" || $locale=="en_GB"){
                 $Host[$i]['HostName'] = htmlspecialchars($Host[$i]['HostName'], ENT_NOQUOTES, 'UTF-8');
                 $Host[$i]['Comments'] = htmlspecialchars($Host[$i]['Comments'], ENT_NOQUOTES, 'UTF-8');
 				$mloInfo = getMloLayer1Info($Host[$i.toString()], $Host[$i.toString()]['__id']);
+				$mloLayer1Interfaces = getMloLayer1Interfaces($Host[$i.toString()], $Host[$i.toString()]['__id']);
 				$selectedLayer1Interface = $mloInfo['Layer1Interface'];
 				$selectedRSSI = $mloInfo['BestMloRSSI'];
 				$hasMloRSSI = $mloInfo['HasMloRSSI'];
+				$tmpHost = ProcessLay1Interface($selectedLayer1Interface);
+				$connectionTypeList = []/*p2j-array*/;
+				$hasWiFiInterface = false;
+				for (var $midx in $mloLayer1Interfaces) {
+					$mloLayer1Interface = $mloLayer1Interfaces[$midx];/*p2j-foreach*/
+					$tmpConnectionInfo = ProcessLay1Interface($mloLayer1Interface);
+					if ($tmpConnectionInfo['networkType'] == "Private") {
+						$tmpHost = $tmpConnectionInfo;
+					}
+					if (!in_array($tmpConnectionInfo['connectionType'], $connectionTypeList)) {
+						array_push($connectionTypeList, $tmpConnectionInfo['connectionType']);
+					}
+					if (stristr($mloLayer1Interface, "WiFi")) {
+						$hasWiFiInterface = true;
+					}
+				}
+				if (empty($connectionTypeList)) {
+					$tmpConnectionInfo = ProcessLay1Interface($selectedLayer1Interface);
+					array_push($connectionTypeList, $tmpConnectionInfo['connectionType']);
+				}
+				$displayConnectionList = []/*p2j-array*/;
+				if (
+					typeof($Host[$i.toString()]['X_RDK-MldClient']) != "undefined" &&
+					!strcasecmp("true", $Host[$i.toString()]['X_RDK-MldClient']) &&
+					$hasWiFiInterface
+				) {
+					for (var $cti in $connectionTypeList) {
+						$ct = $connectionTypeList[$cti];/*p2j-foreach*/
+						if (stristr($ct, "Wi-Fi")) {
+							array_push($displayConnectionList, $ct);
+						}
+					}
+				}
+				if (empty($displayConnectionList)) {
+					$displayConnectionList = $connectionTypeList;
+				}
 				//for WiFi Extended device
 				$isExtendedDevice = false;
 				if (array_key_exists($Host[$i.toString()]['X_RDKCENTRAL-COM_Parent'], $NetworkExtender)){
 					$isExtendedDevice = true;
 					$extDeviceConnType = $NetworkExtender[$Host[$i.toString()]['X_RDKCENTRAL-COM_Parent']];
 				}
-                $tmpHost = ProcessLay1Interface($selectedLayer1Interface);
-		    	if ($tmpHost['networkType'] == "Private"){
-		      	//construct private network host info
-		      	if ( !strcasecmp("true", $Host[$i.toString()]['Active']) ) {
-		      		//construct online private network host info
-					$onlinePrivateNetworkHost['hostNum'] += 1;
-					if(!isset($onlinePrivateNetworkHost[$j.toString()]))
-						$onlinePrivateNetworkHost[$j.toString()]={};
-					$onlinePrivateNetworkHost[$j.toString()]['instanceID'] = $i + 1;
-					array_push($onlinePrivateInstanceArr, $onlinePrivateNetworkHost[$j.toString()]['instanceID']);
-					if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName']))
-						$onlinePrivateNetworkHost[$j.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
-					else
-						$onlinePrivateNetworkHost[$j.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
-			        array_push($onlineHostNameArr, $onlinePrivateNetworkHost[$j.toString()]['HostName']);
-                    $onlinePrivateNetworkHost[$j.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
-                    // IPV6 link-local address
-	                $onlinePrivateNetworkHost[$j.toString()]['IPv6Address1'] = $Host[$i.toString()]['IPv6Address.2.IPAddress'];
-	                // IPV6 global address
-	                $onlinePrivateNetworkHost[$j.toString()]['IPv6Address2'] = resolve_IPV6_global_address($Host[$i.toString()]['IPv6Address.1.IPAddress'], $Host[$i.toString()]['IPv6Address.3.IPAddress']);
-                    $onlinePrivateNetworkHost[$j.toString()]['PhysAddress'] = strtoupper($Host[$i.toString()]['PhysAddress']);
-		            array_push($onlineHostMAC, $onlinePrivateNetworkHost[$j.toString()]['PhysAddress']);
-                    $onlinePrivateNetworkHost[$j.toString()]['AddressSource'] = $Host[$i.toString()]['AddressSource'];
-                    $onlinePrivateNetworkHost[$j.toString()]['Connection'] = ($isExtendedDevice) ? $extDeviceConnType+' '+$tmpHost['connectionType'] : $tmpHost['connectionType'];
-					$onlinePrivateNetworkHost[$j.toString()]['X_RDKCENTRAL-COM_DeviceType'] = $Host[$i.toString()]['X_RDKCENTRAL-COM_DeviceType'];                    
-					$onlinePrivateNetworkHost[$j.toString()]['Comments'] = $Host[$i.toString()]['Comments'];
-					if (stristr($tmpHost['connectionType'], 'Wi-Fi')) {
-						if ($hasMloRSSI) {
-							$onlinePrivateNetworkHost[$j]['RSSI'] = $selectedRSSI + " dBm";
+				if ($tmpHost['networkType'] == "Private"){
+					//construct private network host info
+					if ( !strcasecmp("true", $Host[$i.toString()]['Active']) ) {
+						//construct online private network host info (one row per connection)
+					for (var $didx in $displayConnectionList) {
+						$displayConnection = $displayConnectionList[$didx];/*p2j-foreach*/
+						$onlinePrivateNetworkHost['hostNum'] += 1;
+						if(!isset($onlinePrivateNetworkHost[$j.toString()]))
+							$onlinePrivateNetworkHost[$j.toString()]={};
+						$onlinePrivateNetworkHost[$j.toString()]['instanceID'] = $i + 1;
+						$onlinePrivateNetworkHost[$j.toString()]['ShowActions'] = ($didx == 0);
+						if ($didx == 0) {
+							array_push($onlinePrivateInstanceArr, $onlinePrivateNetworkHost[$j.toString()]['instanceID']);
 						}
-						else if (typeof($clients_RSSI[strtoupper($Host[$i.toString()]['PhysAddress'])]) != "undefined") {
-							$onlinePrivateNetworkHost[$j]['RSSI'] = $clients_RSSI[strtoupper($Host[$i.toString()]['PhysAddress'])] + " dBm";
+						if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName']))
+							$onlinePrivateNetworkHost[$j.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
+						else
+							$onlinePrivateNetworkHost[$j.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
+						if ($didx == 0) {
+							array_push($onlineHostNameArr, $onlinePrivateNetworkHost[$j.toString()]['HostName']);
 						}
-						else if ("" != $Host[$i.toString()]['X_CISCO_COM_RSSI']) {
-							$onlinePrivateNetworkHost[$j]['RSSI'] = $Host[$i.toString()]['X_CISCO_COM_RSSI'] + " dBm";
+						$onlinePrivateNetworkHost[$j.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
+						// IPV6 link-local address
+						$onlinePrivateNetworkHost[$j.toString()]['IPv6Address1'] = $Host[$i.toString()]['IPv6Address.2.IPAddress'];
+						// IPV6 global address
+						$onlinePrivateNetworkHost[$j.toString()]['IPv6Address2'] = resolve_IPV6_global_address($Host[$i.toString()]['IPv6Address.1.IPAddress'], $Host[$i.toString()]['IPv6Address.3.IPAddress']);
+						$onlinePrivateNetworkHost[$j.toString()]['PhysAddress'] = strtoupper($Host[$i.toString()]['PhysAddress']);
+						if ($didx == 0) {
+							array_push($onlineHostMAC, $onlinePrivateNetworkHost[$j.toString()]['PhysAddress']);
 						}
-						else {
+						$onlinePrivateNetworkHost[$j.toString()]['AddressSource'] = $Host[$i.toString()]['AddressSource'];
+						$onlinePrivateNetworkHost[$j.toString()]['Connection'] = ($isExtendedDevice) ? $extDeviceConnType+' '+$displayConnection : $displayConnection;
+						$onlinePrivateNetworkHost[$j.toString()]['X_RDKCENTRAL-COM_DeviceType'] = $Host[$i.toString()]['X_RDKCENTRAL-COM_DeviceType'];
+						$onlinePrivateNetworkHost[$j.toString()]['Comments'] = $Host[$i.toString()]['Comments'];
+						if ($hasWiFiInterface) {
+							if ($hasMloRSSI) {
+								$onlinePrivateNetworkHost[$j]['RSSI'] = $selectedRSSI + " dBm";
+							}
+							else if (typeof($clients_RSSI[strtoupper($Host[$i.toString()]['PhysAddress'])]) != "undefined") {
+								$onlinePrivateNetworkHost[$j]['RSSI'] = $clients_RSSI[strtoupper($Host[$i.toString()]['PhysAddress'])] + " dBm";
+							}
+							else if ("" != $Host[$i.toString()]['X_CISCO_COM_RSSI']) {
+								$onlinePrivateNetworkHost[$j]['RSSI'] = $Host[$i.toString()]['X_CISCO_COM_RSSI'] + " dBm";
+							}
+							else {
+								$onlinePrivateNetworkHost[$j]['RSSI'] = "NA";
+							}
+						}
+						else
 							$onlinePrivateNetworkHost[$j]['RSSI'] = "NA";
+						if(in_array(strtolower($onlinePrivateNetworkHost[$j.toString()]['PhysAddress']), $arrayBlockMAC)){
+							$onlinePrivateNetworkHost[$j.toString()]['Blocked'] = true;
+						} else {
+							$onlinePrivateNetworkHost[$j.toString()]['Blocked'] = false;
 						}
+						$j++;
 					}
-				    else
-				    	$onlinePrivateNetworkHost[$j]['RSSI'] = "NA";
-                    if(in_array(strtolower($onlinePrivateNetworkHost[$j.toString()]['PhysAddress']), $arrayBlockMAC)){
-						$onlinePrivateNetworkHost[$j.toString()]['Blocked'] = true;
-					} else {
-						$onlinePrivateNetworkHost[$j.toString()]['Blocked'] = false;
-					}
-                    $j++;
 		      	}
 		      	else {
-		            $offlinePrivateNetworkHost['hostNum'] += 1;
-				$offlinePrivateNetworkHost[$k]={};
-			        $offlinePrivateNetworkHost[$k.toString()]['instanceID'] = $i + 1;
-				array_push($offlinePrivateInstanceArr, $offlinePrivateNetworkHost[$k.toString()]['instanceID']);
-				if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName'])) 
-						$offlinePrivateNetworkHost[$k.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
-			    else
-			        	$offlinePrivateNetworkHost[$k.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);	
-				array_push($offlineHostNameArr, $offlinePrivateNetworkHost[$k.toString()]['HostName']);				
-                    $offlinePrivateNetworkHost[$k.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
-                    // IPV6 link-local address
-	                $offlinePrivateNetworkHost[$k.toString()]['IPv6Address1'] = $Host[$i.toString()]['IPv6Address.2.IPAddress'];
-	                // IPV6 global address
-	                $offlinePrivateNetworkHost[$k.toString()]['IPv6Address2'] = resolve_IPV6_global_address($Host[$i.toString()]['IPv6Address.1.IPAddress'], $Host[$i.toString()]['IPv6Address.3.IPAddress']);
-                    $offlinePrivateNetworkHost[$k.toString()]['PhysAddress'] = strtoupper($Host[$i.toString()]['PhysAddress']);
-		    array_push($offlineHostMAC, $offlinePrivateNetworkHost[$k.toString()]['PhysAddress']);
-                    $offlinePrivateNetworkHost[$k.toString()]['Connection'] = ($isExtendedDevice) ? $extDeviceConnType+' '+$tmpHost['connectionType'] : $tmpHost['connectionType'];
-                    $offlinePrivateNetworkHost[$k.toString()]['AddressSource'] = $Host[$i.toString()]['AddressSource'];
-                    $offlinePrivateNetworkHost[$k.toString()]['Comments'] = $Host[$i.toString()]['Comments'];
-					if(in_array(strtolower($offlinePrivateNetworkHost[$k.toString()]['PhysAddress']), $arrayBlockMAC)){
-						$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = true;
-					} else {
-						$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = false;
+		            for (var $didx in $displayConnectionList) {
+					$displayConnection = $displayConnectionList[$didx];/*p2j-foreach*/
+					$offlinePrivateNetworkHost['hostNum'] += 1;
+					$offlinePrivateNetworkHost[$k]={};
+					$offlinePrivateNetworkHost[$k.toString()]['instanceID'] = $i + 1;
+					$offlinePrivateNetworkHost[$k.toString()]['ShowActions'] = ($didx == 0);
+					if ($didx == 0) {
+						array_push($offlinePrivateInstanceArr, $offlinePrivateNetworkHost[$k.toString()]['instanceID']);
 					}
-                    $k++;
+					if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName']))
+							$offlinePrivateNetworkHost[$k.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
+					else
+						$offlinePrivateNetworkHost[$k.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
+					if ($didx == 0) {
+						array_push($offlineHostNameArr, $offlinePrivateNetworkHost[$k.toString()]['HostName']);
+					}
+					$offlinePrivateNetworkHost[$k.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
+					// IPV6 link-local address
+					$offlinePrivateNetworkHost[$k.toString()]['IPv6Address1'] = $Host[$i.toString()]['IPv6Address.2.IPAddress'];
+					// IPV6 global address
+					$offlinePrivateNetworkHost[$k.toString()]['IPv6Address2'] = resolve_IPV6_global_address($Host[$i.toString()]['IPv6Address.1.IPAddress'], $Host[$i.toString()]['IPv6Address.3.IPAddress']);
+					$offlinePrivateNetworkHost[$k.toString()]['PhysAddress'] = strtoupper($Host[$i.toString()]['PhysAddress']);
+					if ($didx == 0) {
+						array_push($offlineHostMAC, $offlinePrivateNetworkHost[$k.toString()]['PhysAddress']);
+					}
+					$offlinePrivateNetworkHost[$k.toString()]['AddressSource'] = $Host[$i.toString()]['AddressSource'];
+					$offlinePrivateNetworkHost[$k.toString()]['Comments'] = $Host[$i.toString()]['Comments'];
+						$offlinePrivateNetworkHost[$k.toString()]['Connection'] = ($isExtendedDevice) ? $extDeviceConnType+' '+$displayConnection : $displayConnection;
+						if(in_array(strtolower($offlinePrivateNetworkHost[$k.toString()]['PhysAddress']), $arrayBlockMAC)){
+							$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = true;
+						} else {
+							$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = false;
+						}
+					$k++;
+					}
 		      	}	
 		      }		     
 		    }//end of for
@@ -399,6 +455,13 @@ $(document).ready(function() {
 		}
 	}
     });
+    $(document).on('click', '.mlo-edit-btn', function(){
+		if(!(privateDisabled && $(this).hasClass("private"))){
+			$('.cnt-device-main').hide();
+			var editTarget = $(this).attr('data-edit-target');
+			$("#" + editTarget).show();
+		}
+	});
     for (var i = 0; i < onlineDeviceNum; i++) {  
     ( 
     	function(x) {
@@ -685,8 +748,14 @@ function getTitle(val){
                         privconnnetid ="6_G";
                 }
 		else if($onlinePrivateNetworkHost[$x.toString()]['Connection']=="Ethernet"){privconnnetid ="ethcon";}
-		if(($CloudUIEnable == "true" ) || $onlinePrivateNetworkHost[$x.toString()]['Blocked']) $style = "&nbsp;";
-         	else $style = "<input type='button' id=" + "'online-X-" +$k+ "'" + " value='X' tabindex='0' title='add this device to Blocked Devices List' name=" + "'{\"dev_name\":\""+$dev_name+"\", \"mac_addr\":\""+$mac_addr+"\"}'" + " class=\"btn confirm private\"></input>";
+		if(!$onlinePrivateNetworkHost[$x.toString()]['ShowActions']) {
+			$style = "&nbsp;";
+		}
+		else {
+			if(($CloudUIEnable == "true" ) || $onlinePrivateNetworkHost[$x.toString()]['Blocked']) $style = "&nbsp;";
+			else $style = "<input type='button' id=" + "'online-X-" +$k+ "'" + " value='X' tabindex='0' title='add this device to Blocked Devices List' name=" + "'{\"dev_name\":\""+$dev_name+"\", \"mac_addr\":\""+$mac_addr+"\"}'" + " class=\"btn confirm private\"></input>";
+		}
+		$editStyle = "<input type='button' value='Edit' tabindex='0' id=" + "'btn-" +$onlinePrivateNetworkHost[$x.toString()]['instanceID'] + "-" +$k+ "'"+ " data-edit-target=" + "'edit-device-" +$onlinePrivateNetworkHost[$x.toString()]['instanceID'] + "'" + " class=\"btn private edbutton mlo-edit-btn\"></input>";
 		if($k % 2)  $odd = "";
 				else $odd = " class='odd'";
          	echo( "\
@@ -722,7 +791,9 @@ function getTitle(val){
 			echo('<span id='+privconnnetid+'>'+$onlinePrivateNetworkHost[$x.toString()]['Connection']+'</span>');
 			echo("\
 			</td>\
-                <td headers='edit-button'><input type='button' value='Edit' tabindex='0' id=" + "'btn-" +$onlinePrivateNetworkHost[$x.toString()]['instanceID'] + "'"+ "  class=\"btn private edbutton\"></input></td>\
+	                <td headers='edit-button'>");
+				echo($editStyle);
+				echo("</td>\
                 <td headers='disconnect-button'>\
 		");
 		echo($style);
@@ -789,8 +860,14 @@ function getTitle(val){
         }
 else if($offlinePrivateNetworkHost[$x.toString()]['Connection']=="Ethernet"){privconnnetOffid ="ethcon";}
 
-		if(($CloudUIEnable == "true" ) || $offlinePrivateNetworkHost[$x.toString()]['Blocked']) $style = "&nbsp;";
-		else $style = "<input type='button' id=" + "'offline-X-" +$k+ "'" + " value='X' tabindex='0' onmouseover=getTitle("+$k+")  name=" + "'{\"dev_name\":\""+$dev_name+"\", \"mac_addr\":\""+$mac_addr+"\"}'" + "  class=\"btn confirm private\"></input>";
+		if(!$offlinePrivateNetworkHost[$x.toString()]['ShowActions']) {
+			$style = "&nbsp;";
+		}
+		else {
+			if(($CloudUIEnable == "true" ) || $offlinePrivateNetworkHost[$x.toString()]['Blocked']) $style = "&nbsp;";
+			else $style = "<input type='button' id=" + "'offline-X-" +$k+ "'" + " value='X' tabindex='0' onmouseover=getTitle("+$k+")  name=" + "'{\"dev_name\":\""+$dev_name+"\", \"mac_addr\":\""+$mac_addr+"\"}'" + "  class=\"btn confirm private\"></input>";
+		}
+		$editStyle = "<input type='button' value='Edit' tabindex='0' id=" + "'btn-" +$offlinePrivateNetworkHost[$x.toString()]['instanceID'] + "-" +$k+ "'"+ " data-edit-target=" + "'offline-edit-device-" +$offlinePrivateNetworkHost[$x.toString()]['instanceID'] + "'" + " class=\"btn private edbutton mlo-edit-btn\"></input>";
     	if($k % 2) $odd = "";
     	else $odd = " class='odd'";
 	echo('<input type="hidden" id=devicename_'+$k+' value='+$dev_name+'>');
@@ -820,7 +897,9 @@ else if($offlinePrivateNetworkHost[$x.toString()]['Connection']=="Ethernet"){pri
 	        <td headers='offline-device-conncection' id="+privconnnetOffid+">\
 			");
 		echo('<span id='+privconnnetOffid+'>'+$offlinePrivateNetworkHost[$x.toString()]['Connection']+'</span>');
-	echo("</td><td headers='edit-button'><input type='button' value='Edit' tabindex='0' id=" + "'btn-" +$offlinePrivateNetworkHost[$x.toString()]['instanceID'] + "'"+ "  class=\"btn private edbutton\"></input>");
+	echo("</td><td headers='edit-button'>");
+	echo($editStyle);
+	echo("</td>");
                 echo("</td><td headers='offline-device-disconnect-button'>");echo($style);echo("</td>");
                         echo("</tr>");	
 	}
