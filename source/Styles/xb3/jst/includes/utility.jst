@@ -808,8 +808,9 @@ function hasMloSsidMatch($hostData, $instanceID, $ssid){
  * Compatibility wrapper returning only Layer1Interface
  */
 function getMloLayer1Interface($hostData, $instanceID){
-	$mloInfo = getMloLayer1Info($hostData, $instanceID);
+	var $mloInfo = getMloLayer1Info($hostData, $instanceID);
 	return $mloInfo['Layer1Interface'];
+}
 }
 /**
  * Discription:
