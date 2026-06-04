@@ -245,7 +245,7 @@ if($locale=="it" || $locale=="en_GB"){
 						$onlinePrivateNetworkHost['hostNum'] += 1;
 						if(!isset($onlinePrivateNetworkHost[$j.toString()]))
 							$onlinePrivateNetworkHost[$j.toString()]={};
-						$onlinePrivateNetworkHost[$j.toString()]['instanceID'] = $i + 1;
+						$onlinePrivateNetworkHost[$j.toString()]['instanceID'] = $Host[$i.toString()]['instanceID'];
 						$onlinePrivateNetworkHost[$j.toString()]['ShowActions'] = ($didx == 0);
 						if ($didx == 0) {
 							array_push($onlinePrivateInstanceArr, $onlinePrivateNetworkHost[$j.toString()]['instanceID']);
@@ -299,7 +299,7 @@ if($locale=="it" || $locale=="en_GB"){
 					$displayConnection = $displayConnectionList[$didx];/*p2j-foreach*/
 					$offlinePrivateNetworkHost['hostNum'] += 1;
 					$offlinePrivateNetworkHost[$k]={};
-					$offlinePrivateNetworkHost[$k.toString()]['instanceID'] = $i + 1;
+					$offlinePrivateNetworkHost[$k.toString()]['instanceID'] = $Host[$i.toString()]['instanceID'];
 					$offlinePrivateNetworkHost[$k.toString()]['ShowActions'] = ($didx == 0);
 					if ($didx == 0) {
 						array_push($offlinePrivateInstanceArr, $offlinePrivateNetworkHost[$k.toString()]['instanceID']);
@@ -339,11 +339,11 @@ if($locale=="it" || $locale=="en_GB"){
     if ("" == $onlinePrivateNetworkHost['hostNum']) $onlinePrivateNetworkHost['hostNum']=0;
 ?>
 <script type="text/javascript">
-        var onlineDeviceNum = <?% echo($onlinePrivateNetworkHost['hostNum']); ?>;
+        var onlineDeviceNum = <?% echo(count($onlinePrivateInstanceArr)); ?>;
         var onlineDeviceInstanceArr = <?% echo(json_encode($onlinePrivateInstanceArr)); ?>;
         var onlineHostNameArr = <?% echo(json_encode($onlineHostNameArr)); ?>;
         var onlineHostMAC = <?% echo(json_encode($onlineHostMAC)); ?>;
-	var offlineDeviceNum = <?% echo($offlinePrivateNetworkHost['hostNum']); ?>;
+	var offlineDeviceNum = <?% echo(count($offlinePrivateInstanceArr)); ?>;
 	var offlineDeviceInstanceArr = <?% echo(json_encode($offlinePrivateInstanceArr)); ?>;
 	var offlineHostNameArr = <?% echo(json_encode($offlineHostNameArr)); ?>;
 	var offlineHostMAC = <?% echo(json_encode($offlineHostMAC)); ?>;
@@ -1163,6 +1163,9 @@ else if($offlinePrivateNetworkHost[$x.toString()]['Connection']=="Ethernet"){pri
 <?% 
 //this part is to populate edit device info on each online private network host basis
 for ($i=0; $i < $onlinePrivateNetworkHost['hostNum']; $i++) {
+	if(!$onlinePrivateNetworkHost[$i.toString()]['ShowActions']) {
+		continue;
+	}
 	$commentsOnline2= $onlinePrivateNetworkHost[$i.toString()]['Comments'];
 	$commentsOnline2=$commentsOnline2.trim();
     	if($commentsOnline2.search('@')!=-1){
@@ -1245,6 +1248,9 @@ for ($i=0; $i < $onlinePrivateNetworkHost['hostNum']; $i++) {
 }
 //this part is to populate edit device info on each offline private network host basis
 for ($i=0; $i < $offlinePrivateNetworkHost['hostNum']; $i++) {
+	if(!$offlinePrivateNetworkHost[$i.toString()]['ShowActions']) {
+		continue;
+	}
   	$commentOffline1=      $offlinePrivateNetworkHost[$i.toString()]['Comments'];
 	$commentOffline1=$commentOffline1.trim();
 	if($commentOffline1.search('@')!=-1){
