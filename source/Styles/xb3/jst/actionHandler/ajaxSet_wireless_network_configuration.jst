@@ -362,15 +362,21 @@ else
 		}
 		else
 		{
+			$id = getStr("Device.Hosts.HostNumberOfEntries");
 			$rootObjName    = "Device.Hosts.Host.";
 			$paramNameArray = ["Device.Hosts.Host."]/*p2j-array*/;
 			$mapping_array  = ["Layer1Interface", "HostName", "PhysAddress"]/*p2j-array*/;
-			$mapping_array = array_merge($mapping_array, getMloMappingFields());
-			$actualTableInstance = getParaValues($rootObjName, $paramNameArray, $mapping_array, true);
-			for ($j=0; $j<count($actualTableInstance); $j++)
+			$actualTableInstance = getParaValues($rootObjName, $paramNameArray, $mapping_array);
+			for ($j=0; $j<$id; $j++)
 			{
-				if (hasMloSsidMatch($actualTableInstance[$j.toString()], $actualTableInstance[$j.toString()]["__id"], $i)) {
-					array_push($at, [$actualTableInstance[$j.toString()]["HostName"], $actualTableInstance[$j.toString()]["PhysAddress"]]/*p2j-array*/);
+				$host = explode(".", $actualTableInstance[$j.toString()]["Layer1Interface"]);
+				// $host = explode(".", "Device.WiFi.SSID.1.");
+				if (in_array("WiFi", $host))
+				{
+					if ($i == $host[3])
+					{
+						array_push($at, [$actualTableInstance[$j.toString()]["HostName"], $actualTableInstance[$j.toString()]["PhysAddress"]]/*p2j-array*/);
+					}
 				}
 			}	
 		}
