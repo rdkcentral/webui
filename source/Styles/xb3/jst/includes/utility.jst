@@ -687,6 +687,31 @@ function resolve_IPV6_global_address($address1, $address3){
 
 /**
  * Description:
+ * Return true if the platform supports MLO (X_RDK-MldClient DM exists).
+ * Result is cached after the first probe.
+ */
+function isMloSupported(){
+	if (typeof isMloSupported._cache === "undefined") {
+		var $probe = getStr("Device.Hosts.Host.1.X_RDK-MldClient");
+		isMloSupported._cache = ($probe !== null && $probe !== undefined && $probe !== "");
+	}
+	return isMloSupported._cache;
+}
+
+/**
+ * Description:
+ * Return the MLO-specific mapping fields to append to a Host mapping_array
+ * when MLO is supported. Returns an empty array otherwise.
+ */
+function getMloMappingFields(){
+	if (isMloSupported()) {
+		return ["X_RDK-MldClient", "X_RDK-MloLinkNumberofEntries"]/*p2j-array*/;
+	}
+	return []/*p2j-array*/;
+}
+
+/**
+ * Description:
  * Return MLO info + all Layer1 interfaces using a single MLO-link scan
  *
  * return: {
@@ -792,11 +817,28 @@ function getMloLayer1Interfaces($hostData, $instanceID){
  * Match Layer1Interface against a given WiFi SSID index
  */
 function isLayer1InterfaceOnSsid($layer1Interface, $ssid){
-	if ("" == $layer1Interface || "" == $ssid) {
+	if ("" == $ssid) {
 		return false;
 	}
-	$ssidPattern = "WiFi.SSID." + $ssid + ".";
-	return stristr($layer1Interface, $ssidPattern);
+	if (is_array($layer1Interface)) {
+		for (var $idx in $layer1Interface) {
+			var $iface = $layer1Interface[$idx];/*p2j-foreach*/
+			if (isLayer1InterfaceOnSsid($iface, $ssid)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	if ("" == $layer1Interface) {
+		return false;
+	}
+	var $ssidPattern = "WiFi.SSID." + $ssid + ".";
+	if (stristr($layer1Interface, $ssidPattern)) {
+		return true;
+	}
+	var $ssidSuffix = "WiFi.SSID." + $ssid;
+	return (stristr($layer1Interface, $ssidSuffix) !== false &&
+		$layer1Interface.substr(-$ssidSuffix.length).toLowerCase() === $ssidSuffix.toLowerCase());
 }
 
 /**
@@ -804,9 +846,9 @@ function isLayer1InterfaceOnSsid($layer1Interface, $ssid){
  * Return true if any host Layer1Interface (including MLO links) maps to target SSID
  */
 function hasMloSsidMatch($hostData, $instanceID, $ssid){
-	$interfaces = getMloLayer1Interfaces($hostData, $instanceID);
+	var $interfaces = getMloLayer1Interfaces($hostData, $instanceID);
 	for (var $idx in $interfaces) {
-		$layer1Interface = $interfaces[$idx];/*p2j-foreach*/
+		var $layer1Interface = $interfaces[$idx];/*p2j-foreach*/
 		if (isLayer1InterfaceOnSsid($layer1Interface, $ssid)) {
 			return true;
 		}
@@ -821,7 +863,6 @@ function hasMloSsidMatch($hostData, $instanceID, $ssid){
 function getMloLayer1Interface($hostData, $instanceID){
 	var $mloInfo = getMloLayer1Info($hostData, $instanceID);
 	return $mloInfo['Layer1Interface'];
-}
 }
 /**
  * Discription:

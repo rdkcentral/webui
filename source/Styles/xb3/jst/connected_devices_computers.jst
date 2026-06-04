@@ -117,7 +117,8 @@ if($locale=="it" || $locale=="en_GB"){
 	}
 	$rootObjName    = "Device.Hosts.Host.";
 	$paramNameArray = ["Device.Hosts.Host."]/*p2j-array*/;
-	$mapping_array  = ["PhysAddress", "IPAddress", "Layer1Interface", "HostName", "Active", "AddressSource", "X_CISCO_COM_RSSI", "Comments", "IPv4Address.1.IPAddress", "IPv6Address.1.IPAddress", "IPv6Address.2.IPAddress", "IPv6Address.3.IPAddress", "X_RDKCENTRAL-COM_Parent", "X_RDKCENTRAL-COM_DeviceType", "X_RDK-MldClient", "X_RDK-MloLinkNumberofEntries"]/*p2j-array*/;
+	$mapping_array  = ["PhysAddress", "IPAddress", "Layer1Interface", "HostName", "Active", "AddressSource", "X_CISCO_COM_RSSI", "Comments", "IPv4Address.1.IPAddress", "IPv6Address.1.IPAddress", "IPv6Address.2.IPAddress", "IPv6Address.3.IPAddress", "X_RDKCENTRAL-COM_Parent", "X_RDKCENTRAL-COM_DeviceType"]/*p2j-array*/;
+	$mapping_array = array_merge($mapping_array, getMloMappingFields());
 	$HostIndexArr = DmExtGetInstanceIds("Device.Hosts.Host.");
 	$HostNum = 0;
 	if(0 == $HostIndexArr[0]){  

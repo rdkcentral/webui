@@ -364,7 +364,8 @@ else
 		{
 			$rootObjName    = "Device.Hosts.Host.";
 			$paramNameArray = ["Device.Hosts.Host."]/*p2j-array*/;
-			$mapping_array  = ["Layer1Interface", "HostName", "PhysAddress", "X_RDK-MldClient", "X_RDK-MloLinkNumberofEntries"]/*p2j-array*/;
+			$mapping_array  = ["Layer1Interface", "HostName", "PhysAddress"]/*p2j-array*/;
+			$mapping_array = array_merge($mapping_array, getMloMappingFields());
 			$actualTableInstance = getParaValues($rootObjName, $paramNameArray, $mapping_array, true);
 			for ($j=0; $j<count($actualTableInstance); $j++)
 			{
