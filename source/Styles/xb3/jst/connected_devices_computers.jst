@@ -188,8 +188,9 @@ if($locale=="it" || $locale=="en_GB"){
 				$Host[$i.toString()]['instanceID'] = $HostIndexArr[$i + 1];
                 $Host[$i]['HostName'] = htmlspecialchars($Host[$i]['HostName'], ENT_NOQUOTES, 'UTF-8');
                 $Host[$i]['Comments'] = htmlspecialchars($Host[$i]['Comments'], ENT_NOQUOTES, 'UTF-8');
-				$mloInfo = getMloLayer1Info($Host[$i.toString()], $Host[$i.toString()]['__id']);
-				$mloLayer1Interfaces = getMloLayer1Interfaces($Host[$i.toString()], $Host[$i.toString()]['__id']);
+				$mloLayer1Data = getMloLayer1Data($Host[$i.toString()], $Host[$i.toString()]['__id']);
+				$mloInfo = $mloLayer1Data['MloInfo'];
+				$mloLayer1Interfaces = $mloLayer1Data['Layer1Interfaces'];
 				$selectedLayer1Interface = $mloInfo['Layer1Interface'];
 				$selectedRSSI = $mloInfo['BestMloRSSI'];
 				$hasMloRSSI = $mloInfo['HasMloRSSI'];
@@ -466,15 +467,6 @@ $(document).ready(function() {
     ( 
     	function(x) {
     	//alert(onlineDeviceInstanceArr[i]);    	
-        var butn = "#btn-" + onlineDeviceInstanceArr[x];
-        var editButn = "#edit-device-" + onlineDeviceInstanceArr[x];
-        //alert(editButn);
-    	$(butn).click(function(){
-		if(!(privateDisabled && $(butn).hasClass("private"))){
-			$('.cnt-device-main').hide();
-			$(editButn).show();
-		}
-    	});
     	var submitEditDevice = "#submit_editDevice-" + onlineDeviceInstanceArr[x];
     	var macAddr          = "#mac_address-"       + onlineDeviceInstanceArr[x];
     	var staticIPAddr     = "#staticIPAddress-"   + onlineDeviceInstanceArr[x]; 
@@ -564,15 +556,6 @@ $(document).ready(function() {
     (
         function(x) {
         //alert(offlineDeviceInstanceArr[i]);
-        var butn = "#btn-" + offlineDeviceInstanceArr[x];
-        var editButn = "#offline-edit-device-" + offlineDeviceInstanceArr[x];
-        //alert(editButn);
-        $(butn).click(function(){
-                if(!(privateDisabled && $(butn).hasClass("private"))){
-                        $('.cnt-device-main').hide();
-                        $(editButn).show();
-                }
-        });
         var submitEditDevice = "#submit_editDevice-" + offlineDeviceInstanceArr[x];
         var macAddr          = "#mac_address-"       + offlineDeviceInstanceArr[x];
         var staticIPAddr     = "#staticIPAddress-"   + offlineDeviceInstanceArr[x];
