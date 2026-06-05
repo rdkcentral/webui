@@ -828,7 +828,7 @@ function isLayer1InterfaceOnSsid($layer1Interface, $ssid){
 	if ("" == $layer1Interface) {
 		return false;
 	}
-	var $ssidPattern = "WiFi.SSID." + $ssid + ".";
+	var $ssidPattern = "WiFi.SSID." + $ssid;
 	if (stristr($layer1Interface, $ssidPattern)) {
 		return true;
 	}
