@@ -688,14 +688,10 @@ function resolve_IPV6_global_address($address1, $address3){
 /**
  * Description:
  * Return true if the platform supports MLO (X_RDK-MldClient DM exists).
- * Result is cached after the first probe.
  */
 function isMloSupported(){
-	if (typeof isMloSupported._cache === "undefined") {
-		var $probe = getStr("Device.Hosts.Host.1.X_RDK-MldClient");
-		isMloSupported._cache = ($probe !== null && $probe !== undefined && $probe !== "");
-	}
-	return isMloSupported._cache;
+	var $probe = getStr("Device.Hosts.Host.1.X_RDK-MldClient");
+	return ($probe !== null && $probe !== undefined && $probe !== "");
 }
 
 /**

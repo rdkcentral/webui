@@ -186,7 +186,7 @@ if($locale=="it" || $locale=="en_GB"){
 			}
 		    //This for loop aims to construct online and offline network host arrays based on $Host		    
 		    for ($i=0,$j=0,$k=0,$x=0; $i < $HostNum; $i++) { 
-				$Host[$i.toString()]['instanceID'] = $HostIndexArr[$i + 1];
+				$Host[$i.toString()]['instanceID'] = $Host[$i.toString()]['__id'];
                 $Host[$i]['HostName'] = htmlspecialchars($Host[$i]['HostName'], ENT_NOQUOTES, 'UTF-8');
                 $Host[$i]['Comments'] = htmlspecialchars($Host[$i]['Comments'], ENT_NOQUOTES, 'UTF-8');
 				$mloLayer1Data = getMloLayer1Data($Host[$i.toString()], $Host[$i.toString()]['__id']);
