@@ -158,7 +158,7 @@ if($id != 1 && $id != 2 && $id != 17) $Mesh_Mode = 'false';
 if(strstr($_SESSION["lanMode"], "bridge-static") ) {
 	if($_SESSION["loginuser"] != "mso")
 	{
-        	if($OperatingChannelBandwidth == "6GHz")
+		if($OperatingChannelBandwidth == "6GHz")
         	array_remove($valid_ids,4);
 		array_remove($valid_ids,3);
 		array_remove($valid_ids,2);
@@ -167,7 +167,7 @@ if(strstr($_SESSION["lanMode"], "bridge-static") ) {
 	}
 	else
 	{
-        	if($OperatingChannelBandwidth == "6GHz")
+		if($OperatingChannelBandwidth == "6GHz")
         	array_remove($valid_ids,4);
 		array_remove($valid_ids,1);
 		array_remove($valid_ids,0);
@@ -188,24 +188,7 @@ $supported_mode         = $wifi_value['SupportedStandards'];
 
 if ("1-11"==$possible_channels)
 $possible_channels = "1,2,3,4,5,6,7,8,9,10,11";
-$security = "None";
-if ("WPA2-Personal" == $encrypt_mode){
-	if ("TKIP" == $encrypt_method){
-		$security = "WPA2_PSK_TKIP";
-	}
-	else if ("AES" == $encrypt_method){
-		$security = "WPA2_PSK_AES";
-	}
-}else if ("WPA3-Personal" == $encrypt_mode){
-    if ("AES" == $encrypt_method)
-        	$security = "WPA3-Personal Only";
-}else if ("WPA3-Personal-Transition" == $encrypt_mode){
-    if ("AES" == $encrypt_method)
-        $security = "WPA3-Personal Transition";
-}
-else{
-                $security = "None";
-}
+$security = security_mode_map($encrypt_mode, $encrypt_method);
 
 //for SSID 1 and 2 don't show password for mso user
 $password_mso_user = !(($id == 1 || $id == 2 || $id == 17) && ($_SESSION["loginuser"] == "mso"));
