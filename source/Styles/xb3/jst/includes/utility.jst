@@ -684,6 +684,178 @@ function resolve_IPV6_global_address($address1, $address3){
 	}
 	return $IPV6_Addresses;
 }
+
+/**
+ * Description:
+ * Return true if the platform supports MLO (X_RDK-MldClient DM exists).
+ */
+function isMloSupported(){
+	var $probe = getStr("Device.Hosts.Host.1.X_RDK-MldClient");
+	return ($probe !== null && $probe !== undefined && $probe !== "");
+}
+
+/**
+ * Description:
+ * Return the MLO-specific mapping fields to append to a Host mapping_array
+ * when MLO is supported. Returns an empty array otherwise.
+ */
+function getMloMappingFields(){
+	if (isMloSupported()) {
+		return ["X_RDK-MldClient", "X_RDK-MloLinkNumberofEntries"]/*p2j-array*/;
+	}
+	return []/*p2j-array*/;
+}
+
+/**
+ * Description:
+ * Return MLO info + all Layer1 interfaces using a single MLO-link scan
+ *
+ * return: {
+ *   MloInfo: {
+ *     Layer1Interface: string,
+ *     HasMloRSSI: bool,
+ *     BestMloRSSI: string|number
+ *   },
+ *   Layer1Interfaces: array
+ * }
+ */
+function getMloLayer1Data($hostData, $instanceID){
+	var $selectedLayer1Interface = "";
+	var $hasMloRSSI = false;
+	var $selectedRSSI = "";
+	var $interfaces = []/*p2j-array*/;
+
+	if (typeof($hostData['Layer1Interface']) != "undefined") {
+		$selectedLayer1Interface = $hostData['Layer1Interface'];
+		if ("" != $hostData['Layer1Interface']) {
+			array_push($interfaces, $hostData['Layer1Interface']);
+		}
+	}
+
+	if (
+		typeof($hostData['X_RDK-MldClient']) != "undefined" &&
+		!strcasecmp("true", $hostData['X_RDK-MldClient'])
+	) {
+		var $mloLinkNum = parseInt($hostData['X_RDK-MloLinkNumberofEntries'], 10);
+		if (isNaN($mloLinkNum)) {
+			$mloLinkNum = 0;
+		}
+		if ($mloLinkNum > 0 && "" != $instanceID) {
+			var $bestMloRSSI = -9999;
+			var $fallbackLayer1Interface = "";
+			for (var $m=1; $m <= $mloLinkNum; $m++) {
+				var $mloBaseObj = "Device.Hosts.Host." + $instanceID + ".MloLink." + $m + ".";
+				var $mloLayer1Interface = getStr($mloBaseObj + "X_RDK-Layer1Interface");
+				var $mloRSSI = getStr($mloBaseObj + "X_RDK-RSSI");
+				if ("" != $mloLayer1Interface) {
+					$fallbackLayer1Interface = $mloLayer1Interface;
+					if (!in_array($mloLayer1Interface, $interfaces)) {
+						array_push($interfaces, $mloLayer1Interface);
+					}
+				}
+				var $mloRSSIValue = parseInt($mloRSSI, 10);
+				if (!isNaN($mloRSSIValue) && ($mloRSSIValue > $bestMloRSSI)) {
+					$bestMloRSSI = $mloRSSIValue;
+					$selectedRSSI = $mloRSSIValue;
+					$hasMloRSSI = true;
+					if ("" != $mloLayer1Interface) {
+						$selectedLayer1Interface = $mloLayer1Interface;
+					}
+				}
+			}
+			if (!$hasMloRSSI && "" != $fallbackLayer1Interface) {
+				$selectedLayer1Interface = $fallbackLayer1Interface;
+			}
+		}
+	}
+
+	return {
+		'MloInfo': {
+			'Layer1Interface': $selectedLayer1Interface,
+			'HasMloRSSI': $hasMloRSSI,
+			'BestMloRSSI': $selectedRSSI
+		},
+		'Layer1Interfaces': $interfaces
+	};
+}
+
+/**
+ * Description:
+ * Return MLO-aware Layer1Interface and MLO RSSI metadata
+ *
+ * arguments:
+ *  $hostData: host table row with keys including Layer1Interface,
+ *             X_RDK-MldClient, X_RDK-MloLinkNumberofEntries
+ *  $instanceID: Device.Hosts.Host instance id
+ *
+ * return: {
+ *   Layer1Interface: string,
+ *   HasMloRSSI: bool,
+ *   BestMloRSSI: string|number
+ * }
+ */
+function getMloLayer1Info($hostData, $instanceID){
+	var $mloLayer1Data = getMloLayer1Data($hostData, $instanceID);
+	return $mloLayer1Data['MloInfo'];
+}
+
+/**
+ * Description:
+ * Return all available Layer1Interface values for a host, including MLO links
+ */
+function getMloLayer1Interfaces($hostData, $instanceID){
+	var $mloLayer1Data = getMloLayer1Data($hostData, $instanceID);
+	return $mloLayer1Data['Layer1Interfaces'];
+}
+
+/**
+ * Description:
+ * Match Layer1Interface against a given WiFi SSID index
+ */
+function isLayer1InterfaceOnSsid($layer1Interface, $ssid){
+	if ("" == $ssid) {
+		return false;
+	}
+	if (is_array($layer1Interface)) {
+		for (var $idx in $layer1Interface) {
+			var $iface = $layer1Interface[$idx];/*p2j-foreach*/
+			if (isLayer1InterfaceOnSsid($iface, $ssid)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	if ("" == $layer1Interface) {
+		return false;
+	}
+	var $ssidToken = "WiFi.SSID." + $ssid;
+	var $ssidRegex = new RegExp("(^|\\.)" + $ssidToken + "(\\.|$)", "i");
+	return $ssidRegex.test($layer1Interface);
+}
+
+/**
+ * Description:
+ * Return true if any host Layer1Interface (including MLO links) maps to target SSID
+ */
+function hasMloSsidMatch($hostData, $instanceID, $ssid){
+	var $interfaces = getMloLayer1Interfaces($hostData, $instanceID);
+	for (var $idx in $interfaces) {
+		var $layer1Interface = $interfaces[$idx];/*p2j-foreach*/
+		if (isLayer1InterfaceOnSsid($layer1Interface, $ssid)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Description:
+ * Compatibility wrapper returning only Layer1Interface
+ */
+function getMloLayer1Interface($hostData, $instanceID){
+	var $mloInfo = getMloLayer1Info($hostData, $instanceID);
+	return $mloInfo['Layer1Interface'];
+}
 /**
  * Discription:
  *     This function determines what the WAN type is

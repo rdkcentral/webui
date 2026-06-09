@@ -211,6 +211,7 @@
 	$rootObjName    = "Device.Hosts.Host.";
 	$paramNameArray = ["Device.Hosts.Host."]/*p2j-array*/;
 	$mapping_array  = ["IPAddress", "Layer1Interface"]/*p2j-array*/;
+	$mapping_array = $mapping_array.concat(getMloMappingFields());
 	$HostIndexArr = DmExtGetInstanceIds("Device.Hosts.Host.");
 	$HostNum = 0;
 	if(0 == $HostIndexArr[0]){  
@@ -218,15 +219,17 @@
 		$HostNum = count($HostIndexArr) - 1;
 	}
 	if(!empty($HostNum)){
-		$Host = getParaValues($rootObjName, $paramNameArray, $mapping_array);
+		$Host = getParaValues($rootObjName, $paramNameArray, $mapping_array, true);
 		if(!empty($Host)){
 			for($key in $Host) { $value=$Host[$key];/*p2j-foreach*/
 				if(stristr($value["IPAddress"], $clientIP)){
-					if(stristr($value["Layer1Interface"], "Ethernet")){ $connectionType = "Ethernet"; }
-					else if(stristr($value["Layer1Interface"], "WiFi.SSID.1")){ $connectionType = "WiFi"; }//WiFi 2.4GHz
-					else if(stristr($value["Layer1Interface"], "WiFi.SSID.2")){ $connectionType = "WiFi"; }//WiFi 5GHz
-					else if(stristr($value["Layer1Interface"], "Public")){ $connectionType = "WiFi"; }//WiFi Public
+					$selectedLayer1Interface = getMloLayer1Interface($value, $value["__id"]);
+					if(stristr($selectedLayer1Interface, "Ethernet")){ $connectionType = "Ethernet"; }
+					else if(stristr($selectedLayer1Interface, "WiFi.SSID.1")){ $connectionType = "WiFi"; }//WiFi 2.4GHz
+					else if(stristr($selectedLayer1Interface, "WiFi.SSID.2")){ $connectionType = "WiFi"; }//WiFi 5GHz
+					else if(stristr($selectedLayer1Interface, "Public")){ $connectionType = "WiFi"; }//WiFi Public
 					else { $connectionType = "Ethernet"; }
+					break;
 				}
 			}
 		}//end of if empty host
