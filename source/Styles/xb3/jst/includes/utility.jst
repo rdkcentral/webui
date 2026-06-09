@@ -122,6 +122,8 @@ function encrypt_map($mode, $method)
 			return "WPA3-Personal Transition";
 		case "WPA3-Personal-Compatibility":
 			return "WPA3-Personal Compatibility";
+		case "WPA3-Enterprise":
+			return "WPA3-Enterprise";
 		default:
 			return "WPAWPA2-PSK (TKIP/AES)";
 	}
@@ -167,6 +169,9 @@ function security_mode_map($encrypt_mode, $encrypt_method)
 	}
 	else if ("WPA3-Personal-Compatibility" == $encrypt_mode){
 		$security = "WPA3-Personal Compatibility";
+	}
+	else if ("WPA3-Enterprise" == $encrypt_mode){
+		$security = "WPA3-Enterprise";
 	}
 	return $security;
 }
