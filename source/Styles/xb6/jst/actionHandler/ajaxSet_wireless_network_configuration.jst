@@ -401,12 +401,12 @@ else
 		}
 		else
 		{
-			$id = getStr("Device.Hosts.HostNumberOfEntries");
+			$id = array_filter(explode(",", getInstanceIds("Device.Hosts.Host.")));
 			$rootObjName    = "Device.Hosts.Host.";
 			$paramNameArray = ["Device.Hosts.Host."]/*p2j-array*/;
 			$mapping_array  = ["Layer1Interface", "HostName", "PhysAddress"]/*p2j-array*/;
 			$actualTableInstance = getParaValues($rootObjName, $paramNameArray, $mapping_array);
-			for ($j=0; $j<$id; $j++)
+			for ($j=0; $j<count($id); $j++)
 			{
 				$host = explode(".", $actualTableInstance[$j.toString()]["Layer1Interface"]);
 				// $host = explode(".", "Device.WiFi.SSID.1.");
