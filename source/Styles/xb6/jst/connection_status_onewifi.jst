@@ -173,6 +173,7 @@ if($OperatingChannelBandwidth == "6GHz")
         $val = getStr($fistUSif+"IPv6Address."+$i+".IPAddress");
         if (!strstr($val, "fe80::")){
             $WANIPv6 = $val;
+            break;
         }
     }
 //-----------------------WAN IPv6 Address - End
