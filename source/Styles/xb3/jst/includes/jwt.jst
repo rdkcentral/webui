@@ -138,8 +138,8 @@ function VerifySignature($header, $payload, $sig)
                         }
                         $pubkey = "file://" + $PUBKEYFILE;
                         $token = $header + '.' + $payload;
-                        $sig2verify = base64decode_url( $sig );
-                        $sigvalid = ccsp.openssl_verify_with_cert($pubkey, $token, $sig2verify, 'SHA256');
+                        // $sig2verify = base64decode_url( $sig );
+                        $sigvalid = ccsp.openssl_verify_with_cert($pubkey, $token, $sig, 'SHA256');
     
                         if( $sigvalid == 1 )
                         {
