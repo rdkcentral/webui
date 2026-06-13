@@ -216,11 +216,11 @@ if($locale=="it" || $locale=="en_GB"){
 					array_push($connectionTypeList, $tmpConnectionInfo['connectionType']);
 				}
 				$displayConnectionList = []/*p2j-array*/;
-				if (
+				$isMloClient = (
 					typeof($Host[$i.toString()]['X_RDK-MldClient']) != "undefined" &&
-					!strcasecmp("true", $Host[$i.toString()]['X_RDK-MldClient']) &&
-					$hasWiFiInterface
-				) {
+					!strcasecmp("true", $Host[$i.toString()]['X_RDK-MldClient'])
+				);
+				if ($isMloClient && $hasWiFiInterface) {
 					for (var $cti in $connectionTypeList) {
 						$ct = $connectionTypeList[$cti];/*p2j-foreach*/
 						if (stristr($ct, "Wi-Fi")) {
@@ -228,8 +228,17 @@ if($locale=="it" || $locale=="en_GB"){
 						}
 					}
 				}
-				if (empty($displayConnectionList)) {
+				else {
 					$displayConnectionList = $connectionTypeList;
+				}
+				if (empty($displayConnectionList)) {
+					$tmpConnectionInfo = ProcessLay1Interface($selectedLayer1Interface);
+					if (typeof($tmpConnectionInfo['connectionType']) != "undefined" && "" != $tmpConnectionInfo['connectionType']) {
+						array_push($displayConnectionList, $tmpConnectionInfo['connectionType']);
+					}
+				}
+				if (empty($displayConnectionList)) {
+					array_push($displayConnectionList, "Unknown");
 				}
 				//for WiFi Extended device
 				$isExtendedDevice = false;
