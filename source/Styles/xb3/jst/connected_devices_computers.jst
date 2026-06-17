@@ -1127,7 +1127,7 @@ for ($i=0; $i < $onlinePrivateNetworkHost['hostNum']; $i++) {
 	else if($onlinePrivateNetworkHost[$i.toString()]['Connection']=="Ethernet"){unknowid ="ethcon";}
 	echo( "\
         <div id=\"edit-device-" +$ID+ "-" +$rowKey+ "\" class=\"edit-device content hidden\">\
-		    <h1 id=\"conndevedithead\">Connected Devices > Devices > Edit Device</h1>\
+		    <h1 class=\"conndevedithead\">Connected Devices > Devices > Edit Device</h1>\
 		    <div  class=\"educational-tip-edit\">\
 				<p  class=\"tip\" id='chipadd'>Change the IP address assignment method for Online Devices.</p>\
 				<p  class=\"hidden\" id=\"connedittip"+$id4+"\">If DHCP is selected, the Gateway\'s DHCP server will automatically assign the IP address.</p>\
@@ -1218,7 +1218,7 @@ for ($i=0; $i < $offlinePrivateNetworkHost['hostNum']; $i++) {
 	else{unknowid ="ethcon";}
 		echo("\
 		<div id=\"offline-edit-device-" +$ID+ "-" +$rowKey+ "\" class=\"edit-device content hidden\">\
-                    <h1 id=\"conndevedithead1\">Connected Devices > Devices > Edit Device</h1>\
+					<h1 class=\"conndevedithead\">Connected Devices > Devices > Edit Device</h1>\
                     <div  class=\"educational-tip-edit\">\
                                 <p  class=\"tip\" id=\"conndeveditoffmess1\">Change the IP address assignment method for Offline Devices</p> \
                                 <p  class=\"hidden\" id=\"connedittip"+$id4+"\">If DHCP is selected, the Gateway\'s DHCP server will automatically assign the IP address.</p> \

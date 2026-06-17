@@ -202,7 +202,7 @@ $("#nocyc").text($.i18n("Number of Cycles to date:"));
 $("#batmodno").text($.i18n("Battery Model Number:"));
 $("#batserno").text($.i18n("Battery Serial Number:"));
 $("#connhead").text($.i18n("Connected Devices > Devices"));
-$("#conndevedithead,#conndevedithead1").text($.i18n("Connected Devices > Devices > Edit Device"));
+$(".conndevedithead").text($.i18n("Connected Devices > Devices > Edit Device"));
 $("#connhom1").text($.i18n("Managing your home network settings is now easier than ever."));
 $("#visithead").text($.i18n("Visit "));
 $("#connhom2").text($.i18n(" to view and manage your list of connected/offline devices. You can block access to your home network for any device, among many other features and settings."));
