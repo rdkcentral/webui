@@ -419,32 +419,34 @@ $(document).ready(function() {
 		});
     }    
     $("input:checked[name='ip']").trigger("click");
-    // activate validation plugin
-	$(".pageForm").validate({
-	    rules : {
-	    	host_name: {
-	    		allowed_char: true
-	    	},
-	    	staticIPAddress: {
-	    		ipv4 : {
-	            	depends : function() {
-				return ("static" == $(this).closest('form').find("input:radio[name=ip]:checked").val());
-	            	}
-	            },
-	            required : {
-	                depends : function() {
-				return ("static" == $(this).closest('form').find("input:radio[name=ip]:checked").val());
-	                }
-	            }
-	    	}
-	    	,mac_address:{
-	    		required: true,
-	    		mac: true
-	    	},
-	    	comments:{
-	    		allowed_char: true
-	    	}
-	    }
+	    // activate validation plugin for each edit form
+	$(".pageForm").each(function() {
+		$(this).validate({
+	    		rules : {
+	    			host_name: {
+	    				allowed_char: true
+	    			},
+	    			staticIPAddress: {
+	    				ipv4 : {
+	            			depends : function() {
+						return ("static" == $(this).closest('form').find("input:radio[name=ip]:checked").val());
+	            			}
+	            		},
+	            		required : {
+	                		depends : function() {
+						return ("static" == $(this).closest('form').find("input:radio[name=ip]:checked").val());
+	                		}
+	            		}
+	    			},
+	    			mac_address:{
+	    				required: true,
+	    				mac: true
+	    			},
+	    			comments:{
+	    				allowed_char: true
+	    			}
+	    		}
+		});
 	});
     $(".edit-device").hide();
     $('.device-info').addClass('device-hide');
