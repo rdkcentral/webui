@@ -508,14 +508,16 @@ $(document).ready(function() {
 		}
 		Comments = Comments.replace(/[\r\n]+/gm, "@");
 
+		var editDevObj;
+		var commentsPayload = " " + Comments + " ";
 		if (isDHCP){
 			if(initialAddrSrc == 'DHCP'){
 				//this initial value is DHCP, user is going to modify comments
-				editDevInfo = '{"UpdateComments": "true", "Comments": " '+ Comments +' ", "hostName": "' + hostName + '", "macAddress": "' + macAddress + '", "reseverd_ipAddr": "' + reseverd_ipAddr + '"}';
+				editDevObj = { UpdateComments: "true", Comments: commentsPayload, hostName: hostName, macAddress: macAddress, reseverd_ipAddr: reseverd_ipAddr };
 			}
 			else{
 				// this is to provide info to remove this device in the static addr list, REservedIP => DHCP
-				editDevInfo = '{"delFlag": "true", "Comments": " '+ Comments +' ", "hostName": "' + hostName + '", "macAddress": "' + macAddress + '", "reseverd_ipAddr": "' + reseverd_ipAddr + '"}';
+				editDevObj = { delFlag: "true", Comments: commentsPayload, hostName: hostName, macAddress: macAddress, reseverd_ipAddr: reseverd_ipAddr };
 			}
 		}
 		else{
@@ -530,8 +532,9 @@ $(document).ready(function() {
 				return;
 			}
 			// this is to provide info to edit REservedIP
-			editDevInfo = '{"Comments": " '+ Comments +' ", "hostName": "' + hostName + '", "macAddress": "' + macAddress + '", "reseverd_ipAddr": "' + reseverd_ipAddr + '"}';
+			editDevObj = { Comments: commentsPayload, hostName: hostName, macAddress: macAddress, reseverd_ipAddr: reseverd_ipAddr };
 		}
+		editDevInfo = JSON.stringify(editDevObj);
 
 		if($form.valid()){
 			jProgress($.i18n('This may take several seconds'), 60);
@@ -1121,7 +1124,7 @@ for ($i=0; $i < $onlinePrivateNetworkHost['hostNum']; $i++) {
 	}
 	else if($onlinePrivateNetworkHost[$i.toString()]['Connection']=="Ethernet"){unknowid ="ethcon";}
 	echo( "\
-        <div id=\"edit-device-" +$ID+ "-" +$rowKey+ "\"  class=\"edit-device content \" class='hidden'>\
+        <div id=\"edit-device-" +$ID+ "-" +$rowKey+ "\" class=\"edit-device content hidden\">\
 		    <h1 id=\"conndevedithead\">Connected Devices > Devices > Edit Device</h1>\
 		    <div  class=\"educational-tip-edit\">\
 				<p  class=\"tip\" id='chipadd'>Change the IP address assignment method for Online Devices.</p>\
@@ -1212,7 +1215,7 @@ for ($i=0; $i < $offlinePrivateNetworkHost['hostNum']; $i++) {
 	}
 	else{unknowid ="ethcon";}
 		echo("\
-		<div id=\"offline-edit-device-" +$ID+ "-" +$rowKey+ "\"  class=\"edit-device content \" class='hidden'>\
+		<div id=\"offline-edit-device-" +$ID+ "-" +$rowKey+ "\" class=\"edit-device content hidden\">\
                     <h1 id=\"conndevedithead1\">Connected Devices > Devices > Edit Device</h1>\
                     <div  class=\"educational-tip-edit\">\
                                 <p  class=\"tip\" id=\"conndeveditoffmess1\">Change the IP address assignment method for Offline Devices</p> \
