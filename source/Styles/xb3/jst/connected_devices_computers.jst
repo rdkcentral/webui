@@ -428,12 +428,12 @@ $(document).ready(function() {
 	    	staticIPAddress: {
 	    		ipv4 : {
 	            	depends : function() {
-	            		return ("static" == $("input:radio[name=ip]:checked").val());
+	            		return ("static" == $(this).closest('form').find("input:radio[name=ip]:checked").val());
 	            	}
 	            },
 	            required : {
 	                depends : function() {
-	                	return ("static" == $("input:radio[name=ip]:checked").val());
+	                	return ("static" == $(this).closest('form').find("input:radio[name=ip]:checked").val());
 	                }
 	            }
 	    	}
