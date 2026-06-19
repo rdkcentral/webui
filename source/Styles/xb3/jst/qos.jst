@@ -141,8 +141,7 @@ function set_config(jsConfig)
 				<th id="qosmess4">Loop Current</th>
 			</tr>
 			<?%
-				$LineTableNumberOfEntries = getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
-				for ($i = 1; $i <= $LineTableNumberOfEntries; $i++) {
+				for ($i = 1; $i <= $voice_lines; $i++) {
 					var $rowClass = ($i % 2 == 0) ? "odd" : "";
 					echo('<tr class="' + $rowClass + '">');
 						echo('<td>' + $i + '</td>');

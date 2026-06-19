@@ -649,25 +649,23 @@ $("[id^='mtalinmess3']").text($.i18n("Foreign EMF:"));
 $("[id^='mtalinmess4']").text($.i18n("Receiver Off Hook:"));
 $("[id^='mtalinmess5']").text($.i18n("Ringer Equivalency:"));
 $("[id^='start_diagnostics']").prop("value", $.i18n('Start Diagnostics'));
-$("#mtalinediag1").text($.i18n("MTA Line 1 Diagnostics"));
-$("#mtalinediag2").text($.i18n("MTA Line 2 Diagnostics"));
-$("#mtalinediag3").text($.i18n("MTA Line 3 Diagnostics"));
-$("#mtalinediag4").text($.i18n("MTA Line 4 Diagnostics"));
-$("#mtalinediag5").text($.i18n("MTA Line 5 Diagnostics"));
-$("#mtalinediag6").text($.i18n("MTA Line 6 Diagnostics"));
-$("#mtalinediag7").text($.i18n("MTA Line 7 Diagnostics"));
-$("#mtalinediag8").text($.i18n("MTA Line 8 Diagnostics"));
+$("[id^='mtalinediag']").each(function() {
+	var lineNumber = this.id.replace('mtalinediag', '');
+	if (/^\d+$/.test(lineNumber)) {
+		$(this).text($.i18n("MTA Line " + lineNumber + " Diagnostics"));
+	}
+});
 $("#mtalinstathead").text($.i18n("Gateway > Connection > MTA > Line Status"));
 $("#mtalinstattip1").text($.i18n("Information related to the MTA Line Status."));
 $("#mtalinstatmess1").text($.i18n("MTA Line Status"));
-$("#mtalinstatmess2").text($.i18n("Line 1 Status:"));
-$("#mtalinstatmess3").text($.i18n("Line 2 Status:"));
-$("#mtalinstatmess4").text($.i18n("Line 3 Status:"));
-$("#mtalinstatmess5").text($.i18n("Line 4 Status:"));
-$("#mtalinstatmess6").text($.i18n("Line 5 Status:"));
-$("#mtalinstatmess7").text($.i18n("Line 6 Status:"));
-$("#mtalinstatmess8").text($.i18n("Line 7 Status:"));
-$("#mtalinstatmess9").text($.i18n("Line 8 Status:"));
+$("[id^='mtalinstatmess']").each(function() {
+	var id = $(this).attr("id");
+	var suffix = parseInt(id.replace("mtalinstatmess", ""), 10);
+
+	if (!isNaN(suffix) && suffix > 1) {
+		$(this).text($.i18n("Line " + (suffix - 1) + " Status:"));
+	}
+});
 $("#mtasiplogmess1").text($.i18n("MTA SIP Packet Log"));
 $("#mtasiploghead").text($.i18n("Gateway > Connection > MTA >SIP Packet Log"));
 $("#mtasiplogtip1").text($.i18n("Information related to the SIP Packet Log."));
