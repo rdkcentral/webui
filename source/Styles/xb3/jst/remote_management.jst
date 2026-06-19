@@ -812,10 +812,6 @@ function remote_access_block(){
 			<br/>
 			<span id="remmess2">Remote Management Address (IPv6):</span>
 			<?%
-				/* Fiber devices use brlan0 ipv6 address */
-				if ((get_wan_type() == "DSL" && strpos($partnerId, "sky-") !== false)) {
-					$fistUSif = getFirstDownstreamIpInterface();
-				}
 				$ids = explode(",", getInstanceIds($fistUSif+"IPv6Address."));
 				for(var $keytmp in $ids) { $i=$ids[$keytmp];/*p2j-foreach*/
 					$val = getStr($fistUSif+"IPv6Address."+$i+".IPAddress");

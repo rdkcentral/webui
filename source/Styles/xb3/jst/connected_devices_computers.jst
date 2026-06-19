@@ -118,6 +118,7 @@ if($locale=="it" || $locale=="en_GB"){
 	$rootObjName    = "Device.Hosts.Host.";
 	$paramNameArray = ["Device.Hosts.Host."]/*p2j-array*/;
 	$mapping_array  = ["PhysAddress", "IPAddress", "Layer1Interface", "HostName", "Active", "AddressSource", "X_CISCO_COM_RSSI", "Comments", "IPv4Address.1.IPAddress", "IPv6Address.1.IPAddress", "IPv6Address.2.IPAddress", "IPv6Address.3.IPAddress", "X_RDKCENTRAL-COM_Parent", "X_RDKCENTRAL-COM_DeviceType"]/*p2j-array*/;
+	$mapping_array = $mapping_array.concat(getMloMappingFields());
 	$HostIndexArr = DmExtGetInstanceIds("Device.Hosts.Host.");
 	$HostNum = 0;
 	if(0 == $HostIndexArr[0]){  
@@ -140,7 +141,7 @@ if($locale=="it" || $locale=="en_GB"){
 		$NetworkExtender          = {}/*p2j-array*/;
 		$offlinePrivateNetworkHost['hostNum'] = 0;
 		$PublicNetworkHost['hostNum']  = 0;
-		$Host = getParaValues($rootObjName, $paramNameArray, $mapping_array);
+		$Host = getParaValues($rootObjName, $paramNameArray, $mapping_array, true);
 		if(!empty($Host)){
 			//check if online device is there in Blocked Devices List using MAC Address
 			//if it's there remove 'X' button for "Online Blocked Devices"
@@ -185,78 +186,160 @@ if($locale=="it" || $locale=="en_GB"){
 			}
 		    //This for loop aims to construct online and offline network host arrays based on $Host		    
 		    for ($i=0,$j=0,$k=0,$x=0; $i < $HostNum; $i++) { 
-                $Host[$i.toString()]['instanceID'] = $i + 1;
+				$Host[$i.toString()]['instanceID'] = $Host[$i.toString()]['__id'];
                 $Host[$i]['HostName'] = htmlspecialchars($Host[$i]['HostName'], ENT_NOQUOTES, 'UTF-8');
                 $Host[$i]['Comments'] = htmlspecialchars($Host[$i]['Comments'], ENT_NOQUOTES, 'UTF-8');
+				$mloLayer1Data = getMloLayer1Data($Host[$i.toString()], $Host[$i.toString()]['__id']);
+				$mloInfo = $mloLayer1Data['MloInfo'];
+				$mloLayer1Interfaces = $mloLayer1Data['Layer1Interfaces'];
+				$selectedLayer1Interface = $mloInfo['Layer1Interface'];
+				$selectedRSSI = $mloInfo['BestMloRSSI'];
+				$hasMloRSSI = $mloInfo['HasMloRSSI'];
+				$tmpHost = ProcessLay1Interface($selectedLayer1Interface);
+				$connectionTypeList = []/*p2j-array*/;
+				$hasWiFiInterface = false;
+				for (var $midx in $mloLayer1Interfaces) {
+					$mloLayer1Interface = $mloLayer1Interfaces[$midx];/*p2j-foreach*/
+					$tmpConnectionInfo = ProcessLay1Interface($mloLayer1Interface);
+					if ($tmpConnectionInfo['networkType'] == "Private") {
+						$tmpHost = $tmpConnectionInfo;
+					}
+					if (!in_array($tmpConnectionInfo['connectionType'], $connectionTypeList)) {
+						array_push($connectionTypeList, $tmpConnectionInfo['connectionType']);
+					}
+					if (stristr($mloLayer1Interface, "WiFi")) {
+						$hasWiFiInterface = true;
+					}
+				}
+				if (empty($connectionTypeList)) {
+					$tmpConnectionInfo = ProcessLay1Interface($selectedLayer1Interface);
+					array_push($connectionTypeList, $tmpConnectionInfo['connectionType']);
+				}
+				$displayConnectionList = []/*p2j-array*/;
+				$isMloClient = (
+					typeof($Host[$i.toString()]['X_RDK-MldClient']) != "undefined" &&
+					!strcasecmp("true", $Host[$i.toString()]['X_RDK-MldClient'])
+				);
+				if ($isMloClient && $hasWiFiInterface) {
+					for (var $cti in $connectionTypeList) {
+						$ct = $connectionTypeList[$cti];/*p2j-foreach*/
+						if (stristr($ct, "Wi-Fi")) {
+							array_push($displayConnectionList, $ct);
+						}
+					}
+				}
+				else {
+					$displayConnectionList = $connectionTypeList;
+				}
+				if (empty($displayConnectionList)) {
+					$tmpConnectionInfo = ProcessLay1Interface($selectedLayer1Interface);
+					if (typeof($tmpConnectionInfo['connectionType']) != "undefined" && "" != $tmpConnectionInfo['connectionType']) {
+						array_push($displayConnectionList, $tmpConnectionInfo['connectionType']);
+					}
+				}
+				if (empty($displayConnectionList)) {
+					array_push($displayConnectionList, "Unknown");
+				}
 				//for WiFi Extended device
 				$isExtendedDevice = false;
 				if (array_key_exists($Host[$i.toString()]['X_RDKCENTRAL-COM_Parent'], $NetworkExtender)){
 					$isExtendedDevice = true;
 					$extDeviceConnType = $NetworkExtender[$Host[$i.toString()]['X_RDKCENTRAL-COM_Parent']];
 				}
-                $tmpHost = ProcessLay1Interface( $Host[$i.toString()]['Layer1Interface']);
-		    	if ($tmpHost['networkType'] == "Private"){
-		      	//construct private network host info
-		      	if ( !strcasecmp("true", $Host[$i.toString()]['Active']) ) {
-		      		//construct online private network host info
-					$onlinePrivateNetworkHost['hostNum'] += 1;
-              if(!isset($onlinePrivateNetworkHost[$j.toString()]))
-                $onlinePrivateNetworkHost[$j.toString()]={};
-			        $onlinePrivateNetworkHost[$j.toString()]['instanceID'] = $i + 1;
-			        array_push($onlinePrivateInstanceArr, $onlinePrivateNetworkHost[$j.toString()]['instanceID']);
-					if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName']))
-                                    $onlinePrivateNetworkHost[$j.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
-                    else
-                                    $onlinePrivateNetworkHost[$j.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
-			        array_push($onlineHostNameArr, $onlinePrivateNetworkHost[$j.toString()]['HostName']);
-                    $onlinePrivateNetworkHost[$j.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
-                    // IPV6 link-local address
-	                $onlinePrivateNetworkHost[$j.toString()]['IPv6Address1'] = $Host[$i.toString()]['IPv6Address.2.IPAddress'];
-	                // IPV6 global address
-	                $onlinePrivateNetworkHost[$j.toString()]['IPv6Address2'] = resolve_IPV6_global_address($Host[$i.toString()]['IPv6Address.1.IPAddress'], $Host[$i.toString()]['IPv6Address.3.IPAddress']);
-                    $onlinePrivateNetworkHost[$j.toString()]['PhysAddress'] = strtoupper($Host[$i.toString()]['PhysAddress']);
-		            array_push($onlineHostMAC, $onlinePrivateNetworkHost[$j.toString()]['PhysAddress']);
-                    $onlinePrivateNetworkHost[$j.toString()]['AddressSource'] = $Host[$i.toString()]['AddressSource'];
-                    $onlinePrivateNetworkHost[$j.toString()]['Connection'] = ($isExtendedDevice) ? $extDeviceConnType+' '+$tmpHost['connectionType'] : $tmpHost['connectionType'];
-					$onlinePrivateNetworkHost[$j.toString()]['X_RDKCENTRAL-COM_DeviceType'] = $Host[$i.toString()]['X_RDKCENTRAL-COM_DeviceType'];                    
-					$onlinePrivateNetworkHost[$j.toString()]['Comments'] = $Host[$i.toString()]['Comments'];
-                    if (stristr($tmpHost['connectionType'], 'Wi-Fi'))
-                    	$onlinePrivateNetworkHost[$j]['RSSI'] = $clients_RSSI[strtoupper($Host[$i.toString()]['PhysAddress'])]+" dBm";
-                    else
-                    	$onlinePrivateNetworkHost[$j]['RSSI'] = "NA";
-                    if(in_array(strtolower($onlinePrivateNetworkHost[$j.toString()]['PhysAddress']), $arrayBlockMAC)){
-						$onlinePrivateNetworkHost[$j.toString()]['Blocked'] = true;
-					} else {
-						$onlinePrivateNetworkHost[$j.toString()]['Blocked'] = false;
+				if ($tmpHost['networkType'] == "Private"){
+					//construct private network host info
+					if ( !strcasecmp("true", $Host[$i.toString()]['Active']) ) {
+						//construct online private network host info (one row per connection)
+					for (var $didx in $displayConnectionList) {
+						$displayConnection = $displayConnectionList[$didx];/*p2j-foreach*/
+						$onlinePrivateNetworkHost['hostNum'] += 1;
+						if(!isset($onlinePrivateNetworkHost[$j.toString()]))
+							$onlinePrivateNetworkHost[$j.toString()]={};
+						$onlinePrivateNetworkHost[$j.toString()]['instanceID'] = $Host[$i.toString()]['instanceID'];
+						$onlinePrivateNetworkHost[$j.toString()]['ShowActions'] = ($didx == 0);
+						if ($didx == 0) {
+							array_push($onlinePrivateInstanceArr, $onlinePrivateNetworkHost[$j.toString()]['instanceID']);
+						}
+						if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName']))
+							$onlinePrivateNetworkHost[$j.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
+						else
+							$onlinePrivateNetworkHost[$j.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
+						if ($didx == 0) {
+							array_push($onlineHostNameArr, $onlinePrivateNetworkHost[$j.toString()]['HostName']);
+						}
+						$onlinePrivateNetworkHost[$j.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
+						// IPV6 link-local address
+						$onlinePrivateNetworkHost[$j.toString()]['IPv6Address1'] = $Host[$i.toString()]['IPv6Address.2.IPAddress'];
+						// IPV6 global address
+						$onlinePrivateNetworkHost[$j.toString()]['IPv6Address2'] = resolve_IPV6_global_address($Host[$i.toString()]['IPv6Address.1.IPAddress'], $Host[$i.toString()]['IPv6Address.3.IPAddress']);
+						$onlinePrivateNetworkHost[$j.toString()]['PhysAddress'] = strtoupper($Host[$i.toString()]['PhysAddress']);
+						if ($didx == 0) {
+							array_push($onlineHostMAC, $onlinePrivateNetworkHost[$j.toString()]['PhysAddress']);
+						}
+						$onlinePrivateNetworkHost[$j.toString()]['AddressSource'] = $Host[$i.toString()]['AddressSource'];
+						$onlinePrivateNetworkHost[$j.toString()]['Connection'] = ($isExtendedDevice) ? $extDeviceConnType+' '+$displayConnection : $displayConnection;
+						$onlinePrivateNetworkHost[$j.toString()]['X_RDKCENTRAL-COM_DeviceType'] = $Host[$i.toString()]['X_RDKCENTRAL-COM_DeviceType'];
+						$onlinePrivateNetworkHost[$j.toString()]['Comments'] = $Host[$i.toString()]['Comments'];
+						if ($hasWiFiInterface) {
+							if ($hasMloRSSI) {
+								$onlinePrivateNetworkHost[$j]['RSSI'] = $selectedRSSI + " dBm";
+							}
+							else if (typeof($clients_RSSI[strtoupper($Host[$i.toString()]['PhysAddress'])]) != "undefined") {
+								$onlinePrivateNetworkHost[$j]['RSSI'] = $clients_RSSI[strtoupper($Host[$i.toString()]['PhysAddress'])] + " dBm";
+							}
+							else if ("" != $Host[$i.toString()]['X_CISCO_COM_RSSI']) {
+								$onlinePrivateNetworkHost[$j]['RSSI'] = $Host[$i.toString()]['X_CISCO_COM_RSSI'] + " dBm";
+							}
+							else {
+								$onlinePrivateNetworkHost[$j]['RSSI'] = "NA";
+							}
+						}
+						else
+							$onlinePrivateNetworkHost[$j]['RSSI'] = "NA";
+						if(in_array(strtolower($onlinePrivateNetworkHost[$j.toString()]['PhysAddress']), $arrayBlockMAC)){
+							$onlinePrivateNetworkHost[$j.toString()]['Blocked'] = true;
+						} else {
+							$onlinePrivateNetworkHost[$j.toString()]['Blocked'] = false;
+						}
+						$j++;
 					}
-                    $j++;
 		      	}
 		      	else {
-		            $offlinePrivateNetworkHost['hostNum'] += 1;
-				$offlinePrivateNetworkHost[$k]={};
-			        $offlinePrivateNetworkHost[$k.toString()]['instanceID'] = $i + 1;
-				array_push($offlinePrivateInstanceArr, $offlinePrivateNetworkHost[$k.toString()]['instanceID']);
-				if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName'])) 
-						$offlinePrivateNetworkHost[$k.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
-			    else
-			        	$offlinePrivateNetworkHost[$k.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);	
-				array_push($offlineHostNameArr, $offlinePrivateNetworkHost[$k.toString()]['HostName']);				
-                    $offlinePrivateNetworkHost[$k.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
-                    // IPV6 link-local address
-	                $offlinePrivateNetworkHost[$k.toString()]['IPv6Address1'] = $Host[$i.toString()]['IPv6Address.2.IPAddress'];
-	                // IPV6 global address
-	                $offlinePrivateNetworkHost[$k.toString()]['IPv6Address2'] = resolve_IPV6_global_address($Host[$i.toString()]['IPv6Address.1.IPAddress'], $Host[$i.toString()]['IPv6Address.3.IPAddress']);
-                    $offlinePrivateNetworkHost[$k.toString()]['PhysAddress'] = strtoupper($Host[$i.toString()]['PhysAddress']);
-		    array_push($offlineHostMAC, $offlinePrivateNetworkHost[$k.toString()]['PhysAddress']);
-                    $offlinePrivateNetworkHost[$k.toString()]['Connection'] = ($isExtendedDevice) ? $extDeviceConnType+' '+$tmpHost['connectionType'] : $tmpHost['connectionType'];
-                    $offlinePrivateNetworkHost[$k.toString()]['AddressSource'] = $Host[$i.toString()]['AddressSource'];
-                    $offlinePrivateNetworkHost[$k.toString()]['Comments'] = $Host[$i.toString()]['Comments'];
-					if(in_array(strtolower($offlinePrivateNetworkHost[$k.toString()]['PhysAddress']), $arrayBlockMAC)){
-						$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = true;
-					} else {
-						$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = false;
+		            for (var $didx in $displayConnectionList) {
+					$displayConnection = $displayConnectionList[$didx];/*p2j-foreach*/
+					$offlinePrivateNetworkHost['hostNum'] += 1;
+					$offlinePrivateNetworkHost[$k]={};
+					$offlinePrivateNetworkHost[$k.toString()]['instanceID'] = $Host[$i.toString()]['instanceID'];
+					$offlinePrivateNetworkHost[$k.toString()]['ShowActions'] = ($didx == 0);
+					if ($didx == 0) {
+						array_push($offlinePrivateInstanceArr, $offlinePrivateNetworkHost[$k.toString()]['instanceID']);
 					}
-                    $k++;
+					if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName']))
+							$offlinePrivateNetworkHost[$k.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
+					else
+						$offlinePrivateNetworkHost[$k.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
+					if ($didx == 0) {
+						array_push($offlineHostNameArr, $offlinePrivateNetworkHost[$k.toString()]['HostName']);
+					}
+					$offlinePrivateNetworkHost[$k.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
+					// IPV6 link-local address
+					$offlinePrivateNetworkHost[$k.toString()]['IPv6Address1'] = $Host[$i.toString()]['IPv6Address.2.IPAddress'];
+					// IPV6 global address
+					$offlinePrivateNetworkHost[$k.toString()]['IPv6Address2'] = resolve_IPV6_global_address($Host[$i.toString()]['IPv6Address.1.IPAddress'], $Host[$i.toString()]['IPv6Address.3.IPAddress']);
+					$offlinePrivateNetworkHost[$k.toString()]['PhysAddress'] = strtoupper($Host[$i.toString()]['PhysAddress']);
+					if ($didx == 0) {
+						array_push($offlineHostMAC, $offlinePrivateNetworkHost[$k.toString()]['PhysAddress']);
+					}
+					$offlinePrivateNetworkHost[$k.toString()]['AddressSource'] = $Host[$i.toString()]['AddressSource'];
+					$offlinePrivateNetworkHost[$k.toString()]['Comments'] = $Host[$i.toString()]['Comments'];
+						$offlinePrivateNetworkHost[$k.toString()]['Connection'] = ($isExtendedDevice) ? $extDeviceConnType+' '+$displayConnection : $displayConnection;
+						if(in_array(strtolower($offlinePrivateNetworkHost[$k.toString()]['PhysAddress']), $arrayBlockMAC)){
+							$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = true;
+						} else {
+							$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = false;
+						}
+					$k++;
+					}
 		      	}	
 		      }		     
 		    }//end of for
@@ -266,11 +349,11 @@ if($locale=="it" || $locale=="en_GB"){
     if ("" == $onlinePrivateNetworkHost['hostNum']) $onlinePrivateNetworkHost['hostNum']=0;
 ?>
 <script type="text/javascript">
-        var onlineDeviceNum = <?% echo($onlinePrivateNetworkHost['hostNum']); ?>;
+        var onlineDeviceNum = <?% echo(count($onlinePrivateInstanceArr)); ?>;
         var onlineDeviceInstanceArr = <?% echo(json_encode($onlinePrivateInstanceArr)); ?>;
         var onlineHostNameArr = <?% echo(json_encode($onlineHostNameArr)); ?>;
         var onlineHostMAC = <?% echo(json_encode($onlineHostMAC)); ?>;
-	var offlineDeviceNum = <?% echo($offlinePrivateNetworkHost['hostNum']); ?>;
+	var offlineDeviceNum = <?% echo(count($offlinePrivateInstanceArr)); ?>;
 	var offlineDeviceInstanceArr = <?% echo(json_encode($offlinePrivateInstanceArr)); ?>;
 	var offlineHostNameArr = <?% echo(json_encode($offlineHostNameArr)); ?>;
 	var offlineHostMAC = <?% echo(json_encode($offlineHostMAC)); ?>;
@@ -336,32 +419,34 @@ $(document).ready(function() {
 		});
     }    
     $("input:checked[name='ip']").trigger("click");
-    // activate validation plugin
-	$(".pageForm").validate({
-	    rules : {
-	    	host_name: {
-	    		allowed_char: true
-	    	},
-	    	staticIPAddress: {
-	    		ipv4 : {
-	            	depends : function() {
-	            		return ("static" == $("input:radio[name=ip]:checked").val());
-	            	}
-	            },
-	            required : {
-	                depends : function() {
-	                	return ("static" == $("input:radio[name=ip]:checked").val());
-	                }
-	            }
-	    	}
-	    	,mac_address:{
-	    		required: true,
-	    		mac: true
-	    	},
-	    	comments:{
-	    		allowed_char: true
-	    	}
-	    }
+	    // activate validation plugin for each edit form
+	$(".pageForm").each(function() {
+		$(this).validate({
+	    		rules : {
+	    			host_name: {
+	    				allowed_char: true
+	    			},
+	    			staticIPAddress: {
+	    				ipv4 : {
+	            			depends : function() {
+						return ("static" == $(this).closest('form').find("input:radio[name=ip]:checked").val());
+	            			}
+	            		},
+	            		required : {
+	                		depends : function() {
+						return ("static" == $(this).closest('form').find("input:radio[name=ip]:checked").val());
+	                		}
+	            		}
+	    			},
+	    			mac_address:{
+	    				required: true,
+	    				mac: true
+	    			},
+	    			comments:{
+	    				allowed_char: true
+	    			}
+	    		}
+		});
 	});
     $(".edit-device").hide();
     $('.device-info').addClass('device-hide');
@@ -383,197 +468,98 @@ $(document).ready(function() {
 		}
 	}
     });
-    for (var i = 0; i < onlineDeviceNum; i++) {  
-    ( 
-    	function(x) {
-    	//alert(onlineDeviceInstanceArr[i]);    	
-        var butn = "#btn-" + onlineDeviceInstanceArr[x];
-        var editButn = "#edit-device-" + onlineDeviceInstanceArr[x];
-        //alert(editButn);
-    	$(butn).click(function(){
-		if(!(privateDisabled && $(butn).hasClass("private"))){
+    $(document).on('click', '.mlo-edit-btn', function(){
+		if(!(privateDisabled && $(this).hasClass("private"))){
 			$('.cnt-device-main').hide();
-			$(editButn).show();
+			var editTarget = $(this).attr('data-edit-target');
+			$("#" + editTarget).show();
 		}
-    	});
-    	var submitEditDevice = "#submit_editDevice-" + onlineDeviceInstanceArr[x];
-    	var macAddr          = "#mac_address-"       + onlineDeviceInstanceArr[x];
-    	var staticIPAddr     = "#staticIPAddress-"   + onlineDeviceInstanceArr[x]; 
-        var ipDHCP           = "#ip_dhcp-"           + onlineDeviceInstanceArr[x];
-        var ipResv	         = "#ip_static-"         + onlineDeviceInstanceArr[x];
-        var comment          = "#comment-"           + onlineDeviceInstanceArr[x];
-        var dhcp_mac   = "#dhcp-mac"   + onlineDeviceInstanceArr[x];
-        var static_ip  = "#static-ip"  + onlineDeviceInstanceArr[x];
-    	//alert(onlineDeviceInstanceArr[x]);
-    	var isDHCP = $(ipDHCP).is(":checked");
-    	if (isDHCP) {
-    	    $(static_ip).hide();
-    	}
-    	else{
-    	    $(static_ip).show();
-    	}
-    	$(ipResv).click(function(){
-    	    $(static_ip).show();
-    	});
-    	$(ipDHCP).click(function(){
-    	    $(static_ip).hide();
-    	});
-        var hostName = onlineHostNameArr[x];
-        var macAddress = onlineHostMAC[x];
-    	$(submitEditDevice).click(function(e){
-            e.preventDefault();
-            var reseverd_ipAddr = $(staticIPAddr).val();
-            var isDHCP = $(ipDHCP).is(":checked");
-            var Comments = $(comment).val();
-            if (Comments.length > 63) {
-                alertLocale("The comments should be no more than 63 characters !");
-                return;
-            }
-		Comments=Comments.replace(/[\r\n]+/gm, "@" );
-            if (isDHCP){
-                if($(ipDHCP).val() == 'DHCP'){
-           	  	//this initial value is DHCP, user is going to modify comments
-                    var editDevInfo = '{"UpdateComments": "true", "Comments": " '+ Comments +' ", "hostName": "' + hostName + '", "macAddress": "' + macAddress + '", "reseverd_ipAddr": "' + reseverd_ipAddr + '"}';
-                }
-                else{
-	                // this is to provide info to remove this device in the static addr list, REservedIP => DHCP
-	                var editDevInfo = '{"delFlag": "true", "Comments": " '+ Comments +' ", "hostName": "' + hostName + '", "macAddress": "' + macAddress + '", "reseverd_ipAddr": "' + reseverd_ipAddr + '"}';
-                }
-            }
-            else{
-				//to check if "Reserved IP Address" is in "DHCP Pool range"
-				if(reseverd_ipAddr==""){
-					alertLocale("Please enter Reserved IP Address !");
-					return;
+	});
+	function toggleStaticIpInForm($form) {
+		var isDHCP = $form.find("input[name='ip'][value='DHCP']").is(":checked");
+		if (isDHCP) {
+			$form.find('.static-ip').hide();
+		}
+		else {
+			$form.find('.static-ip').show();
+		}
+	}
+
+	$('.edit-device-form').each(function(){
+		toggleStaticIpInForm($(this));
+	});
+
+	$(document).on('change', '.edit-device-form input[name="ip"]', function(){
+		var $form = $(this).closest('.edit-device-form');
+		toggleStaticIpInForm($form);
+	});
+
+	$(document).on('click', '.btn-save-edit-device', function(e){
+		e.preventDefault();
+		var $form = $(this).closest('.edit-device-form');
+		var hostName = $form.attr('data-host-name');
+		var macAddress = $form.attr('data-mac-address');
+		var initialAddrSrc = $form.attr('data-initial-addrsrc');
+		var reseverd_ipAddr = $form.find('.static-ip-input').val();
+		var isDHCP = $form.find("input[name='ip'][value='DHCP']").is(":checked");
+		var Comments = $form.find('.comment-input').val();
+		var editDevInfo = "";
+		if (Comments.length > 63) {
+			alertLocale("The comments should be no more than 63 characters !");
+			return;
+		}
+		Comments = Comments.replace(/[\r\n]+/gm, "@");
+
+		var editDevObj;
+		var commentsPayload = " " + Comments + " ";
+		if (isDHCP){
+			if(initialAddrSrc == 'DHCP'){
+				//this initial value is DHCP, user is going to modify comments
+				editDevObj = { UpdateComments: "true", Comments: commentsPayload, hostName: hostName, macAddress: macAddress, reseverd_ipAddr: reseverd_ipAddr };
+			}
+			else{
+				// this is to provide info to remove this device in the static addr list, REservedIP => DHCP
+				editDevObj = { delFlag: "true", Comments: commentsPayload, hostName: hostName, macAddress: macAddress, reseverd_ipAddr: reseverd_ipAddr };
+			}
+		}
+		else{
+			//to check if "Reserved IP Address" is in "DHCP Pool range"
+			if(reseverd_ipAddr==""){
+				alertLocale("Please enter Reserved IP Address !");
+				return;
+			}
+			var validIpaddr = valid_GW_IP(beginAddr, endAddr, reseverd_ipAddr);
+			if(!validIpaddr){
+				jAlert($.i18n('Reserved IP Address is not in valid range:')+"\n"+beginAddr+" ~ "+endAddr);
+				return;
+			}
+			// this is to provide info to edit REservedIP
+			editDevObj = { Comments: commentsPayload, hostName: hostName, macAddress: macAddress, reseverd_ipAddr: reseverd_ipAddr };
+		}
+		editDevInfo = JSON.stringify(editDevObj);
+
+		if($form.valid()){
+			jProgress($.i18n('This may take several seconds'), 60);
+			$.ajax({
+				type: "POST",
+				url: "actionHandler/ajaxSet_add_device.jst",
+				data: { DeviceInfo: editDevInfo, csrfp_token: token },
+				dataType: "json",
+				success: function(results){
+					setTimeout(function(){
+						jHide();
+						if (results=="success") { window.location.href="connected_devices_computers.jst";}
+						else if (results=="") {alertLocale("Failure! Please check your inputs.");}
+						else alertLocale(results);
+					}, 15000);
+				},
+				error: function(){
+					jHide();
+					alertLocale("Failure, Please check your inputs and try again.");
 				}
-				var validIpaddr = valid_GW_IP(beginAddr, endAddr,reseverd_ipAddr);
-                                if(!validIpaddr){
-                                         jAlert($.i18n('Reserved IP Address is not in valid range:')+"\n"+beginAddr+" ~ "+endAddr);
-                                                return;
-                                }
-				var reseverd_ipArr	= reseverd_ipAddr.split(".");
-				// this is to provide info to edit REservedIP
-				var editDevInfo = '{"Comments": " '+ Comments +' ", "hostName": "' + hostName + '", "macAddress": "' + macAddress + '", "reseverd_ipAddr": "' + reseverd_ipAddr + '"}';
-            } 
-            //alert(editDevInfo);
-            if($(".pageForm").valid()){
-                jProgress($.i18n('This may take several seconds'), 60); 
-    			$.ajax({           	
-    				type: "POST",
-    				url: "actionHandler/ajaxSet_add_device.jst",
-    				data: { DeviceInfo: editDevInfo,csrfp_token: token },
-    				dataType: "json",
-    				success: function(results){
-    					setTimeout(function(){
-    						jHide();
-    						if (results=='success') { window.location.href="connected_devices_computers.jst";}
-    						else if (results=="") {alertLocale("Failure! Please check your inputs.");}
-    						else alertLocale(results);
-    					}, 15000);
-    				},
-    				error: function(){
-    					jHide();
-    					alertLocale("Failure, Please check your inputs and try again.");
-    				}
-    			});
-            } //end of page form valid
-    	}); //end of submit edit device click
-       }) (i); //end of function(x)
-    }; // end of for loop
-      
-   for (var i = 0; i < offlineDeviceNum; i++) {
-    (
-        function(x) {
-        //alert(offlineDeviceInstanceArr[i]);
-        var butn = "#btn-" + offlineDeviceInstanceArr[x];
-        var editButn = "#offline-edit-device-" + offlineDeviceInstanceArr[x];
-        //alert(editButn);
-        $(butn).click(function(){
-                if(!(privateDisabled && $(butn).hasClass("private"))){
-                        $('.cnt-device-main').hide();
-                        $(editButn).show();
-                }
-        });
-        var submitEditDevice = "#submit_editDevice-" + offlineDeviceInstanceArr[x];
-        var macAddr          = "#mac_address-"       + offlineDeviceInstanceArr[x];
-        var staticIPAddr     = "#staticIPAddress-"   + offlineDeviceInstanceArr[x];
-        var ipDHCP           = "#ip_dhcp-"           + offlineDeviceInstanceArr[x];
-        var ipResv               = "#ip_static-"         + offlineDeviceInstanceArr[x];
-        var comment          = "#comment-"           + offlineDeviceInstanceArr[x];
-        var dhcp_mac   = "#dhcp-mac"   + offlineDeviceInstanceArr[x];
-        var static_ip  = "#static-ip"  + offlineDeviceInstanceArr[x];
-        //alert(offlineDeviceInstanceArr[x]);
-        var isDHCP = $(ipDHCP).is(":checked");
-        if (isDHCP) {
-            $(static_ip).hide();
-        }
-        else{
-            $(static_ip).show();
-        }
-        $(ipResv).click(function(){
-            $(static_ip).show();
-        });
-        $(ipDHCP).click(function(){
-            $(static_ip).hide();
-        });
-        var hostName = offlineHostNameArr[x];
-        var macAddress = offlineHostMAC[x];
-        $(submitEditDevice).click(function(e){
-            e.preventDefault();
-            var reseverd_ipAddr = $(staticIPAddr).val();
-            var isDHCP = $(ipDHCP).is(":checked");
-            var Comments = $(comment).val();
-            Comments=Comments.replace(/[\r\n]+/gm, "@" );		
-            if (isDHCP){
-                if($(ipDHCP).val() == 'DHCP'){
-                        //this initial value is DHCP, user is going to modify comments
-                    var editDevInfo = '{"UpdateComments": "true", "Comments": " '+ Comments +' ", "hostName": "' + hostName + '", "macAddress": "' + macAddress + '", "reseverd_ipAddr": "' + reseverd_ipAddr + '"}';
-                }
-                else{
-                        // this is to provide info to remove this device in the static addr list, REservedIP => DHCP
-                        var editDevInfo = '{"delFlag": "true", "Comments": " '+ Comments +' ", "hostName": "' + hostName + '", "macAddress": "' + macAddress + '", "reseverd_ipAddr": "' + reseverd_ipAddr + '"}';
-                }
-            }
-            else{
-                                //to check if "Reserved IP Address" is in "DHCP Pool range"
-                                if(reseverd_ipAddr==""){
-                                        alertLocale("Please enter Reserved IP Address !");
-                                        return;
-                                }
-				var validIpaddr = valid_GW_IP(beginAddr, endAddr,reseverd_ipAddr);
-                                if(!validIpaddr){
-                                         jAlert($.i18n('Reserved IP Address is not in valid range:')+"\n"+beginAddr+" ~ "+endAddr);
-                                                return;
-                                }
-                                var reseverd_ipArr      = reseverd_ipAddr.split(".");
-                                // this is to provide info to edit REservedIP
-                                var editDevInfo = '{"Comments": " '+ Comments +' ", "hostName": "' + hostName + '", "macAddress": "' + macAddress + '", "reseverd_ipAddr": "' + reseverd_ipAddr + '"}';
-            }
-            //alert(editDevInfo);
-            if($(".pageForm").valid()){
-                jProgress($.i18n('This may take several seconds'), 60);
-                        $.ajax({
-                                type: "POST",
-                                url: "actionHandler/ajaxSet_add_device.jst",
-                                data: { DeviceInfo: editDevInfo,csrfp_token: token },
-                                dataType: "json",
-                                success: function(results){
-                                        setTimeout(function(){
-                                                jHide();
-                                                if (results=="success") { window.location.href="connected_devices_computers.jst";}
-                                                else if (results=="") {alertLocale("Failure! Please check your inputs.");}
-                                                else alertLocale(results);
-                                        }, 15000);
-                                },
-                                error: function(){
-                                        jHide();
-                                        alertLocale("Failure, Please check your inputs and try again.");
-                                }
-                        });
-            } //end of page form valid
-        }); //end of submit edit device click
-       }) (i); //end of function(x)
-    }; // end of for loop   
+			});
+		}
+	});
 
     $('.confirm').off('click').click(function(e){
 	    if(!(privateDisabled && $(this).hasClass("private"))){
@@ -669,8 +655,14 @@ function getTitle(val){
                         privconnnetid ="6_G";
                 }
 		else if($onlinePrivateNetworkHost[$x.toString()]['Connection']=="Ethernet"){privconnnetid ="ethcon";}
-		if(($CloudUIEnable == "true" ) || $onlinePrivateNetworkHost[$x.toString()]['Blocked']) $style = "&nbsp;";
-         	else $style = "<input type='button' id=" + "'online-X-" +$k+ "'" + " value='X' tabindex='0' title='add this device to Blocked Devices List' name=" + "'{\"dev_name\":\""+$dev_name+"\", \"mac_addr\":\""+$mac_addr+"\"}'" + " class=\"btn confirm private\"></input>";
+		if(!$onlinePrivateNetworkHost[$x.toString()]['ShowActions']) {
+			$style = "&nbsp;";
+		}
+		else {
+			if(($CloudUIEnable == "true" ) || $onlinePrivateNetworkHost[$x.toString()]['Blocked']) $style = "&nbsp;";
+			else $style = "<input type='button' id=" + "'online-X-" +$k+ "'" + " value='X' tabindex='0' title='add this device to Blocked Devices List' name=" + "'{\"dev_name\":\""+$dev_name+"\", \"mac_addr\":\""+$mac_addr+"\"}'" + " class=\"btn confirm private\"></input>";
+		}
+		$editStyle = "<input type='button' value='Edit' tabindex='0' id=" + "'btn-" +$onlinePrivateNetworkHost[$x.toString()]['instanceID'] + "-" +$k+ "'"+ " data-edit-target=" + "'edit-device-" +$onlinePrivateNetworkHost[$x.toString()]['instanceID'] + "-" +$k+ "'" + " class=\"btn private edbutton mlo-edit-btn\"></input>";
 		if($k % 2)  $odd = "";
 				else $odd = " class='odd'";
          	echo( "\
@@ -706,7 +698,9 @@ function getTitle(val){
 			echo('<span id='+privconnnetid+'>'+$onlinePrivateNetworkHost[$x.toString()]['Connection']+'</span>');
 			echo("\
 			</td>\
-                <td headers='edit-button'><input type='button' value='Edit' tabindex='0' id=" + "'btn-" +$onlinePrivateNetworkHost[$x.toString()]['instanceID'] + "'"+ "  class=\"btn private edbutton\"></input></td>\
+	                <td headers='edit-button'>");
+				echo($editStyle);
+				echo("</td>\
                 <td headers='disconnect-button'>\
 		");
 		echo($style);
@@ -773,8 +767,14 @@ function getTitle(val){
         }
 else if($offlinePrivateNetworkHost[$x.toString()]['Connection']=="Ethernet"){privconnnetOffid ="ethcon";}
 
-		if(($CloudUIEnable == "true" ) || $offlinePrivateNetworkHost[$x.toString()]['Blocked']) $style = "&nbsp;";
-		else $style = "<input type='button' id=" + "'offline-X-" +$k+ "'" + " value='X' tabindex='0' onmouseover=getTitle("+$k+")  name=" + "'{\"dev_name\":\""+$dev_name+"\", \"mac_addr\":\""+$mac_addr+"\"}'" + "  class=\"btn confirm private\"></input>";
+		if(!$offlinePrivateNetworkHost[$x.toString()]['ShowActions']) {
+			$style = "&nbsp;";
+		}
+		else {
+			if(($CloudUIEnable == "true" ) || $offlinePrivateNetworkHost[$x.toString()]['Blocked']) $style = "&nbsp;";
+			else $style = "<input type='button' id=" + "'offline-X-" +$k+ "'" + " value='X' tabindex='0' onmouseover=getTitle("+$k+")  name=" + "'{\"dev_name\":\""+$dev_name+"\", \"mac_addr\":\""+$mac_addr+"\"}'" + "  class=\"btn confirm private\"></input>";
+		}
+		$editStyle = "<input type='button' value='Edit' tabindex='0' id=" + "'btn-" +$offlinePrivateNetworkHost[$x.toString()]['instanceID'] + "-" +$k+ "'"+ " data-edit-target=" + "'offline-edit-device-" +$offlinePrivateNetworkHost[$x.toString()]['instanceID'] + "-" +$k+ "'" + " class=\"btn private edbutton mlo-edit-btn\"></input>";
     	if($k % 2) $odd = "";
     	else $odd = " class='odd'";
 	echo('<input type="hidden" id=devicename_'+$k+' value='+$dev_name+'>');
@@ -804,8 +804,10 @@ else if($offlinePrivateNetworkHost[$x.toString()]['Connection']=="Ethernet"){pri
 	        <td headers='offline-device-conncection' id="+privconnnetOffid+">\
 			");
 		echo('<span id='+privconnnetOffid+'>'+$offlinePrivateNetworkHost[$x.toString()]['Connection']+'</span>');
-	echo("</td><td headers='edit-button'><input type='button' value='Edit' tabindex='0' id=" + "'btn-" +$offlinePrivateNetworkHost[$x.toString()]['instanceID'] + "'"+ "  class=\"btn private edbutton\"></input>");
-                echo("</td><td headers='offline-device-disconnect-button'>");echo($style);echo("</td>");
+	echo("</td><td headers='edit-button'>");
+	echo($editStyle);
+	echo("</td>");
+                echo("<td headers='offline-device-disconnect-button'>");echo($style);echo("</td>");
                         echo("</tr>");	
 	}
     ?>
@@ -1085,6 +1087,7 @@ else if($offlinePrivateNetworkHost[$x.toString()]['Connection']=="Ethernet"){pri
 <?% 
 //this part is to populate edit device info on each online private network host basis
 for ($i=0; $i < $onlinePrivateNetworkHost['hostNum']; $i++) {
+	$rowKey = $i + 1;
 	$commentsOnline2= $onlinePrivateNetworkHost[$i.toString()]['Comments'];
 	$commentsOnline2=$commentsOnline2.trim();
     	if($commentsOnline2.search('@')!=-1){
@@ -1106,6 +1109,8 @@ for ($i=0; $i < $onlinePrivateNetworkHost['hostNum']; $i++) {
     } 
 	$ID      = $onlinePrivateNetworkHost[$i.toString()]['instanceID'];
 	$AddrSrc = $onlinePrivateNetworkHost[$i.toString()]['AddressSource'];
+	$editHostName = htmlspecialchars($onlinePrivateNetworkHost[$i.toString()]['HostName'], ENT_NOQUOTES, 'UTF-8');
+	$editMacAddress = $onlinePrivateNetworkHost[$i.toString()]['PhysAddress'];
 	var unknowid="";
 	if($onlinePrivateNetworkHost[$i.toString()]['Connection']=="Unknown"){
 		unknowid="unknown";
@@ -1115,19 +1120,23 @@ for ($i=0; $i < $onlinePrivateNetworkHost['hostNum']; $i++) {
 	}
 	else if($onlinePrivateNetworkHost[$i.toString()]['Connection']=="Wi-Fi 5 GHz"){
 		unknowid ="5_G";
-	}else if($onlinePrivateNetworkHost[$i.toString()]['Connection']=="Ethernet"){unknowid ="ethcon";}
+	}
+	else if($onlinePrivateNetworkHost[$i.toString()]['Connection']=="Wi-Fi 6 GHz"){
+		unknowid ="6_G";
+	}
+	else if($onlinePrivateNetworkHost[$i.toString()]['Connection']=="Ethernet"){unknowid ="ethcon";}
 	echo( "\
-        <div id=\"edit-device-" +$ID+ "\"  class=\"edit-device content \" class='hidden'>\
-		    <h1 id=\"conndevedithead\">Connected Devices > Devices > Edit Device</h1>\
+        <div id=\"edit-device-" +$ID+ "-" +$rowKey+ "\" class=\"edit-device content hidden\">\
+		    <h1 class=\"conndevedithead\">Connected Devices > Devices > Edit Device</h1>\
 		    <div  class=\"educational-tip-edit\">\
 				<p  class=\"tip\" id='chipadd'>Change the IP address assignment method for Online Devices.</p>\
 				<p  class=\"hidden\" id=\"connedittip"+$id4+"\">If DHCP is selected, the Gateway\'s DHCP server will automatically assign the IP address.</p>\
 				<p  class=\"hidden\" id=\"connedittip"+$id5+"\">If Reserved IP is selected, the IP address will be fixed without DHCP operation and you\'ll need to manually enter the IP address. The IP address must be within the DHCP IP address pool. To find your IP address range, go to <strong>Gateway > Connection > Local IP Network.</strong></p>\
 				<p  class=\"hidden\" id='connedittip3'>Reserved IP addresses can be assigned to any device that acts as a server or that requires a fixed IP address.</p> \
 			</div>\
-		<div  class=\"module forms\" id=\"computers-edit-" +$ID+ "\" >\
+		<div  class=\"module forms\" id=\"computers-edit-" +$ID+ "-" +$rowKey+ "\" >\
 		<h2 id='editdevloc'>Edit Device</h2> \
-        <form id=\"pageForm-" +$ID+ "\"   class=\"pageForm\">\
+        <form id=\"pageForm-" +$ID+ "-" +$rowKey+ "\"   class=\"pageForm edit-device-form\" data-host-name=\"" +$editHostName+ "\" data-mac-address=\"" +$editMacAddress+ "\" data-initial-addrsrc=\"" +$AddrSrc+ "\">\
 			<div  class=\"form-row\">\
         		<span  class=\"readonlyLabel\" name=\"host_name\" id=\"hostnew\">Host Name:</span>\
         		<span  class=\"value\">" + $onlinePrivateNetworkHost[$i.toString()]['HostName'] + "</span>\
@@ -1138,27 +1147,27 @@ for ($i=0; $i < $onlinePrivateNetworkHost['hostNum']; $i++) {
 			</div>\
 			<div  class=\"form-row\">\
 				<label for=\"ip\" class='condev_config' id='confloc'>Configuration:</label>\
-				<input type=\"radio\" name=\"ip\" value=\"" +$AddrSrc+ "\" " +( ($AddrSrc == "DHCP") ? "checked='checked'" : '' )+ " class=\"ip_dchp\" id=\"ip_dhcp-" +$ID+ "\" />\
-				<label  class=\"radio\" for=\"ip_dhcp-" +$ID+ "\">DHCP</label>\
+				<input type=\"radio\" name=\"ip\" value=\"DHCP\" " +( ($AddrSrc == "DHCP") ? "checked='checked'" : '' )+ " class=\"ip_dchp\" id=\"ip_dhcp-" +$ID+ "-" +$rowKey+ "\" />\
+				<label  class=\"radio\" for=\"ip_dhcp-" +$ID+ "-" +$rowKey+ "\">DHCP</label>\
 				<br/>\
-				<input  class=\"trigger ip_static\" type=\"radio\"" +(($AddrSrc == "DHCP") ? '' : "checked='checked'"  )+ " name=\"ip\" value=\"static\" id=\"ip_static-" +$ID+ "\" />\
-				<label  class=\"radio\" for=\"ip_static-" +$ID+ "\" id=\"reserveip\">Reserved IP</label>\
+				<input  class=\"trigger ip_static\" type=\"radio\"" +(($AddrSrc == "DHCP") ? '' : "checked='checked'"  )+ " name=\"ip\" value=\"static\" id=\"ip_static-" +$ID+ "-" +$rowKey+ "\" />\
+				<label  class=\"radio\" for=\"ip_static-" +$ID+ "-" +$rowKey+ "\" id=\"reserveip\">Reserved IP</label>\
 			</div>\
-			<div id=\"dhcp-mac" +$ID+ "\"  class=\"dhcp-mac form-row odd\">\
+			<div id=\"dhcp-mac" +$ID+ "-" +$rowKey+ "\"  class=\"dhcp-mac form-row odd\">\
 			    	<span  class=\"readonlyLabel\" id=\"macaddronline\">MAC Address:</span>\
         			<span  class=\"value\">"+$onlinePrivateNetworkHost[$i.toString()]['PhysAddress']+"</span>\
 			</div>\
-      		<div id=\"static-ip" +$ID+ "\"  class=\"static-ip form-row odd\" >\
-				<label for=\"staticIPAddress-" +$ID+ "\" id=\"reservediploc\">Reserved IP Address:</label>\
-				<input type=\"text\" value=\""+ $onlinePrivateNetworkHost[$i.toString()]['IPv4Address'] +"\" id=\"staticIPAddress-" +$ID+ "\" name=\"staticIPAddress\"  class=\"target\" />\
+			<div id=\"static-ip" +$ID+ "-" +$rowKey+ "\"  class=\"static-ip form-row odd\" >\
+				<label for=\"staticIPAddress-" +$ID+ "-" +$rowKey+ "\" id=\"reservediploc\">Reserved IP Address:</label>\
+				<input type=\"text\" value=\""+ $onlinePrivateNetworkHost[$i.toString()]['IPv4Address'] +"\" id=\"staticIPAddress-" +$ID+ "-" +$rowKey+ "\" name=\"staticIPAddress\"  class=\"target static-ip-input\" />\
 			</div>\
 			<div  class=\"form-row\">\
-				<label for=\"comment-" +$ID+ "\" id=\"commentloc\">Comments:</label>\
-		        <textarea id=\"comment-" +$ID+ "\" name=\"comments\" ros=\"6\" cols=\"18\" maxlength=\"63\">"+ $commentsOnline2 +"</textarea>\
+				<label for=\"comment-" +$ID+ "-" +$rowKey+ "\" id=\"commentloc\">Comments:</label>\
+		        <textarea id=\"comment-" +$ID+ "-" +$rowKey+ "\" name=\"comments\" rows=\"6\" cols=\"18\" maxlength=\"63\" class=\"comment-input\">"+ $commentsOnline2 +"</textarea>\
 			</div>\
 			<div  class=\"form-row form-btn\">\
-				<input type=\"button\" id=\"submit_editDevice-" +$ID+ "\"  class=\"btn\" value=\"Save\"/>\
-			    <input type=\"reset\" id=\"btn-cancel-" +$ID+ "\" class=\"btn-cancel btn alt reset\" value=\"Cancel\"/>\
+				<input type=\"button\" id=\"submit_editDevice-" +$ID+ "-" +$rowKey+ "\"  class=\"btn btn-save-edit-device\" value=\"Save\"/>\
+			    <input type=\"reset\" id=\"btn-cancel-" +$ID+ "-" +$rowKey+ "\" class=\"btn-cancel btn alt reset\" value=\"Cancel\"/>\
 			</div>\
 		</form>\
 	</div> <!-- end .module -->\
@@ -1167,6 +1176,7 @@ for ($i=0; $i < $onlinePrivateNetworkHost['hostNum']; $i++) {
 }
 //this part is to populate edit device info on each offline private network host basis
 for ($i=0; $i < $offlinePrivateNetworkHost['hostNum']; $i++) {
+	$rowKey = $i + 1;
   	$commentOffline1=      $offlinePrivateNetworkHost[$i.toString()]['Comments'];
 	$commentOffline1=$commentOffline1.trim();
 	if($commentOffline1.search('@')!=-1){
@@ -1190,6 +1200,8 @@ for ($i=0; $i < $offlinePrivateNetworkHost['hostNum']; $i++) {
 
         $ID      = $offlinePrivateNetworkHost[$i.toString()]['instanceID'];
         $AddrSrc = $offlinePrivateNetworkHost[$i.toString()]['AddressSource'];
+	$editHostName = htmlspecialchars($offlinePrivateNetworkHost[$i.toString()]['HostName'], ENT_NOQUOTES, 'UTF-8');
+	$editMacAddress = $offlinePrivateNetworkHost[$i.toString()]['PhysAddress'];
 	var unknowid="";
         if($offlinePrivateNetworkHost[$i.toString()]['Connection']=="Unknown"){
                 unknowid="unknown";
@@ -1199,19 +1211,23 @@ for ($i=0; $i < $offlinePrivateNetworkHost['hostNum']; $i++) {
 	}
 	else if($offlinePrivateNetworkHost[$i.toString()]['Connection']=="Wi-Fi 5 GHz"){
 		unknowid ="5_G";
-	}else{unknowid ="ethcon";}
-        echo("\
-        <div id=\"offline-edit-device-" +$ID+ "\"  class=\"edit-device content \" class='hidden'>\
-                    <h1 id=\"conndevedithead1\">Connected Devices > Devices > Edit Device</h1>\
+	}
+	else if($offlinePrivateNetworkHost[$i.toString()]['Connection']=="Wi-Fi 6 GHz"){
+		unknowid ="6_G";
+	}
+	else{unknowid ="ethcon";}
+		echo("\
+		<div id=\"offline-edit-device-" +$ID+ "-" +$rowKey+ "\" class=\"edit-device content hidden\">\
+					<h1 class=\"conndevedithead\">Connected Devices > Devices > Edit Device</h1>\
                     <div  class=\"educational-tip-edit\">\
                                 <p  class=\"tip\" id=\"conndeveditoffmess1\">Change the IP address assignment method for Offline Devices</p> \
                                 <p  class=\"hidden\" id=\"connedittip"+$id4+"\">If DHCP is selected, the Gateway\'s DHCP server will automatically assign the IP address.</p> \
                                 <p  class=\"hidden\" id=\"connedittip"+$id5+"\">If Reserved IP is selected, the IP address will be fixed without DHCP operation and you\'ll need to manually enter the IP address. The IP address must be within the DHCP IP address pool. To find your IP address range, go to <strong>Gateway > Connection > Local IP Network.</strong></p> \
                                 <p  class=\"hidden\" id='connedittip3'>Reserved IP addresses can be assigned to any device that acts as a server or that requires a fixed IP address.</p> \
                         </div> \
-                <div  class=\"module forms\" id=\"computers-edit-" +$ID+ "\" > \
+				<div  class=\"module forms\" id=\"computers-edit-" +$ID+ "-" +$rowKey+ "\" > \
                 <h2 id=\"editdevloc1\">Edit Device</h2> \
-        <form id=\"pageForm-" +$ID+ "\"   class=\"pageForm\"> \
+			<form id=\"pageForm-" +$ID+ "-" +$rowKey+ "\"   class=\"pageForm edit-device-form\" data-host-name=\"" +$editHostName+ "\" data-mac-address=\"" +$editMacAddress+ "\" data-initial-addrsrc=\"" +$AddrSrc+ "\"> \
                         <div  class=\"form-row\"> \
                         <span  class=\"readonlyLabel\" name=\"host_name\" id=\"hostnew\">Host Name:</span> \
                         <span  class=\"value\">" + $offlinePrivateNetworkHost[$i.toString()]['HostName'] + "</span> \
@@ -1222,27 +1238,27 @@ for ($i=0; $i < $offlinePrivateNetworkHost['hostNum']; $i++) {
                         </div>\
                         <div  class=\"form-row\">\
                                 <label for=\"ip\" class='condev_config'  id='confloc'>Configuration:</label>\
-                                <input type=\"radio\" name=\"ip\" value=\"" +$AddrSrc+ "\" " +( ($AddrSrc == "DHCP") ? "checked='checked'" : '' )+ " class=\"ip_dchp\" id=\"ip_dhcp-" +$ID+ "\" />\
-                                <label  class=\"radio\" for=\"ip_dhcp-" +$ID+ "\">DHCP</label>\
+								<input type=\"radio\" name=\"ip\" value=\"DHCP\" " +( ($AddrSrc == "DHCP") ? "checked='checked'" : '' )+ " class=\"ip_dchp\" id=\"ip_dhcp-" +$ID+ "-" +$rowKey+ "\" />\
+								<label  class=\"radio\" for=\"ip_dhcp-" +$ID+ "-" +$rowKey+ "\">DHCP</label>\
                                 <br/>\
-                                <input  class=\"trigger ip_static\" type=\"radio\"" +(($AddrSrc == "DHCP") ? '' : "checked='checked'"  )+ " name=\"ip\" value=\"static\" id=\"ip_static-" +$ID+ "\" />\
-                                <label  class=\"radio\" for=\"ip_static-" +$ID+ "\" id=\"reserveip\">Reserved IP</label>\
+								<input  class=\"trigger ip_static\" type=\"radio\"" +(($AddrSrc == "DHCP") ? '' : "checked='checked'"  )+ " name=\"ip\" value=\"static\" id=\"ip_static-" +$ID+ "-" +$rowKey+ "\" />\
+								<label  class=\"radio\" for=\"ip_static-" +$ID+ "-" +$rowKey+ "\" id=\"reserveip\">Reserved IP</label>\
                         </div>\
-                        <div id=\"dhcp-mac" +$ID+ "\"  class=\"dhcp-mac form-row odd\">\
+							<div id=\"dhcp-mac" +$ID+ "-" +$rowKey+ "\"  class=\"dhcp-mac form-row odd\">\
                                 <span  class=\"readonlyLabel\" id=\"macaddronline\">MAC Address:</span>\
                                 <span  class=\"value\">"+$offlinePrivateNetworkHost[$i.toString()]['PhysAddress']+"</span>\
                         </div>\
-                <div id=\"static-ip" +$ID+ "\"  class=\"static-ip form-row odd\" >\
-                                <label for=\"staticIPAddress-" +$ID+ "\" id=\"reservediploc\">Reserved IP Address:</label>\
-                                <input type=\"text\" value=\""+ $resIp +"\" id=\"staticIPAddress-" +$ID+ "\" name=\"staticIPAddress\"  class=\"target\" />\
+						<div id=\"static-ip" +$ID+ "-" +$rowKey+ "\"  class=\"static-ip form-row odd\" >\
+								<label for=\"staticIPAddress-" +$ID+ "-" +$rowKey+ "\" id=\"reservediploc\">Reserved IP Address:</label>\
+								<input type=\"text\" value=\""+ $resIp +"\" id=\"staticIPAddress-" +$ID+ "-" +$rowKey+ "\" name=\"staticIPAddress\"  class=\"target static-ip-input\" />\
                         </div>\
                         <div  class=\"form-row\">\
-                                <label for=\"comment-" +$ID+ "\" id=\"commentloc\">Comments:</label>\
-                        <textarea id=\"comment-" +$ID+ "\" name=\"comments\" ros=\"6\" cols=\"18\" maxlength=\"63\">"+ $commentOffline1 +"</textarea>\
+								<label for=\"comment-" +$ID+ "-" +$rowKey+ "\" id=\"commentloc\">Comments:</label>\
+							<textarea id=\"comment-" +$ID+ "-" +$rowKey+ "\" name=\"comments\" rows=\"6\" cols=\"18\" maxlength=\"63\" class=\"comment-input\">"+ $commentOffline1 +"</textarea>\
                         </div>\
                         <div  class=\"form-row form-btn\">\
-                                <input type=\"button\" id=\"submit_editDevice-" +$ID+ "\"  class=\"btn\" value=\"Save\"/>\
-                            <input type=\"reset\" id=\"btn-cancel-" +$ID+ "\" class=\"btn-cancel btn alt reset\" value=\"Cancel\"/>\
+								<input type=\"button\" id=\"submit_editDevice-" +$ID+ "-" +$rowKey+ "\"  class=\"btn btn-save-edit-device\" value=\"Save\"/>\
+							    <input type=\"reset\" id=\"btn-cancel-" +$ID+ "-" +$rowKey+ "\" class=\"btn-cancel btn alt reset\" value=\"Cancel\"/>\
                         </div>\
                 </form>\
         </div> <!-- end .module -->\
