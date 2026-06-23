@@ -119,7 +119,7 @@ $(document).ready(function() {
 			<select id="line_number">
 				<option value="1" selected="selected">1</option>
 				<?%
-					$LineNumberCount = getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries");
+					$LineNumberCount = Number(getStr("Device.X_CISCO_COM_MTA.LineTableNumberOfEntries"));
 					for ($k=2; $k<=$LineNumberCount; $k++) echo( '<option value="'+$k+'">'+$k+'</option>');
 				?>
 			</select>
