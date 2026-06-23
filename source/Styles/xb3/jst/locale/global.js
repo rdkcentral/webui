@@ -649,10 +649,10 @@ $("[id^='mtalinmess3']").text($.i18n("Foreign EMF:"));
 $("[id^='mtalinmess4']").text($.i18n("Receiver Off Hook:"));
 $("[id^='mtalinmess5']").text($.i18n("Ringer Equivalency:"));
 $("[id^='start_diagnostics']").prop("value", $.i18n('Start Diagnostics'));
-$("[id^='mtalinediag']").each(function() {
-	var lineNumber = this.id.replace('mtalinediag', '');
-	if (/^\d+$/.test(lineNumber)) {
-		$(this).text($.i18n("MTA Line " + lineNumber + " Diagnostics"));
+$("[id^='mtalinediag']").each(function () {
+	var lineNumber = this.id.replace("mtalinediag", "");
+	if (lineNumber) {
+		$(this).text($.i18n("MTA Line $1 Diagnostics", lineNumber));
 	}
 });
 $("#mtalinstathead").text($.i18n("Gateway > Connection > MTA > Line Status"));

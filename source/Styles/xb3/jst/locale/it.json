@@ -724,6 +724,7 @@
  "Refresh":"Aggiorna",
  "Gateway > Connection > MTA > Line Diagnostics":"Gateway > Connessione > MTA > Diagnostica linea",
  "Information related to the MTA Line Diagnostics.":"Informazioni relative alla diagnostica di linea MTA.",
+"MTA Line $1 Diagnostics":"Diagnostica linea $1 MTA",
  "MTA Line 1 Diagnostics":"Diagnostica linea 1 MTA",
  "Hazardous Potential:":"Potenziale pericoloso:",
  "Not Started":"Non avviato",
