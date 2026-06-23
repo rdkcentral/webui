@@ -658,12 +658,10 @@ $("[id^='mtalinediag']").each(function () {
 $("#mtalinstathead").text($.i18n("Gateway > Connection > MTA > Line Status"));
 $("#mtalinstattip1").text($.i18n("Information related to the MTA Line Status."));
 $("#mtalinstatmess1").text($.i18n("MTA Line Status"));
-$("[id^='mtalinstatmess']").each(function() {
-	var id = $(this).attr("id");
-	var suffix = parseInt(id.replace("mtalinstatmess", ""), 10);
-
-	if (!isNaN(suffix) && suffix > 1) {
-		$(this).text($.i18n("Line " + (suffix - 1) + " Status:"));
+$("[id^='mtalinstatmess']").each(function () {
+	var labelIndex = parseInt(this.id.replace("mtalinstatmess", ""), 10);
+	if (!isNaN(labelIndex) && labelIndex > 1) {
+		$(this).text($.i18n("Line $1 Status:", labelIndex - 1));
 	}
 });
 $("#mtasiplogmess1").text($.i18n("MTA SIP Packet Log"));
