@@ -45,10 +45,12 @@ $(document).ready(function() {
 		});
 
 		jProgress($.i18n("Check telephony line status, please wait..."), 60);
+		var statusRequestData = {};
+		statusRequestData["get_status" + line] = "true";
 
 		$.get(
 			"actionHandler/ajaxSet_mta_Line_Diagnostics.jst",
-			{ ["get_status"+line]: "true" },
+			statusRequestData,
 			function (msg) {
 				jHide();
 
@@ -72,10 +74,12 @@ $(document).ready(function() {
 
 	function startDiagnostics(line) {
 		jProgress($.i18n("This may take several seconds..."), 60);
+		var startRequestData = {};
+		startRequestData["start_diagnostics" + line] = "true";
 
 		$.get(
 			"actionHandler/ajaxSet_mta_Line_Diagnostics.jst",
-			{ ["start_diagnostics"+line]: "true" },
+			startRequestData,
 			function (msg) {
 				["hp", "femf", "rf", "roh", "re"].forEach(function (item) {
 					document.getElementById("line" + line + item).value =
