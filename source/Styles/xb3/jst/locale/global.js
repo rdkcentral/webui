@@ -643,22 +643,28 @@ $("#mocadiagmess17").text($.i18n("MoCA Network Diagram"));
 $("#refresh").prop("value", $.i18n('Refresh'));
 $("#mtalinhead").text($.i18n("Gateway > Connection > MTA > Line Diagnostics"));
 $("#mtalintip1").text($.i18n("Information related to the MTA Line Diagnostics."));
-$("#mtalinmess1").text($.i18n("MTA Line 1 Diagnostics"));
-$("[id^='mtalinmess2']").text($.i18n("Hazardous Potential:"));
-$("#line1hp,#line1hp,#line1femf,#line1rf,#line1roh,#line1re,#line2hp,#line2femf,#line2rf,#line2roh,#line2re").text($.i18n("Not Started"));
-$("[id^='mtalinmess3']").text($.i18n("Foreign EMF:"));
-$("[id^='mtalinmess4']").text($.i18n("Receiver Off Hook:"));
-$("[id^='mtalinmess5']").text($.i18n("Ringer Equivalency:"));
-$("#start_diagnostics1,#start_diagnostics2").prop("value", $.i18n('Start Diagnostics'));
-$("#mtalinmess6").text($.i18n("MTA Line 2 Diagnostics"));
-$("#mtalinmess6").text($.i18n("MTA Line 2 Diagnostics"));
-$("#mtalinmess6").text($.i18n("MTA Line 2 Diagnostics"));
-$("#mtalinmess6").text($.i18n("MTA Line 2 Diagnostics"));
+$('.mtalinmess2').text($.i18n("Hazardous Potential:"));
+$("[id^='line'][id$='hp'],[id^='line'][id$='femf'],[id^='line'][id$='rf'],[id^='line'][id$='roh'],[id^='line'][id$='re']").val($.i18n("Not Started"));
+$('.mtalinmess3').text($.i18n("Foreign EMF:"));
+$('.mtalinmessnew1').text($.i18n("Resistive Faults:"));
+$('.mtalinmess4').text($.i18n("Receiver Off Hook:"));
+$('.mtalinmess5').text($.i18n("Ringer Equivalency:"));
+$("[id^='start_diagnostics']").prop("value", $.i18n('Start Diagnostics'));
+$("[id^='mtalinediag']").each(function () {
+	var lineNumber = this.id.replace("mtalinediag", "");
+	if (lineNumber) {
+		$(this).text($.i18n("MTA Line $1 Diagnostics", lineNumber));
+	}
+});
 $("#mtalinstathead").text($.i18n("Gateway > Connection > MTA > Line Status"));
 $("#mtalinstattip1").text($.i18n("Information related to the MTA Line Status."));
 $("#mtalinstatmess1").text($.i18n("MTA Line Status"));
-$("#mtalinstatmess2").text($.i18n("Line 1 Status:"));
-$("#mtalinstatmess3").text($.i18n("Line 2 Status:"));
+$("[id^='mtalinstatmess']").each(function () {
+	var labelIndex = parseInt(this.id.replace("mtalinstatmess", ""), 10);
+	if (!isNaN(labelIndex) && labelIndex > 1) {
+		$(this).text($.i18n("Line $1 Status:", labelIndex - 1));
+	}
+});
 $("#mtasiplogmess1").text($.i18n("MTA SIP Packet Log"));
 $("#mtasiploghead").text($.i18n("Gateway > Connection > MTA >SIP Packet Log"));
 $("#mtasiplogtip1").text($.i18n("Information related to the SIP Packet Log."));
