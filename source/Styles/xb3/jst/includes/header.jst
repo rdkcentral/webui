@@ -58,11 +58,15 @@ csrfProtector.init();
 	$webuiEnabled = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WebUI.Enable");
 	//$webuiEnabled = "msoOnly";
 	$webuiIsEnabled = "true";
+	$wanStatus = getStr("Device.X_RDK_WanManager.InterfaceActiveStatus");
 
 	$RemoteMgt = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WebUIRemoteMgtOption.Enable");
 	$http_mode = getStr("Device.UserInterface.X_CISCO_COM_RemoteAccess.HttpEnable");
 	$https_mode = getStr("Device.UserInterface.X_CISCO_COM_RemoteAccess.HttpsEnable");
 	if($wan_enabled=="true"){
+        	$Wan_IPv4 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IP");
+        	$Wan_IPv6 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IPv6");
+	}else if(strstr($wanStatus,"EPON,1") || strstr($wanStatus,"XGSPON,1")){
         	$Wan_IPv4 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IP");
         	$Wan_IPv6 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IPv6");
 	}else{
