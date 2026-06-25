@@ -454,21 +454,11 @@ else
 					//add enough new instance, but we can't tell which ID is added!!!
 					for ($j=0; $j<count($ft); $j++)
 					{
-						addTblObj("Device.WiFi.AccessPoint."+$i+".X_CISCO_COM_MacFilterTable.");
-					}
-					//get all instance IDs, perhaps contains old IDs
-					$new_id = array_filter(explode(",",getInstanceIds("Device.WiFi.AccessPoint."+$i+".X_CISCO_COM_MacFilterTable.")));
-					//find the IDs in new table, but not in old table
-					$id = array_differ($new_id, $old_id);
-					//key the diff array as 0, 1, 2...
-					$id.sort();
-					//add the rest
-					if (count($id) > 0)
-					{
-						for ($j=0; $j<count($ft); $j++)
+						$new_inst = addTblObj("Device.WiFi.AccessPoint."+$i+".X_CISCO_COM_MacFilterTable.");
+						if ($new_inst > 0)
 						{
-							setStr("Device.WiFi.AccessPoint."+$i+".X_CISCO_COM_MacFilterTable."+$id[$j]+".DeviceName", $ft[$j][0], false);
-							setStr("Device.WiFi.AccessPoint."+$i+".X_CISCO_COM_MacFilterTable."+$id[$j]+".MACAddress", $ft[$j][1], true);
+							setStr("Device.WiFi.AccessPoint."+$i+".X_CISCO_COM_MacFilterTable."+$new_inst+".DeviceName", $ft[$j][0], false);
+							setStr("Device.WiFi.AccessPoint."+$i+".X_CISCO_COM_MacFilterTable."+$new_inst+".MACAddress", $ft[$j][1], true);
 						}
 					}
 					//MAC filter mode, else is "allow_all"
