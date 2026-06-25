@@ -51,6 +51,7 @@ $DeviceControl_value = KeyExtGet("Device.X_CISCO_COM_DeviceControl.", $DeviceCon
 $url = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : "" ;
 $wan_enabled=getStr("Device.Ethernet.X_RDKCENTRAL-COM_WAN.Enabled");
 $webuiEnabled = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.WebUI.Enable");
+$wanStatus = getStr("Device.X_RDK_WanManager.InterfaceActiveStatus");
 $webuiIsEnabled = "true";
 $ModelName = getStr("Device.DeviceInfo.ModelName");
 $idadv ="";
@@ -65,6 +66,9 @@ else{
 if($wan_enabled=="true"){
 	$Wan_IPv4 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IP");
 	$Wan_IPv6 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IPv6");
+}else if(strstr($wanStatus,"EPON,1") || strstr($wanStatus,"XGSPON,1")){                                                              
+        $Wan_IPv4 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IP");                       
+        $Wan_IPv6 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IPv6");
 }else{
 	$Wan_IPv4 = getStr("Device.X_CISCO_COM_CableModem.IPAddress");
 	$Wan_IPv6 = getStr("Device.X_CISCO_COM_CableModem.IPv6Address");
