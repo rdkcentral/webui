@@ -1337,6 +1337,20 @@ function is_docsis_supported()
 
 /**
 * Description:
+* return the device supports EPON or not
+*/
+function is_PON_Supported()
+{	
+	$epon_status = getenv("PON_SUPPORTED");
+	if($epon_status === "false") {
+		return false;
+        } else {
+                return true;
+        }
+}
+
+/**
+* Description:
 * return the device supports Bridge Mode or not
 */
 function is_bridge_mode_supported()
