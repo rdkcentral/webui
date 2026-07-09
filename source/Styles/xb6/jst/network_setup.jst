@@ -450,8 +450,7 @@ function sec2dhm($sec)
             <?% } else { ?>
                  <span class="readonlyLabel">ETHWAN MAC:</span>
             <?% } ?>
-            <span class="value">
-            <?% echo(strtoupper(getStr("Device.DeviceInfo.X_COMCAST-COM_CM_MAC"))); ?></span>
+            <span class="value"><?% echo(strtoupper(getStr("Device.DeviceInfo.X_COMCAST-COM_CM_MAC"))); ?></span>
 		<?% } ?>
 	</div>
 	<?% if(is_wps_supported()) { ?>
