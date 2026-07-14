@@ -445,7 +445,7 @@ function sec2dhm($sec)
 			<span class="readonlyLabel">CM MAC:</span>
                         <span class="value"><?% echo( strtoupper($CM_value["MACAddress"]));?></span>
 		<?% } else { ?>              
-            <?% if (is_PON_Supported()) { ?>
+            <?% if (is_pon_supported()) { ?>
                  <span class="readonlyLabel">Device MAC:</span>
             <?% } else { ?>
                  <span class="readonlyLabel">ETHWAN MAC:</span>
