@@ -444,9 +444,13 @@ function sec2dhm($sec)
 		<?% if(is_docsis_supported()) { ?>
 			<span class="readonlyLabel">CM MAC:</span>
                         <span class="value"><?% echo( strtoupper($CM_value["MACAddress"]));?></span>
-		<?% } else { ?>
-			<span class="readonlyLabel">ETHWAN MAC:</span>
-                        <span class="value"><?% echo( strtoupper(getStr("Device.DeviceInfo.X_COMCAST-COM_CM_MAC")));?></span>
+		<?% } else { ?>              
+            <?% if (is_pon_supported()) { ?>
+                 <span class="readonlyLabel">Device MAC:</span>
+            <?% } else { ?>
+                 <span class="readonlyLabel">ETHWAN MAC:</span>
+            <?% } ?>
+            <span class="value"><?% echo(strtoupper(getStr("Device.DeviceInfo.X_COMCAST-COM_CM_MAC"))); ?></span>
 		<?% } ?>
 	</div>
 	<?% if(is_wps_supported()) { ?>
