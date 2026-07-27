@@ -57,6 +57,15 @@ function validFilterParam($ft){
 	}
 	return true;
 }
+
+function ResolveRadioFromSsid($ssid){
+	$ssid_tmp = String($ssid);
+	$ssid_lower_layers = getStr("Device.WiFi.SSID."+$ssid_tmp+".LowerLayers");
+	if (strpos($ssid_lower_layers, "Device.WiFi.Radio.1.") !== false) return 1;
+	if (strpos($ssid_lower_layers, "Device.WiFi.Radio.2.") !== false) return 2;
+	if (strpos($ssid_lower_layers, "Device.WiFi.Radio.3.") !== false) return 3;
+	return "";
+}
 if ($_POST['configInfo']) {
         $jsConfig = $_POST['configInfo'];
 } else if ($_GET['configInfo']){
@@ -65,7 +74,19 @@ if ($_POST['configInfo']) {
 //$jsConfig = '{"ssid_number":"1", "ft":[["1","2"],["c","d"]], "target":"save_filter"}';
 $arConfig = json_decode($jsConfig, true);
 //print_r($arConfig);
-$i = $arConfig['ssid_number'];
+$i = (array_key_exists('ssid_number', $arConfig)) ? String($arConfig['ssid_number']) : "";
+if ($i != "" && (preg_match('/^\d+$/', $i) != 1)) {
+	http_response_code(400);
+	echo( '{"error":"invalid_ssid_number"}');
+	exit(0);
+}
+$valid_ssids = array_filter(explode(",", getInstanceIds("Device.WiFi.SSID.")));
+if ($i != "" && !isValInArray($i, $valid_ssids)) {
+	http_response_code(400);
+	echo( '{"error":"invalid_ssid_number"}');
+	exit(0);
+}
+
 if($i == "17")
 {
         $Radio_3_Enable = getStr("Device.WiFi.Radio.3.Enable");
@@ -110,27 +131,23 @@ if (array_key_exists('band_steering', $arConfig))
 }
 else
 {
-	$i = $arConfig['ssid_number'];
-	$get_channel_automatic 	= getStr("Device.WiFi.Radio."+$i+".AutoChannelEnable");
-	$get_wireless_mode 	= getStr("Device.WiFi.Radio."+$i+".OperatingStandards");
-	$get_channel_bandwidth 	= getStr("Device.WiFi.Radio."+$i+".OperatingChannelBandwidth");
-        if($i == 17)
-		$r=3;   //17th is private ssid for 6 GHz(radio 3)
-	else
-		$r = $i;
+       $i = String($arConfig['ssid_number']);
+       $r = ResolveRadioFromSsid($i);
+       if ($r == "") {
+		http_response_code(400);
+		echo( '{"error":"invalid_ssid_mapping"}');
+		exit(0);
+	}
+	$get_channel_automatic 	= getStr("Device.WiFi.Radio."+$r+".AutoChannelEnable");
+	$get_wireless_mode 	= getStr("Device.WiFi.Radio."+$r+".OperatingStandards");
+	$get_channel_bandwidth 	= getStr("Device.WiFi.Radio."+$r+".OperatingChannelBandwidth");
 	// this method for only restart a certain SSID
 	function MiniApplySSID($ssid) {
-		if($ssid == 17)
-		{
-			$apply_id = 17;
-			$apply_rf = 3;
-		}
-		else
-		{
-			$apply_id = (1 << intval($ssid)-1);
-			$apply_rf = (2  - intval($ssid)%2);
-		}
-		setStr("Device.WiFi.Radio."+$r+".X_CISCO_COM_ApplySetting", "true", true);
+            
+		$apply_rf = ResolveRadioFromSsid($ssid);
+		if ($apply_rf == "")
+			return;
+		setStr("Device.WiFi.Radio."+$apply_rf+".X_CISCO_COM_ApplySetting", "true", true);
 	}
         $channel = getStr("Device.WiFi.Radio."+$r+".AutoChannelEnable");
 	if ("save_config" == $arConfig['target'])
