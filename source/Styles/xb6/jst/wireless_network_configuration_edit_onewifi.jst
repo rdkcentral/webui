@@ -635,12 +635,21 @@ $(document).ready(function() {
 		}
 	}
 	}).trigger("change");
+    $dfsBoot= '<?% echo($dfsAtBootup); ?>';
 	$("#channel_number").change(function() {
 		if ("165" == $(this).val()){
 			$('[name="channel_bandwidth1"]:not([value="20MHz"])').prop("disabled", true);
 		}
 		else{
+			/*
+			 * Re-enable bandwidth options for non-165 channels,
+			 * but preserve DFS-at-boot restrictions.
+			 */
 			$('[name="channel_bandwidth1"]').prop("disabled", false);
+
+			if ($dfsBoot == "false") {
+				$("#channel_bandwidth3").prop("disabled", true);
+			}
 		}
 	}).trigger("change");
     $("#wireless_network_switch").change(function() {
@@ -782,7 +791,6 @@ wpa2psk ==> 8 to 63 Ascii characters
 			click_save();
 		}
     });
-    $dfsBoot= '<?% echo($dfsAtBootup); ?>';
     if($dfsBoot=="false" && (platformSupported=="true" )){
     	$("#channel_bandwidth3").prop("disabled", true);
     }
