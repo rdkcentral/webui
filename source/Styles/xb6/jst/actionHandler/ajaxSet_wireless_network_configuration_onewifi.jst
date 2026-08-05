@@ -34,8 +34,6 @@ $Radio_Enable = ($Radio_1_Enable == 'true' || $Radio_2_Enable == 'true') ? true 
 $Radio_1_Support_Modes = getStr("Device.WiFi.Radio.1.SupportedStandards");
 $Radio_2_Support_Modes = getStr("Device.WiFi.Radio.2.SupportedStandards");
 $partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
-$MIN_SSID_INSTANCE = 1;  // Minimum valid SSID instance number per TR-181 RDK-B DM
-$MAX_SSID_INSTANCES = 24; // Maximum: 8 SSIDs x 3 radios (2.4GHz + 5GHz + 6GHz tri-band)
 $wps_ssids = [];
 if ($Radio_1_Enable == 'true') $wps_ssids.push(1);
 if ($Radio_2_Enable == 'true') $wps_ssids.push(2);
@@ -59,20 +57,6 @@ function validFilterParam($ft){
 	}
 	return true;
 }
-
-function ResolveRadioFromSsid($ssid){
-       global $MIN_SSID_INSTANCE, $MAX_SSID_INSTANCES;
-       $ssid_tmp = String($ssid);
-       if (preg_match('/^\d+$/', $ssid_tmp) != 1) return "";
-       $ssid_num = intval($ssid_tmp);
-       if ($ssid_num < $MIN_SSID_INSTANCE || $ssid_num > $MAX_SSID_INSTANCES) return "";
-       if ($ssid_num == 1) return 1;
-       if ($ssid_num == 2) return 2;
-       if ($ssid_num == 17) return 3;
-       return "";
- }
-
-
 if ($_POST['configInfo']) {
         $jsConfig = $_POST['configInfo'];
 } else if ($_GET['configInfo']){
@@ -82,30 +66,7 @@ if ($_POST['configInfo']) {
 //$jsConfig = '{"ssid_number":"1", "ft":[["1","2"],["c","d"]], "target":"save_filter"}';
 $arConfig = json_decode($jsConfig, true);
 //print_r($arConfig);
-$i = (array_key_exists('ssid_number', $arConfig)) ? String($arConfig['ssid_number']) : "";
-$ssid_log = substr(String($i), 0, 32);
-if ($i != "" && strlen($i) > 3) {
-       LogStr(" : security_event:invalid_ssid_number_length:" + String(strlen($i)) + " value_prefix:" + $ssid_log);
-       http_response_code(400);
-       echo( '{"error":"invalid_ssid_number"}');
-       exit(0);
-}
-
-if ($i != "" && (preg_match('/^\d+$/', $i) != 1)) {
-       LogStr(" : security_event:invalid_ssid_number_format value_prefix:" + $ssid_log);
-       http_response_code(400);
-       echo( '{"error":"invalid_ssid_number"}');
-       exit(0);
-}
-
-// Strict numeric boundary check: reject SSID numbers outside valid DM range
-if ($i != "" && (intval($i) < $MIN_SSID_INSTANCE || intval($i) > $MAX_SSID_INSTANCES)) {
-       LogStr(" : security_event:invalid_ssid_number_range value:" + $ssid_log);
-       http_response_code(400);
-       echo( '{"error":"invalid_ssid_number"}');
-       exit(0);
-}
-
+$i = $arConfig['ssid_number'];
 if($i == "17")
 {
         $Radio_3_Enable = getStr("Device.WiFi.Radio.3.Enable");
@@ -150,24 +111,12 @@ if (array_key_exists('band_steering', $arConfig))
 }
 else
 {
-       $i = String($arConfig['ssid_number']);
-       $r = ResolveRadioFromSsid($i);
-       if ($r == "") {
-               LogStr(" : security_event:invalid_ssid_mapping ssid:" + substr(String($i), 0, 32));
-               http_response_code(400);
-               echo( '{"error":"invalid_ssid_mapping"}');
-               exit(0);
-       }
-       $get_channel_automatic  = getStr("Device.WiFi.Radio."+$r+".AutoChannelEnable");
-       $get_wireless_mode      = getStr("Device.WiFi.Radio."+$r+".OperatingStandards");
-       $get_channel_bandwidth  = getStr("Device.WiFi.Radio."+$r+".OperatingChannelBandwidth");
-       function MiniApplySSID($ssid) {
-               $apply_rf = ResolveRadioFromSsid($ssid);
-               if ($apply_rf == "")
-                       return;
-               setStr("Device.WiFi.Radio."+$apply_rf+".X_CISCO_COM_ApplySetting", "true", true);
-       }
-
+	$i = $arConfig['ssid_number'];
+        if($i == 17)
+		$r=3;   //17th is private ssid for 6 GHz(radio 3)
+	else
+		$r = $i;
+        $channel = getStr("Device.WiFi.Radio."+$r+".AutoChannelEnable");
 	if ("save_config" == $arConfig['target'])
 	{        
 		//save_basic & save_advance is only for mso
