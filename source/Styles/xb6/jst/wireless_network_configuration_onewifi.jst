@@ -1070,7 +1070,7 @@ $(document).ready(function() {
 			 */
 			$('[name="channel_bandwidth1"]').prop("disabled", false);
 
-			if ($dfsBoot == "false") {
+			if ($dfsBoot == "false" && (platformSupported=="true" )) {
 				$("#channel_bandwidth3").prop("disabled", true);
 			}
 		}
