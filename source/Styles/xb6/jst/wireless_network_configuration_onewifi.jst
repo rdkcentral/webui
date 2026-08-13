@@ -480,6 +480,7 @@ var isBridge		= "<?% echo( $_SESSION["lanMode"]); ?>";
 var partner_id = "<?% echo( $partnerId); ?>";
 var modelName = "<?% echo($modelName); ?>";
 var platformSupported  = "<?% echo($platformSupported); ?>";
+var $dfsBoot = '<?% echo($dfsAtBootup); ?>';
 <?%if($OperatingChannelBandwidth == "6GHz")
 {?>
 var G_radio_enable3	= <?% echo( ($radio_enable3 === "true" ? "true" : "false")); ?>;
@@ -1051,6 +1052,7 @@ $(document).ready(function() {
 			});
 		}
 		//DFS_Support1 1-supported 0-not supported
+		$dfsBoot= '<?% echo($dfsAtBootup); ?>';
 		if("<?% echo( $DFS_Support1);?>" == "true" && "<?% echo( $IEEE80211hSupport1);?>" == "true"){
 			if($("#channel_number1 option:selected").val() >= 52 && $("#channel_number1 option:selected").val() <= 140) {
 				$('[name="DFS_Channel_Selection"]').prop("disabled", false);
