@@ -475,6 +475,7 @@ var modeEnabled1	= "<?% echo( $encrypt_mode1); ?>";
 var partner_id = "<?% echo( $partnerId); ?>";
 var modelName = "<?% echo($modelName); ?>";
 var platformSupported  = "<?% echo($platformSupported); ?>";
+var $dfsBoot = '<?% echo($dfsAtBootup); ?>';
 <?%if($OperatingChannelBandwidth == "6GHz")
 {?>
 var G_radio_enable3	= <?% echo( ($radio_enable3 === "true" ? "true" : "false")); ?>;
@@ -1018,6 +1019,7 @@ $(document).ready(function() {
 	}
 	// disable NOT 20MHz channel if 165
 	// Warning for DFS channel (52-140)
+	$dfsBoot= '<?% echo($dfsAtBootup); ?>';
 	$("#channel_number1").change(function(){
 		var channel = $("#channel_number1 option:selected").val();
 		if(channel >= 52 && channel <= 140 ) {
@@ -1031,6 +1033,7 @@ $(document).ready(function() {
 			});
 		}
 		//DFS_Support1 1-supported 0-not supported
+		$dfsBoot= '<?% echo($dfsAtBootup); ?>';
 		if("<?% echo( $DFS_Support1);?>" == "true" && "<?% echo( $IEEE80211hSupport1);?>" == "true"){
 			if($("#channel_number1 option:selected").val() >= 52 && $("#channel_number1 option:selected").val() <= 140) {
 				$('[name="DFS_Channel_Selection"]').prop("disabled", false);
@@ -1044,18 +1047,25 @@ $(document).ready(function() {
 			$('[name="channel_bandwidth1"]:not([value="20MHz"])').prop("disabled", true);
 		}
 		else{
+			/*
+			 * Re-enable bandwidth options for non-165 channels,
+			 * but preserve DFS-at-boot restrictions.
+			 */
 			$('[name="channel_bandwidth1"]').prop("disabled", false);
+
+			if ($dfsBoot == "false" && (platformSupported=="true" )) {
+				$("#channel_bandwidth3").prop("disabled", true);
+			}
 		}
 	});
 	// disable NOT 20MHz channel if 165
-	$dfsBoot= '<?% echo($dfsAtBootup); ?>';
 	if ( "true" != "<?% echo( $channel_automatic1); ?>"  && "165" == "<?% echo( $channel_number1); ?>"){
 		$('[name="channel_bandwidth1"]:not([value="20MHz"])').prop("disabled", true);
 	}
 	else{
 		if($dfsBoot=="false" && (platformSupported=="true" ))
-                        $("#channel_bandwidth3").prop("disabled", true);
-                else
+			$("#channel_bandwidth3").prop("disabled", true);
+		else
 			$('[name="channel_bandwidth1"]').prop("disabled", false);
 	}
 	// now we can show target content
