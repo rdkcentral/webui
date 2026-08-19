@@ -28,8 +28,6 @@
 <?%
 	$ret = init_psmMode("Gateway > Connection > Wi-Fi", "nav-wifi-config");
 	if ("" != $ret){echo( $ret);	exit(0);}
-	if(isset($_GET['mac_ssid']))
-		if ($_GET['mac_ssid'] > 18) die();
 ?>
 <?%
 $Mesh_Enable 	= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_xOpsDeviceMgmt.Mesh.Enable");
@@ -455,6 +453,14 @@ else {
 		array_remove($ssids,0);
 		array_remove($ssids,6);
 	}
+
+$mac_ssid_data = getValidatedAllowedNumericQueryValue('mac_ssid', $ssids);
+$allowed_mac_ssids = $mac_ssid_data['allowedValues'];
+$mac_ssid_v = $mac_ssid_data['value'];
+
+$mac_ssid_v_js = htmlspecialchars(json_encode($mac_ssid_v), ENT_NOQUOTES, 'UTF-8');
+$allowed_mac_ssids_js = htmlspecialchars(json_encode($allowed_mac_ssids), ENT_NOQUOTES, 'UTF-8');
+
 $dfsEnable= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.DFS.Enable");
 $dfsAtBootup= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.DFSatBootUp.Enable");
 $modelName= getStr("Device.DeviceInfo.ModelName");
@@ -1114,9 +1120,9 @@ $(document).ready(function() {
 
 });
 setTimeout(function(){
-	var mac_ssid_GET	= "<?% echo( $_GET['mac_ssid']);?>";
-	var ssids = "<?% echo( $ssids);?>";
-	if((ssids.includes(mac_ssid_GET)) && mac_ssid_GET) {
+	var mac_ssid_GET	= <?% echo( $mac_ssid_v_js);?>;
+	var allowedMacSsids = <?% echo( $allowed_mac_ssids_js);?>;
+	if (typeof mac_ssid_GET === "string" && allowedMacSsids.includes(mac_ssid_GET)) {
 		$("#mac_ssid").val(mac_ssid_GET);
 	}
 	update_Wi_Fi_control_list();
