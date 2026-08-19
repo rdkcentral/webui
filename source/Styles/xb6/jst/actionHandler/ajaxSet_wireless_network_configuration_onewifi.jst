@@ -51,6 +51,15 @@ function validChecksum($WPS_pin){
 	$accum += 1 * (intval($WPS_pin / 1) % 10);
 	return (0 == ($accum % 10));
 }
+function ResolveRadioFromSsid($ssid){
+        $ssid_tmp = String($ssid);
+        $ssid_lower_layers = String(getStr("Device.WiFi.SSID."+$ssid_tmp+".LowerLayers"));
+        LogStr(" : value of ssid_lower_layers" + $ssid_lower_layers);
+        if (preg_match('/Radio\\.1(\\.|$)/', $ssid_lower_layers) == 1) return 1;
+        if (preg_match('/Radio\\.2(\\.|$)/', $ssid_lower_layers) == 1) return 2;
+        if (preg_match('/Radio\\.3(\\.|$)/', $ssid_lower_layers) == 1) return 3;
+        return "";
+ }
 function validFilterParam($ft){
 	for(var $keytmp in $ft) { $val=$ft[$keytmp];/*p2j-foreach*/
 		if(!(printableCharacters($val[0]) && validMAC($val[1]))) return false;
@@ -66,7 +75,20 @@ if ($_POST['configInfo']) {
 //$jsConfig = '{"ssid_number":"1", "ft":[["1","2"],["c","d"]], "target":"save_filter"}';
 $arConfig = json_decode($jsConfig, true);
 //print_r($arConfig);
-$i = $arConfig['ssid_number'];
+$i = (array_key_exists('ssid_number', $arConfig)) ? String($arConfig['ssid_number']) : "";
+$ssid_log = substr(String($i), 0, 32);
+if ($i != "" && strlen($i) > 3) {
+        LogStr(" : security_event:invalid_ssid_number_length:" + String(strlen($i)) + " value_prefix:" + $ssid_log);
+        http_response_code(400);
+        echo( '{"error":"invalid_ssid_number"}');
+        exit(0);
+}
+if ($i != "" && preg_match("/^(?:[1-9]|1[0-9]|2[0-4])$/", $i) != 1) {
+        LogStr(" : security_event:invalid_ssid_number_format value_prefix:" + $ssid_log);
+        http_response_code(400);
+        echo( '{"error":"invalid_ssid_number"}');
+        exit(0);
+}
 if($i == "17")
 {
         $Radio_3_Enable = getStr("Device.WiFi.Radio.3.Enable");
@@ -111,11 +133,13 @@ if (array_key_exists('band_steering', $arConfig))
 }
 else
 {
-	$i = $arConfig['ssid_number'];
-        if($i == 17)
-		$r=3;   //17th is private ssid for 6 GHz(radio 3)
-	else
-		$r = $i;
+        $r = ResolveRadioFromSsid($i);
+        if ($r == "") {
+                LogStr(" : ResolvedSSid returned security_event:invalid_ssid_mapping ssid:" + substr(String($i), 0, 32));
+                http_response_code(400);
+                echo( '{"error":"invalid_ssid_mapping"}');
+                exit(0);
+        } 
         $channel = getStr("Device.WiFi.Radio."+$r+".AutoChannelEnable");
 	if ("save_config" == $arConfig['target'])
 	{        
