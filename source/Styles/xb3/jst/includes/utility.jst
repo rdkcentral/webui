@@ -1149,42 +1149,6 @@ function cleanJsonDms($dm_key, $param_json) {
 }
 
 /**
-* Description:
-* normalize an allowlist of numeric string values and validate a query param against it.
-*
-* return: {
-*   'allowedValues': normalized allowlist,
-*   'value': validated query value or empty string
-* }
-*/
-function getValidatedAllowedNumericQueryValue($queryKey, $allowedValues) {
-	var $normalizedAllowedValues = []/*p2j-array*/;
-	for (var $keytmp in $allowedValues) {
-		var $allowedValue = $allowedValues[$keytmp];/*p2j-foreach*/
-		var $normalizedValue = strval(intval($allowedValue));
-		if ((string)$allowedValue === $normalizedValue) {
-			array_push($normalizedAllowedValues, $normalizedValue);
-		}
-	}
-
-	var $validatedValue = "";
-	if (isset($_GET[$queryKey]) && is_scalar($_GET[$queryKey])) {
-		var $candidateValue = trim((string)$_GET[$queryKey]);
-		if (ctype_digit($candidateValue)) {
-			$candidateValue = strval(intval($candidateValue));
-			if (in_array($candidateValue, $normalizedAllowedValues, true)) {
-				$validatedValue = $candidateValue;
-			}
-		}
-	}
-
-	return {
-		'allowedValues': $normalizedAllowedValues,
-		'value': $validatedValue
-	};
-}
-
-/**
 * Discription: time rounded to 5 min
 *
 * return: $datetime
