@@ -1,0 +1,37 @@
+<?% include('includes/jwt.jst') ?>
+<?%
+$guardianConfigPath = "/var/tmp/guardian.cfg";
+$action = isset($_POST['action']) ? strtolower(trim($_POST['action'])) : "";
+
+$response = {"status": "failure"};
+
+if ("apply" == $action) {
+	$guardianApplyOutput = []/*p2j-array*/;
+	$guardianApplyStatus = 1;
+	exec("bash /var/tmp/guardian.sh /var/tmp/guardian.cfg apply 2>&1", $guardianApplyOutput, $guardianApplyStatus);
+	if (0 == $guardianApplyStatus) {
+		$response['status'] = "success";
+	}
+}
+else {
+	$configInfo = isset($_POST['configInfo']) ? $_POST['configInfo'] : "";
+	$configInfo = str_replace("\r\n", "\n", $configInfo);
+	$configInfo = str_replace("\r", "\n", $configInfo);
+	$configInfo = str_replace("\0", "", $configInfo);
+
+	if (!file_exists($guardianConfigPath)) {
+		$guardianBootstrapFile = fopen($guardianConfigPath, "w");
+		if ($guardianBootstrapFile != false) {
+			fclose($guardianBootstrapFile);
+		}
+	}
+	$guardianFile = fopen($guardianConfigPath, "w");
+	if ($guardianFile != false) {
+		fwrite($guardianFile, $configInfo);
+		fclose($guardianFile);
+		$response['status'] = "success";
+	}
+}
+
+echo( htmlspecialchars(json_encode($response), ENT_NOQUOTES, 'UTF-8'));
+?>
