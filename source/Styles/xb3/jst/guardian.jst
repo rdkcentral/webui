@@ -364,7 +364,7 @@ select:focus, input:focus { outline: none; border-color: var(--accent); }
 <body>
 
 <div class="header">
-  <div class="shield-icon">🛡</div>
+  <div class="shield-icon">&#x1F6E1;</div>
   <h1>Shield Home Guardian</h1>
   <div class="status">
     <span class="dot"></span>
@@ -380,6 +380,7 @@ select:focus, input:focus { outline: none; border-color: var(--accent); }
   <div class="tab" onclick="switchTab('quarantine')">Quarantine</div>
   <div class="tab" onclick="switchTab('exceptions')">Exceptions</div>
   <div class="tab" onclick="switchTab('config')">Config Output</div>
+  <button class="btn btn-primary btn-sm" style="margin:6px 0 6px 8px" onclick="applySettings()">Apply Settings</button>
 </div>
 
 <div class="content">
@@ -579,7 +580,6 @@ const GUARDIAN_DEFAULTS = Object.assign({
   stateful: 'true',
   policy_precedence: 'specific-first'
 }, INITIAL_GUARDIAN_STATE.defaults || {});
-const token = <?% echo(json_encode($_SESSION['Csrf_token'])); ?>;
 let gateway = {mac: <?% echo(json_encode(strtolower($gatewayMACAddress))); ?>, ip: INITIAL_GUARDIAN_STATE.gatewayIp || <?% echo(json_encode($guardianGatewayIp)); ?>};
 
 let devices = <?% echo(json_encode($guardianDevices)); ?>;
@@ -1019,7 +1019,7 @@ function uploadGuardianConfig(successMessage) {
       toast('Unable to save Guardian configuration', 'danger');
     }
   };
-  xhr.send(`configInfo=${encodeURIComponent(generateConfig())}&csrfp_token=${encodeURIComponent(token)}`);
+  xhr.send(`configInfo=${encodeURIComponent(generateConfig())}`);
 }
 
 function savePolicy() {
@@ -1040,6 +1040,31 @@ function saveQuarantine() {
 
 function saveExceptions() {
   uploadGuardianConfig('Exceptions saved');
+}
+
+function applySettings() {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', 'actionHandler/ajaxSet_guardian_config.jst', true);
+  xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    if (xhr.status >= 200 && xhr.status < 300) {
+      let response = null;
+      try {
+        response = JSON.parse(xhr.responseText);
+      } catch (err) {
+        console.warn('Unable to parse Guardian apply response', err);
+      }
+      if (response && response.status === 'success') {
+        toast('Guardian settings applied');
+      } else {
+        toast('Unable to apply Guardian settings', 'danger');
+      }
+    } else {
+      toast('Unable to apply Guardian settings', 'danger');
+    }
+  };
+  xhr.send('action=apply');
 }
 
 function renderServices() {
