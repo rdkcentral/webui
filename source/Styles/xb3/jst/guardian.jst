@@ -1,0 +1,1331 @@
+<?% include('includes/utility.jst'); ?>
+<?%
+  $gatewayMACAddress = getStr("Device.X_CISCO_COM_CableModem.MACAddress");
+  $guardianGatewayIp = getStr("Device.X_CISCO_COM_DeviceControl.LanManagementEntry.1.LanIPAddress");
+  $guardianConfigPath = "/var/tmp/upd_guardian.cfg";
+  $guardianLogPath = "/var/tmp/guardian.log";
+  $guardianSavedState = {};
+  $guardianSavedState['hasConfig'] = false;
+  $guardianSavedState['gatewayIp'] = $guardianGatewayIp;
+  $guardianSavedState['groupIds'] = {
+    'PERSONAL': 1,
+    'WORK': 2,
+    'IOT': 4,
+    'PRINTER': 8,
+    'CAMERA': 16
+  };
+  $guardianSavedState['deviceGroups'] = {};
+  $guardianSavedState['policy'] = {};
+  $guardianSavedState['groupPolicyRules'] = []/*p2j-array*/;
+  $guardianSavedState['intraGroupPolicyRules'] = []/*p2j-array*/;
+  $guardianSavedState['devicePolicyRules'] = []/*p2j-array*/;
+  $guardianSavedState['serviceDefinitions'] = {};
+  $guardianSavedState['serviceMacros'] = {};
+  $guardianSavedState['services'] = []/*p2j-array*/;
+  $guardianSavedState['defaults'] = {
+    'inter_group_policy': 'drop',
+    'intra_group_policy': 'allow',
+    'stateful': 'true',
+    'policy_precedence': 'specific-first'
+  };
+  $guardianSavedState['quarantine'] = []/*p2j-array*/;
+  $guardianSavedState['exceptions'] = []/*p2j-array*/;
+  $guardianConfigLines = []/*p2j-array*/;
+  $guardianFlowPreviewLines = []/*p2j-array*/;
+  $guardianReadStatus = 1;
+  $guardianFlowReadStatus = 1;
+  exec("cat "+$guardianConfigPath+" 2>/dev/null", $guardianConfigLines, $guardianReadStatus);
+  exec("cat "+$guardianLogPath+" 2>/dev/null", $guardianFlowPreviewLines, $guardianFlowReadStatus);
+  $guardianFlowPreview = (0 == $guardianFlowReadStatus && !empty($guardianFlowPreviewLines)) ? implode("\n", $guardianFlowPreviewLines) : "";
+  if (0 == $guardianReadStatus && !empty($guardianConfigLines)) {
+    $guardianCurrentSection = "";
+    for ($cfgIdx = 0; $cfgIdx < count($guardianConfigLines); $cfgIdx++) {
+      $guardianLine = trim($guardianConfigLines[$cfgIdx]);
+      if ("" == $guardianLine || "#" == substr($guardianLine, 0, 1)) {
+        continue;
+      }
+      $guardianSavedState['hasConfig'] = true;
+      $guardianSectionMatch = []/*p2j-array*/;
+      if (preg_match('/^\[(.+)\]$/', $guardianLine, $guardianSectionMatch)) {
+        $guardianCurrentSection = strtolower($guardianSectionMatch[1]);
+        continue;
+      }
+
+      if ("gateway" == $guardianCurrentSection) {
+        $gatewayParts = preg_split('/\s+/', $guardianLine);
+        if (count($gatewayParts) >= 2) {
+          $guardianSavedState['gatewayIp'] = $gatewayParts[1];
+        }
+      }
+      else if ("groups" == $guardianCurrentSection) {
+        $groupParts = preg_split('/\s+/', $guardianLine);
+        if (count($groupParts) >= 2) {
+          $guardianSavedState['groupIds'][strtoupper($groupParts[0])] = intval($groupParts[1]);
+        }
+      }
+      else if ("devices" == $guardianCurrentSection) {
+        $deviceParts = preg_split('/\s+/', $guardianLine);
+        if (count($deviceParts) >= 2) {
+          $guardianSavedState['deviceGroups'][strtolower($deviceParts[0])] = strtoupper($deviceParts[1]);
+        }
+      }
+      else if ("policy" == $guardianCurrentSection) {
+        $policyParts = preg_split('/\s+/', $guardianLine);
+        if (count($policyParts) >= 3) {
+          $policySrc = strtoupper($policyParts[0]);
+          $policyDst = strtoupper($policyParts[1]);
+          if (!isset($guardianSavedState['policy'][$policySrc])) {
+            $guardianSavedState['policy'][$policySrc] = {};
+          }
+          $guardianSavedState['policy'][$policySrc][$policyDst] = strtolower($policyParts[2]);
+          array_push($guardianSavedState['groupPolicyRules'], {
+            'src': $policySrc,
+            'dst': $policyDst,
+            'service': 'ANY',
+            'action': strtolower($policyParts[2])
+          });
+        }
+      }
+      else if ("group_policy" == $guardianCurrentSection) {
+        $policyParts = preg_split('/\s+/', $guardianLine);
+        if (count($policyParts) >= 4) {
+          array_push($guardianSavedState['groupPolicyRules'], {
+            'src': strtoupper($policyParts[0]),
+            'dst': strtoupper($policyParts[1]),
+            'service': strtoupper($policyParts[2]),
+            'action': strtolower($policyParts[3])
+          });
+        }
+      }
+      else if ("intra_group_policy" == $guardianCurrentSection) {
+        $intraParts = preg_split('/\s+/', $guardianLine);
+        if (count($intraParts) >= 3) {
+          array_push($guardianSavedState['intraGroupPolicyRules'], {
+            'group': strtoupper($intraParts[0]),
+            'service': strtoupper($intraParts[1]),
+            'action': strtolower($intraParts[2])
+          });
+        }
+      }
+      else if ("quarantine" == $guardianCurrentSection) {
+        array_push($guardianSavedState['quarantine'], strtolower($guardianLine));
+      }
+      else if ("exceptions" == $guardianCurrentSection) {
+        $exceptionParts = preg_split('/\s+/', $guardianLine);
+        if (count($exceptionParts) >= 3) {
+          array_push($guardianSavedState['exceptions'], {
+            'src': strtolower($exceptionParts[0]),
+            'dst': strtolower($exceptionParts[1]),
+            'action': strtolower($exceptionParts[2])
+          });
+        }
+      }
+      else if ("services" == $guardianCurrentSection) {
+        $serviceLine = $guardianLine;
+        $serviceDesc = "";
+        if (false !== strpos($guardianLine, "#")) {
+          $serviceDescParts = explode("#", $guardianLine, 2);
+          $serviceLine = trim($serviceDescParts[0]);
+          $serviceDesc = trim($serviceDescParts[1]);
+        }
+        $serviceParts = preg_split('/\s+/', $serviceLine);
+        if (count($serviceParts) >= 4 && preg_match('/^(tcp|udp|sctp)$/i', $serviceParts[1])) {
+          array_push($guardianSavedState['services'], {
+            'target': strtolower($serviceParts[0]),
+            'proto': strtolower($serviceParts[1]),
+            'port': intval($serviceParts[2]),
+            'group': strtoupper($serviceParts[3]),
+            'desc': $serviceDesc,
+            'action': 'allow',
+            'serviceName': ''
+          });
+        }
+        else if (count($serviceParts) >= 3 && preg_match('/^(tcp|udp|sctp)$/i', $serviceParts[1])) {
+          $serviceName = strtoupper($serviceParts[0]);
+          $guardianSavedState['serviceDefinitions'][$serviceName] = {
+            'name': $serviceName,
+            'proto': strtolower($serviceParts[1]),
+            'port': $serviceParts[2],
+            'desc': $serviceDesc
+          };
+        }
+      }
+      else if ("service_macros" == $guardianCurrentSection) {
+        $macroParts = preg_split('/\s+/', $guardianLine, 2);
+        if (count($macroParts) >= 2) {
+          $guardianSavedState['serviceMacros'][strtoupper($macroParts[0])] = trim($macroParts[1]);
+        }
+      }
+      else if ("defaults" == $guardianCurrentSection) {
+        $defaultParts = preg_split('/\s+/', $guardianLine, 2);
+        if (count($defaultParts) >= 2) {
+          $guardianSavedState['defaults'][strtolower($defaultParts[0])] = strtolower(trim($defaultParts[1]));
+        }
+      }
+      else if ("device_policy" == $guardianCurrentSection) {
+        $devicePolicyParts = preg_split('/\s+/', $guardianLine);
+        if (count($devicePolicyParts) >= 4) {
+          array_push($guardianSavedState['devicePolicyRules'], {
+            'src': strtoupper($devicePolicyParts[0]),
+            'dst': strtolower($devicePolicyParts[1]),
+            'service': strtoupper($devicePolicyParts[2]),
+            'action': strtolower($devicePolicyParts[3])
+          });
+        }
+      }
+    }
+  }
+  function guardianDeviceGroup($hostName, $deviceType) {
+    if (stristr($deviceType, "printer") || stristr($hostName, "printer")) {
+      return "PRINTER";
+    }
+    if (stristr($deviceType, "camera") || stristr($hostName, "camera")) {
+      return "CAMERA";
+    }
+    if (
+      stristr($deviceType, "iot") || stristr($deviceType, "speaker") || stristr($deviceType, "tv") ||
+      stristr($deviceType, "thermostat") || stristr($deviceType, "sensor") || stristr($deviceType, "appliance") ||
+      stristr($hostName, "plug") || stristr($hostName, "iot") || stristr($hostName, "thermostat")
+    ) {
+      return "IOT";
+    }
+    if (stristr($hostName, "work") || stristr($deviceType, "laptop") || stristr($deviceType, "pc")) {
+      return "WORK";
+    }
+    return "PERSONAL";
+  }
+
+  $guardianDevices = []/*p2j-array*/;
+  $rootObjName = "Device.Hosts.Host.";
+  $paramNameArray = [$rootObjName]/*p2j-array*/;
+  $mapping_array = ["PhysAddress", "HostName", "Active", "IPv4Address.1.IPAddress", "IPv6Address.1.IPAddress", "IPv6Address.2.IPAddress", "IPv6Address.3.IPAddress", "X_RDKCENTRAL-COM_DeviceType"]/*p2j-array*/;
+  $HostIndexArr = DmExtGetInstanceIds($rootObjName);
+  $HostNum = 0;
+  if (0 == $HostIndexArr[0]) {
+    $HostNum = count($HostIndexArr) - 1;
+  }
+  if (!empty($HostNum)) {
+    $Host = getParaValues($rootObjName, $paramNameArray, $mapping_array, true);
+    if (!empty($Host)) {
+      for ($i = 0; $i < $HostNum; $i++) {
+        $hostEntry = $Host[$i.toString()];
+        $macAddress = strtolower($hostEntry['PhysAddress']);
+        if ("" == $macAddress) {
+          continue;
+        }
+        $hostName = $hostEntry['HostName'];
+        if ((strlen($hostName) == 0) || !isValidHostname($hostName)) {
+          $hostName = strtoupper($macAddress);
+        }
+        $deviceInfo = {};
+        $deviceInfo['mac'] = $macAddress;
+        $deviceInfo['name'] = $hostName;
+        $deviceInfo['ip'] = ("" != $hostEntry['IPv4Address.1.IPAddress']) ? $hostEntry['IPv4Address.1.IPAddress'] : "--";
+        $deviceInfo['online'] = !strcasecmp("true", $hostEntry['Active']);
+        $deviceInfo['isConfigured'] = ($guardianSavedState['hasConfig'] && isset($guardianSavedState['deviceGroups'][$macAddress]));
+    		$deviceInfo['group'] = $deviceInfo['isConfigured'] ? $guardianSavedState['deviceGroups'][$macAddress] : "PERSONAL";
+        $deviceInfo['ipv6'] = resolve_IPV6_global_address($hostEntry['IPv6Address.1.IPAddress'], $hostEntry['IPv6Address.3.IPAddress']);
+        $deviceInfo['ipv6Local'] = $hostEntry['IPv6Address.2.IPAddress'];
+        $deviceInfo['deviceType'] = $hostEntry['X_RDKCENTRAL-COM_DeviceType'];
+        array_push($guardianDevices, $deviceInfo);
+      }
+    }
+  }
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shield Home Guardian</title>
+<style>
+:root {
+  --bg: #0f1923;
+  --surface: #1a2733;
+  --surface2: #223344;
+  --border: #2a3f52;
+  --accent: #00b4d8;
+  --accent2: #0077b6;
+  --danger: #e63946;
+  --success: #2a9d8f;
+  --warn: #e9c46a;
+  --text: #e0e6ed;
+  --text2: #8899aa;
+  --radius: 8px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* Layout */
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+.header h1 { font-size: 20px; font-weight: 600; }
+.header .shield-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.header .status { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); }
+.header .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; }
+.tab { padding: 12px 20px; cursor: pointer; font-size: 14px; color: var(--text2); border-bottom: 2px solid transparent; transition: all .2s; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.content { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+.card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.card-header h2 { font-size: 16px; font-weight: 600; }
+.card-body { padding: 20px; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 10px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--text2); border-bottom: 1px solid var(--border); }
+td { padding: 10px 12px; font-size: 14px; border-bottom: 1px solid var(--border); }
+tr:hover td { background: rgba(0,180,216,.05); }
+.device-name-button { background: none; border: 0; padding: 0; color: var(--text); cursor: pointer; font: inherit; text-align: left; text-decoration: underline; }
+.device-name-button:hover { color: var(--accent); }
+.device-name-button:focus { outline: 1px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+.device-details { display: none; margin-top: 10px; padding: 12px; background: rgba(0,180,216,.06); border: 1px solid var(--border); border-radius: var(--radius); }
+.device-details.show { display: block; }
+.device-details dl { margin: 0; }
+.device-details dd { margin: 0 0 10px; color: var(--text2); }
+.device-details b { color: var(--text); }
+.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; }
+
+/* Badges */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+.badge-personal { background: #0077b622; color: #48cae4; }
+.badge-work { background: #2a9d8f22; color: #2a9d8f; }
+.badge-printer { background: #8899aa22; color: #b8c6d1; }
+.badge-camera { background: #e9c46a22; color: #e9c46a; }
+.badge-iot { background: #e6394622; color: #e63946; }
+.badge-quarantine { background: #e6394644; color: #ff6b6b; }
+.badge-unknown { background: #33445522; color: #667788; }
+.badge-allow { background: #2a9d8f22; color: #2a9d8f; }
+.badge-drop { background: #e6394622; color: #e63946; }
+.badge-online { background: #2a9d8f22; color: #2a9d8f; }
+.badge-offline { background: #33445522; color: #667788; }
+
+/* Buttons */
+.btn { padding: 8px 16px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 500; transition: all .2s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #c1121f; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+
+/* Forms */
+select, input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: var(--radius); font-size: 13px; }
+select:focus, input:focus { outline: none; border-color: var(--accent); }
+
+/* Policy matrix */
+.matrix-grid { display: grid; gap: 2px; }
+.matrix-cell { width: 100%; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: all .15s; }
+.matrix-cell.allow { background: #2a9d8f33; color: #2a9d8f; }
+.matrix-cell.drop { background: #e6394633; color: #e63946; }
+.matrix-cell.header { background: var(--surface2); color: var(--text2); cursor: default; font-weight: 500; }
+.matrix-cell:not(.header):hover { opacity: .8; transform: scale(1.05); }
+
+/* Service rules */
+.rule-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.rule-row:last-child { border-bottom: none; }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: var(--radius); font-size: 14px; z-index: 1000; transform: translateY(100px); opacity: 0; transition: all .3s; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast-success { background: var(--success); color: #fff; }
+.toast-danger { background: var(--danger); color: #fff; }
+
+/* Stats bar */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.stat-card .value { font-size: 28px; font-weight: 700; color: var(--accent); }
+.stat-card .label { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: 480px; max-width: 90vw; }
+.modal h3 { margin-bottom: 16px; }
+.modal .form-group { margin-bottom: 12px; }
+.modal .form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+.modal .form-group select, .modal .form-group input { width: 100%; }
+.modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+/* Config preview */
+.config-preview { background: #0a1219; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; max-height: 500px; overflow-y: auto; color: #8899aa; }
+.config-preview .section { color: var(--accent); }
+.config-preview .comment { color: #556677; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="shield-icon">🛡</div>
+  <h1>Shield Home Guardian</h1>
+  <div class="status">
+    <span class="dot"></span>
+    <span>Policy Active</span>
+    <span style="margin-left:12px; color:var(--text2)">Gateway: <span id="gw-display"><?% echo($gatewayMACAddress); ?></span></span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('devices')">Devices</div>
+  <div class="tab" onclick="switchTab('policy')">Group Policy</div>
+  <div class="tab" onclick="switchTab('services')">Service Rules</div>
+  <div class="tab" onclick="switchTab('quarantine')">Quarantine</div>
+  <div class="tab" onclick="switchTab('exceptions')">Exceptions</div>
+  <div class="tab" onclick="switchTab('config')">Config Output</div>
+</div>
+
+<div class="content">
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card"><div class="value" id="stat-devices">0</div><div class="label">Connected Devices</div></div>
+    <div class="stat-card"><div class="value" id="stat-groups">0</div><div class="label">Active Groups</div></div>
+    <div class="stat-card"><div class="value" id="stat-rules">0</div><div class="label">Service Rules</div></div>
+    <div class="stat-card"><div class="value" id="stat-quarantined">0</div><div class="label">Quarantined</div></div>
+    <div class="stat-card"><div class="value" id="stat-flows">0</div><div class="label">OVS Flows</div></div>
+  </div>
+
+  <!-- DEVICES PANEL -->
+  <div class="panel active" id="panel-devices">
+    <div class="card">
+      <div class="card-header">
+        <h2>Connected Devices</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="saveDevices()">Save</button>
+          <button class="btn btn-primary btn-sm" onclick="showAddDevice()">+ Add Device</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>Status</th><th>Hostname</th><th>MAC Address</th><th>IP Address</th><th>Group</th><th>Actions</th></tr></thead>
+          <tbody id="device-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROUP POLICY PANEL -->
+  <div class="panel" id="panel-policy">
+    <div class="card">
+      <div class="card-header">
+        <h2>Group-to-Group Policy Matrix</h2>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:12px;color:var(--text2)">Click a cell to toggle ALLOW / DROP</span>
+          <button class="btn btn-primary btn-sm" onclick="savePolicy()">Save</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="policy-matrix"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVICE RULES PANEL -->
+  <div class="panel" id="panel-services">
+    <div class="card">
+      <div class="card-header">
+        <h2>Service Rules (Port/Protocol)</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="saveServices()">Save</button>
+          <button class="btn btn-primary btn-sm" onclick="showAddService()">+ Add Rule</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>Target</th><th>Protocol</th><th>Port</th><th>Allowed Group</th><th>Description</th><th>Actions</th></tr></thead>
+          <tbody id="service-table"></tbody>
+        </table>
+        <div id="no-services" style="text-align:center;padding:20px;color:var(--text2);display:none">No service rules configured</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUARANTINE PANEL -->
+  <div class="panel" id="panel-quarantine">
+    <div class="card">
+      <div class="card-header">
+        <h2>Quarantined Devices</h2>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:12px;color:var(--text2)">Quarantined devices are fully isolated — no traffic in or out</span>
+          <button class="btn btn-outline btn-sm" onclick="saveQuarantine()">Save</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>MAC Address</th><th>Hostname</th><th>Reason</th><th>Actions</th></tr></thead>
+          <tbody id="quarantine-table"></tbody>
+        </table>
+        <div id="no-quarantine" style="text-align:center;padding:20px;color:var(--text2)">No quarantined devices</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXCEPTIONS PANEL -->
+  <div class="panel" id="panel-exceptions">
+    <div class="card">
+      <div class="card-header">
+        <h2>Device Exceptions (MAC-pair overrides)</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="saveExceptions()">Save</button>
+          <button class="btn btn-primary btn-sm" onclick="showAddException()">+ Add Exception</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>Source Device</th><th>Destination Device</th><th>Action</th><th>Remove</th></tr></thead>
+          <tbody id="exception-table"></tbody>
+        </table>
+        <div id="no-exceptions" style="text-align:center;padding:20px;color:var(--text2)">No exceptions configured</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIG OUTPUT PANEL -->
+  <div class="panel" id="panel-config">
+    <div class="card">
+      <div class="card-header">
+        <h2>Generated Configuration</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="copyConfig()">Copy</button>
+          <button class="btn btn-primary btn-sm" onclick="downloadConfig()">Download .cfg</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="config-preview" id="config-output"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-header"><h2>Dry-Run Flow Preview</h2></div>
+      <div class="card-body">
+        <div class="config-preview" id="flow-output"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-add-device">
+  <div class="modal">
+    <h3>Add / Edit Device</h3>
+    <div class="form-group"><label>MAC Address</label><input id="dev-mac" placeholder="aa:bb:cc:dd:ee:ff"></div>
+    <div class="form-group"><label>Hostname</label><input id="dev-name" placeholder="my-laptop"></div>
+    <div class="form-group"><label>IP Address</label><input id="dev-ip" placeholder="10.0.0.x"></div>
+    <div class="form-group"><label>Group</label>
+      <select id="dev-group"></select>
+    </div>
+    <div class="actions">
+      <button class="btn btn-outline" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDevice()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-service">
+  <div class="modal">
+    <h3>Add Service Rule</h3>
+    <div class="form-group"><label>Target</label>
+      <select id="svc-target"><option value="gateway">Gateway (DNS/NTP/etc)</option></select>
+    </div>
+    <div class="form-group"><label>Protocol</label>
+      <select id="svc-proto"><option value="tcp">TCP</option><option value="udp">UDP</option></select>
+    </div>
+    <div class="form-group"><label>Port</label><input id="svc-port" type="number" placeholder="53"></div>
+    <div class="form-group"><label>Allowed Source Group</label>
+      <select id="svc-group"></select>
+    </div>
+    <div class="form-group"><label>Description (optional)</label><input id="svc-desc" placeholder="Allow DNS"></div>
+    <div class="actions">
+      <button class="btn btn-outline" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveService()">Add Rule</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-exception">
+  <div class="modal">
+    <h3>Add Device Exception</h3>
+    <div class="form-group"><label>Source Device</label><select id="exc-src"></select></div>
+    <div class="form-group"><label>Destination Device</label><select id="exc-dst"></select></div>
+    <div class="form-group"><label>Action</label>
+      <select id="exc-action"><option value="allow">Allow</option><option value="drop">Drop</option></select>
+    </div>
+    <div class="actions">
+      <button class="btn btn-outline" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveException()">Add Exception</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+const INITIAL_GUARDIAN_STATE = <?% echo(htmlspecialchars(json_encode($guardianSavedState), ENT_NOQUOTES, 'UTF-8')); ?>;
+const INITIAL_GUARDIAN_FLOW_LOG = <?% echo(json_encode($guardianFlowPreview)); ?>;
+const GROUPS = ['PERSONAL','WORK','IOT','PRINTER','CAMERA'];
+const GROUP_IDS = INITIAL_GUARDIAN_STATE.groupIds || {PERSONAL:1,WORK:2,IOT:4,PRINTER:8,CAMERA:16};
+const GUARDIAN_DEFAULTS = Object.assign({
+  inter_group_policy: 'drop',
+  intra_group_policy: 'allow',
+  stateful: 'true',
+  policy_precedence: 'specific-first'
+}, INITIAL_GUARDIAN_STATE.defaults || {});
+const token = <?% echo(json_encode($_SESSION['Csrf_token'])); ?>;
+let gateway = {mac: <?% echo(json_encode(strtolower($gatewayMACAddress))); ?>, ip: INITIAL_GUARDIAN_STATE.gatewayIp || <?% echo(json_encode($guardianGatewayIp)); ?>};
+
+let devices = <?% echo(json_encode($guardianDevices)); ?>;
+
+let policy = {};
+GROUPS.forEach(src => {
+  policy[src] = {};
+  GROUPS.forEach(dst => {
+    policy[src][dst] = (src === dst) ? GUARDIAN_DEFAULTS.intra_group_policy : GUARDIAN_DEFAULTS.inter_group_policy;
+  });
+});
+
+let services = [];
+let quarantined = [];
+let exceptions = [];
+let preservedGroupPolicyRules = [];
+let preservedIntraGroupPolicyRules = [];
+let preservedDevicePolicyRules = [];
+let serviceDefinitions = Object.assign({}, INITIAL_GUARDIAN_STATE.serviceDefinitions || {});
+let serviceMacros = Object.assign({}, INITIAL_GUARDIAN_STATE.serviceMacros || {});
+
+function normalizePolicyRule(rule) {
+  const normalized = {...rule};
+  normalized.src = String(normalized.src || '').toUpperCase();
+  normalized.dst = String(normalized.dst || '').toUpperCase();
+  normalized.service = String(normalized.service || 'ANY').toUpperCase();
+  normalized.action = normalized.action === 'allow' ? 'allow' : 'drop';
+  return normalized;
+}
+
+function normalizeIntraPolicyRule(rule) {
+  const normalized = {...rule};
+  normalized.group = String(normalized.group || '').toUpperCase();
+  normalized.service = String(normalized.service || 'ANY').toUpperCase();
+  normalized.action = normalized.action === 'allow' ? 'allow' : 'drop';
+  return normalized;
+}
+
+function normalizeDevicePolicyRule(rule) {
+  const normalized = {...rule};
+  normalized.src = String(normalized.src || '').toUpperCase();
+  normalized.dst = String(normalized.dst || '').toLowerCase();
+  normalized.service = String(normalized.service || '').toUpperCase();
+  normalized.action = normalized.action === 'drop' ? 'drop' : 'allow';
+  return normalized;
+}
+
+function normalizeServiceDefinition(definition) {
+  const normalized = {...definition};
+  normalized.name = String(normalized.name || '').toUpperCase();
+  normalized.proto = String(normalized.proto || '').toLowerCase();
+  normalized.port = String(normalized.port || '');
+  normalized.desc = normalized.desc ? String(normalized.desc) : '';
+  return normalized;
+}
+
+function normalizeService(service) {
+  const normalized = {...service};
+  normalized.target = String(normalized.target || 'gateway');
+  normalized.proto = normalized.proto === 'tcp' ? 'tcp' : 'udp';
+  normalized.port = parseInt(normalized.port, 10);
+  normalized.group = GROUPS.includes(normalized.group) ? normalized.group : 'PERSONAL';
+  normalized.desc = normalized.desc ? String(normalized.desc) : '';
+  normalized.action = normalized.action === 'drop' ? 'drop' : 'allow';
+  normalized.serviceName = normalized.serviceName ? String(normalized.serviceName).toUpperCase() : '';
+  return normalized;
+}
+
+function normalizeException(exception) {
+  const normalized = {...exception};
+  normalized.src = String(normalized.src || '').toLowerCase();
+  normalized.dst = String(normalized.dst || '').toLowerCase();
+  normalized.action = normalized.action === 'drop' ? 'drop' : 'allow';
+  return normalized;
+}
+
+function normalizeDevice(device) {
+  const normalized = {...device};
+  normalized.mac = String(normalized.mac || '').toLowerCase();
+  normalized.name = String(normalized.name || normalized.mac || 'Unknown Device');
+  normalized.ip = normalized.ip ? String(normalized.ip) : '--';
+  normalized.group = GROUPS.includes(normalized.group) ? normalized.group : 'PERSONAL';
+  normalized.online = normalized.online === true || normalized.online === 'true' || normalized.online === 1;
+  normalized.isConfigured = normalized.isConfigured === true || normalized.isConfigured === 'true' || normalized.isConfigured === 1;
+  normalized.ipv6 = normalized.ipv6 ? String(normalized.ipv6) : '';
+  normalized.ipv6Local = normalized.ipv6Local ? String(normalized.ipv6Local) : '';
+  normalized.deviceType = normalized.deviceType ? String(normalized.deviceType) : '';
+  return normalized;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatMac(value) {
+  return escapeHtml(String(value || '').toUpperCase());
+}
+
+function toDeviceDomId(mac) {
+  return 'device-info-' + String(mac).replace(/[^a-z0-9]/gi, '-');
+}
+
+function renderDetailRow(label, value, mono = false) {
+  if (!value || value === '--') return '';
+  return `<dd><b>${escapeHtml(label)}</b><br><span${mono ? ' class="mono"' : ''}>${escapeHtml(value)}</span></dd>`;
+}
+
+function renderDeviceDetails(device) {
+  return [
+    renderDetailRow('IPv4 Address', device.ip, true),
+    renderDetailRow('IPv6 Address', device.ipv6, true),
+    renderDetailRow('Local Link IPv6 Address', device.ipv6Local, true),
+    renderDetailRow('MAC Address', String(device.mac || '').toUpperCase(), true)
+  ].join('');
+}
+
+function toggleDeviceInfo(mac) {
+  const panel = document.getElementById(toDeviceDomId(mac));
+  if (panel) panel.classList.toggle('show');
+}
+
+devices = devices.map(normalizeDevice).sort((a, b) => {
+  if (a.online !== b.online) return Number(b.online) - Number(a.online);
+  return a.name.localeCompare(b.name);
+});
+
+function resolveServiceReference(serviceName) {
+  const serviceKey = String(serviceName || '').toUpperCase();
+  const directDefinition = serviceDefinitions[serviceKey];
+  if (directDefinition) {
+    const normalizedDefinition = normalizeServiceDefinition(directDefinition);
+    return {
+      supported: true,
+      proto: normalizedDefinition.proto,
+      port: parseInt(normalizedDefinition.port, 10),
+      description: normalizedDefinition.desc || serviceKey,
+      serviceName: serviceKey
+    };
+  }
+  const macroValue = serviceMacros[serviceKey];
+  if (macroValue) {
+    const macroParts = String(macroValue).split(',').map(item => item.trim().toUpperCase()).filter(Boolean);
+    if (macroParts.length === 1 && serviceDefinitions[macroParts[0]]) {
+      const normalizedDefinition = normalizeServiceDefinition(serviceDefinitions[macroParts[0]]);
+      return {
+        supported: true,
+        proto: normalizedDefinition.proto,
+        port: parseInt(normalizedDefinition.port, 10),
+        description: serviceKey,
+        serviceName: serviceKey
+      };
+    }
+  }
+  return { supported: false, description: serviceKey, serviceName: serviceKey };
+}
+
+if (Array.isArray(INITIAL_GUARDIAN_STATE.groupPolicyRules)) {
+  INITIAL_GUARDIAN_STATE.groupPolicyRules.map(normalizePolicyRule).forEach(rule => {
+    if (rule.service === 'ANY' && GROUPS.includes(rule.src) && GROUPS.includes(rule.dst)) {
+      policy[rule.src][rule.dst] = rule.action;
+    } else {
+      preservedGroupPolicyRules.push(rule);
+    }
+  });
+}
+
+if (Array.isArray(INITIAL_GUARDIAN_STATE.intraGroupPolicyRules)) {
+  INITIAL_GUARDIAN_STATE.intraGroupPolicyRules.map(normalizeIntraPolicyRule).forEach(rule => {
+    if (rule.service === 'ANY' && GROUPS.includes(rule.group)) {
+      policy[rule.group][rule.group] = rule.action;
+    } else {
+      preservedIntraGroupPolicyRules.push(rule);
+    }
+  });
+}
+
+if (Array.isArray(INITIAL_GUARDIAN_STATE.devicePolicyRules)) {
+  INITIAL_GUARDIAN_STATE.devicePolicyRules.map(normalizeDevicePolicyRule).forEach(rule => {
+    const resolvedService = resolveServiceReference(rule.service);
+    if (resolvedService.supported && resolvedService.port >= 1 && resolvedService.port <= 65535) {
+      services.push(normalizeService({
+        target: rule.dst,
+        proto: resolvedService.proto,
+        port: resolvedService.port,
+        group: rule.src,
+        desc: resolvedService.description,
+        action: rule.action,
+        serviceName: resolvedService.serviceName
+      }));
+    } else {
+      preservedDevicePolicyRules.push(rule);
+    }
+  });
+}
+
+if (Array.isArray(INITIAL_GUARDIAN_STATE.services) && INITIAL_GUARDIAN_STATE.services.length > 0) {
+  services = services.concat(
+    INITIAL_GUARDIAN_STATE.services
+      .map(normalizeService)
+      .filter(service => service.port >= 1 && service.port <= 65535)
+  );
+}
+
+if (Array.isArray(INITIAL_GUARDIAN_STATE.quarantine)) {
+  quarantined = INITIAL_GUARDIAN_STATE.quarantine
+    .map(mac => String(mac || '').toLowerCase())
+    .filter((mac, index, arr) => mac && arr.indexOf(mac) === index);
+}
+
+if (Array.isArray(INITIAL_GUARDIAN_STATE.exceptions)) {
+  exceptions = INITIAL_GUARDIAN_STATE.exceptions
+    .map(normalizeException)
+    .filter(exception => exception.src && exception.dst && exception.src !== exception.dst);
+}
+
+// ── Tab switching ──
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'config') renderConfig();
+}
+
+// ── Toast ──
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Modals ──
+function closeModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show')); }
+
+function showAddDevice(mac) {
+  const m = document.getElementById('modal-add-device');
+  const sel = document.getElementById('dev-group');
+  sel.innerHTML = GROUPS.map(g => `<option value="${g}">${g}</option>`).join('');
+  if (mac) {
+    const d = devices.find(x => x.mac === mac);
+    document.getElementById('dev-mac').value = String(d.mac || '').toUpperCase();
+    document.getElementById('dev-name').value = d.name;
+    document.getElementById('dev-ip').value = d.ip;
+    sel.value = d.group;
+  } else {
+    document.getElementById('dev-mac').value = '';
+    document.getElementById('dev-name').value = '';
+    document.getElementById('dev-ip').value = '';
+  }
+  m.classList.add('show');
+}
+
+function saveDevice() {
+  const mac = document.getElementById('dev-mac').value.trim().toLowerCase();
+  const name = document.getElementById('dev-name').value.trim() || mac;
+  const ip = document.getElementById('dev-ip').value.trim();
+  const group = document.getElementById('dev-group').value;
+  if (!mac || !ip) { toast('MAC and IP required', 'danger'); return; }
+  const idx = devices.findIndex(d => d.mac === mac);
+  if (idx >= 0) { devices[idx] = normalizeDevice({...devices[idx], name, ip, group, isConfigured: true}); }
+  else { devices.push(normalizeDevice({mac, name, ip, group, online: false, isConfigured: true})); }
+  closeModals();
+  renderDevices();
+  updateStats();
+  toast('Device saved');
+}
+
+function showAddService() {
+  const m = document.getElementById('modal-add-service');
+  const tgt = document.getElementById('svc-target');
+  tgt.innerHTML = '<option value="gateway">Gateway</option>' +
+    devices.map(d => `<option value="${d.mac}">${escapeHtml(d.name)} (${formatMac(d.mac)})</option>`).join('');
+  document.getElementById('svc-group').innerHTML = GROUPS.map(g => `<option value="${g}">${g}</option>`).join('');
+  document.getElementById('svc-port').value = '';
+  document.getElementById('svc-desc').value = '';
+  m.classList.add('show');
+}
+
+function saveService() {
+  const target = document.getElementById('svc-target').value;
+  const proto = document.getElementById('svc-proto').value;
+  const port = parseInt(document.getElementById('svc-port').value);
+  const group = document.getElementById('svc-group').value;
+  const desc = document.getElementById('svc-desc').value.trim();
+  if (!port || port < 1 || port > 65535) { toast('Valid port required', 'danger'); return; }
+  services.push(normalizeService({target, proto, port, group, desc}));
+  closeModals();
+  renderServices();
+  updateStats();
+  toast('Service rule added');
+}
+
+function removeService(i) { services.splice(i, 1); renderServices(); updateStats(); toast('Rule removed'); }
+
+function showAddException() {
+  const m = document.getElementById('modal-add-exception');
+  const opts = devices.map(d => `<option value="${d.mac}">${escapeHtml(d.name)} (${formatMac(d.mac)})</option>`).join('');
+  document.getElementById('exc-src').innerHTML = opts;
+  document.getElementById('exc-dst').innerHTML = opts;
+  m.classList.add('show');
+}
+
+function saveException() {
+  const src = document.getElementById('exc-src').value;
+  const dst = document.getElementById('exc-dst').value;
+  const action = document.getElementById('exc-action').value;
+  if (src === dst) { toast('Source and destination must differ', 'danger'); return; }
+  exceptions.push(normalizeException({src, dst, action}));
+  closeModals();
+  renderExceptions();
+  toast('Exception added');
+}
+
+function removeException(i) { exceptions.splice(i, 1); renderExceptions(); toast('Exception removed'); }
+
+// ── Quarantine ──
+function quarantineDevice(mac) {
+  if (quarantined.includes(mac)) return;
+  quarantined.push(mac);
+  renderDevices(); renderQuarantine(); updateStats();
+  toast('Device quarantined', 'danger');
+}
+
+function releaseDevice(mac) {
+  quarantined = quarantined.filter(m => m !== mac);
+  renderDevices(); renderQuarantine(); updateStats();
+  toast('Device released');
+}
+
+function removeDevice(mac) {
+  devices = devices.filter(d => d.mac !== mac);
+  quarantined = quarantined.filter(m => m !== mac);
+  renderDevices(); renderQuarantine(); updateStats();
+  toast('Device removed');
+}
+
+// ── Rendering ──
+function badgeClass(group) { return 'badge-' + group.toLowerCase(); }
+
+function renderDevices() {
+  const tb = document.getElementById('device-table');
+  if (devices.length === 0) {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2)">No connected devices found</td></tr>';
+    return;
+  }
+  tb.innerHTML = devices.map(d => {
+    const isQ = quarantined.includes(d.mac);
+    const canManage = d.isConfigured;
+    const groupBadge = isQ
+      ? `<span class="badge badge-quarantine">QUARANTINE</span>`
+      : `<span class="badge ${badgeClass(d.group)}">${d.group}</span>`;
+    return `<tr>
+      <td><span class="badge ${d.online ? 'badge-online' : 'badge-offline'}">${d.online ? 'Online' : 'Offline'}</span></td>
+      <td>
+        <button type="button" class="device-name-button" onclick="toggleDeviceInfo('${d.mac}')">${escapeHtml(d.name)}</button>
+        <div class="device-details" id="${toDeviceDomId(d.mac)}">
+          <dl>${renderDeviceDetails(d)}</dl>
+        </div>
+      </td>
+      <td class="mono">${formatMac(d.mac)}</td>
+      <td class="mono">${escapeHtml(d.ip)}</td>
+      <td>${groupBadge}
+        ${canManage && !isQ ? `<select style="margin-left:8px;padding:4px 8px;font-size:11px" onchange="changeGroup('${d.mac}',this.value)">
+          ${GROUPS.map(g => `<option value="${g}" ${g===d.group?'selected':''}>${g}</option>`).join('')}
+        </select>` : ''}
+      </td>
+      <td>
+        ${canManage ? (
+          !isQ
+            ? `<button class="btn btn-danger btn-sm" onclick="quarantineDevice('${d.mac}')">Quarantine</button>`
+            : `<button class="btn btn-outline btn-sm" onclick="releaseDevice('${d.mac}')">Release</button>`
+        ) : ''}
+        ${canManage ? `<button class="btn btn-outline btn-sm" style="margin-left:4px" onclick="showAddDevice('${d.mac}')">Edit</button>` : ''}
+        ${canManage ? `<button class="btn btn-outline btn-sm" style="margin-left:4px;color:var(--danger)" onclick="removeDevice('${d.mac}')">×</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function changeGroup(mac, group) {
+  const d = devices.find(x => x.mac === mac);
+  if (d) d.group = group;
+  renderDevices();
+  toast(`Moved to ${group}`);
+}
+
+function renderPolicyMatrix() {
+  const groups = GROUPS;
+  const n = groups.length + 1;
+  const grid = document.getElementById('policy-matrix');
+  grid.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+  grid.className = 'matrix-grid';
+  let html = '<div class="matrix-cell header">SRC \\ DST</div>';
+  groups.forEach(g => { html += `<div class="matrix-cell header">${g}</div>`; });
+  groups.forEach(s => {
+    html += `<div class="matrix-cell header">${s}</div>`;
+    groups.forEach(d => {
+      const val = policy[s][d];
+      html += `<div class="matrix-cell ${val}" onclick="togglePolicy('${s}','${d}')">${val.toUpperCase()}</div>`;
+    });
+  });
+  grid.innerHTML = html;
+}
+
+function togglePolicy(src, dst) {
+  policy[src][dst] = policy[src][dst] === 'allow' ? 'drop' : 'allow';
+  renderPolicyMatrix();
+  toast(`${src} → ${dst}: ${policy[src][dst].toUpperCase()}`);
+}
+
+function uploadGuardianConfig(successMessage) {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', 'actionHandler/ajaxSet_guardian_config.jst', true);
+  xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    if (xhr.status >= 200 && xhr.status < 300) {
+      let response = null;
+      try {
+        response = JSON.parse(xhr.responseText);
+      } catch (err) {
+        console.warn('Unable to parse Guardian save response', err);
+      }
+      if (response && response.status === 'success') {
+        renderConfig();
+        toast(successMessage);
+      } else {
+        toast('Unable to save Guardian configuration', 'danger');
+      }
+    } else {
+      toast('Unable to save Guardian configuration', 'danger');
+    }
+  };
+  xhr.send(`configInfo=${encodeURIComponent(generateConfig())}&csrfp_token=${encodeURIComponent(token)}`);
+}
+
+function savePolicy() {
+  uploadGuardianConfig('Group policy saved');
+}
+
+function saveDevices() {
+  uploadGuardianConfig('Device changes saved');
+}
+
+function saveServices() {
+  uploadGuardianConfig('Service rules saved');
+}
+
+function saveQuarantine() {
+  uploadGuardianConfig('Quarantine list saved');
+}
+
+function saveExceptions() {
+  uploadGuardianConfig('Exceptions saved');
+}
+
+function renderServices() {
+  const tb = document.getElementById('service-table');
+  const ns = document.getElementById('no-services');
+  if (services.length === 0) { tb.innerHTML = ''; ns.style.display = 'block'; return; }
+  ns.style.display = 'none';
+  tb.innerHTML = services.map((s, i) => {
+    const tgtLabel = s.target === 'gateway'
+      ? 'Gateway (' + gateway.ip + ')'
+      : (() => {
+          const targetDevice = devices.find(d => d.mac === s.target);
+          return targetDevice ? `${escapeHtml(targetDevice.name)} (${formatMac(targetDevice.mac)})` : formatMac(s.target);
+        })();
+    return `<tr>
+      <td>${tgtLabel}</td>
+      <td style="text-transform:uppercase">${s.proto}</td>
+      <td>${s.port}</td>
+      <td><span class="badge ${badgeClass(s.group)}">${s.group}</span></td>
+      <td style="color:var(--text2)">${escapeHtml((s.action === 'drop' ? '[DROP] ' : '') + (s.desc||'—'))}</td>
+      <td><button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="removeService(${i})">Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderQuarantine() {
+  const tb = document.getElementById('quarantine-table');
+  const nq = document.getElementById('no-quarantine');
+  if (quarantined.length === 0) { tb.innerHTML = ''; nq.style.display = 'block'; return; }
+  nq.style.display = 'none';
+  tb.innerHTML = quarantined.map(mac => {
+    const d = devices.find(x => x.mac === mac);
+    return `<tr>
+      <td style="font-family:monospace">${formatMac(mac)}</td>
+      <td>${d ? escapeHtml(d.name) : 'Unknown'}</td>
+      <td style="color:var(--text2)">Manual quarantine</td>
+      <td><button class="btn btn-outline btn-sm" onclick="releaseDevice('${mac}')">Release</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderExceptions() {
+  const tb = document.getElementById('exception-table');
+  const ne = document.getElementById('no-exceptions');
+  if (exceptions.length === 0) { tb.innerHTML = ''; ne.style.display = 'block'; return; }
+  ne.style.display = 'none';
+  tb.innerHTML = exceptions.map((e, i) => {
+    const srcDev = devices.find(d => d.mac === e.src);
+    const dstDev = devices.find(d => d.mac === e.dst);
+    return `<tr>
+      <td>${srcDev ? escapeHtml(srcDev.name) : formatMac(e.src)} <span style="color:var(--text2);font-size:11px">(${formatMac(e.src)})</span></td>
+      <td>${dstDev ? escapeHtml(dstDev.name) : formatMac(e.dst)} <span style="color:var(--text2);font-size:11px">(${formatMac(e.dst)})</span></td>
+      <td><span class="badge badge-${e.action}">${e.action.toUpperCase()}</span></td>
+      <td><button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="removeException(${i})">Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateStats() {
+  document.getElementById('stat-devices').textContent = devices.length;
+  const activeGroups = new Set(devices.map(d => quarantined.includes(d.mac) ? 'QUARANTINE' : d.group));
+  document.getElementById('stat-groups').textContent = activeGroups.size;
+  document.getElementById('stat-rules').textContent = services.length;
+  document.getElementById('stat-quarantined').textContent = quarantined.length;
+  // Estimate flow count
+  const flowEst = 6 + (devices.length * 4) + 1 + (devices.length * 2) + 1 + (devices.length * 2) + 2 + 1
+    + (quarantined.length * 2) + 1 + (exceptions.length) + 1 + services.length + 5 + 1 + 2
+    + Object.values(policy).reduce((a, row) => a + Object.values(row).filter(v => v === 'drop').length, 0) + 1 + 4;
+  document.getElementById('stat-flows').textContent = flowEst;
+}
+
+// ── Config Generation ──
+function generateConfig() {
+  const generatedServiceDefinitions = Object.assign({}, serviceDefinitions);
+  const generatedDevicePolicyRules = preservedDevicePolicyRules.slice();
+  let generatedServiceIndex = 1;
+  services.forEach(service => {
+    let serviceName = service.serviceName;
+    if (!serviceName) {
+      do {
+        serviceName = `UI_RULE_${generatedServiceIndex}`;
+        generatedServiceIndex += 1;
+      } while (generatedServiceDefinitions[serviceName] || serviceMacros[serviceName]);
+    }
+    if (!generatedServiceDefinitions[serviceName] && !serviceMacros[serviceName]) {
+      generatedServiceDefinitions[serviceName] = {
+        name: serviceName,
+        proto: service.proto,
+        port: String(service.port),
+        desc: service.desc || ''
+      };
+    }
+    generatedDevicePolicyRules.push({
+      src: service.group,
+      dst: service.target,
+      service: serviceName,
+      action: service.action || 'allow'
+    });
+  });
+
+  let cfg = '# Shield Home Guardian - Generated Configuration\n\n';
+  cfg += '[gateway]\n';
+  cfg += `${String(gateway.mac || '').toUpperCase()} ${gateway.ip}\n\n`;
+  cfg += '[groups]\n';
+  GROUPS.forEach(g => { cfg += `${g} ${GROUP_IDS[g]}\n`; });
+  cfg += '\n[devices]\n';
+  devices.filter(d => d.isConfigured).forEach(d => { cfg += `${String(d.mac || '').toUpperCase()} ${d.group} ${d.ip}\n`; });
+
+  cfg += '\n[services]\n';
+  Object.keys(generatedServiceDefinitions).sort().forEach(serviceName => {
+    const definition = normalizeServiceDefinition(generatedServiceDefinitions[serviceName]);
+    cfg += `${definition.name} ${definition.proto} ${definition.port}`;
+    if (definition.desc) cfg += `  # ${definition.desc}`;
+    cfg += '\n';
+  });
+
+  cfg += '\n[service_macros]\n';
+  Object.keys(serviceMacros).sort().forEach(macroName => {
+    cfg += `${macroName} ${serviceMacros[macroName]}\n`;
+  });
+
+  cfg += '\n[defaults]\n';
+  cfg += `inter_group_policy ${GUARDIAN_DEFAULTS.inter_group_policy}\n`;
+  cfg += `intra_group_policy ${GUARDIAN_DEFAULTS.intra_group_policy}\n`;
+  cfg += `stateful ${GUARDIAN_DEFAULTS.stateful}\n`;
+  cfg += `policy_precedence ${GUARDIAN_DEFAULTS.policy_precedence}\n`;
+
+  cfg += '\n[group_policy]\n';
+  GROUPS.forEach(src => {
+    GROUPS.forEach(dst => {
+      if (src !== dst) {
+        cfg += `${src} ${dst} ANY ${policy[src][dst].toUpperCase()}\n`;
+      }
+    });
+  });
+  preservedGroupPolicyRules.forEach(rule => {
+    cfg += `${rule.src} ${rule.dst} ${rule.service} ${rule.action.toUpperCase()}\n`;
+  });
+
+  cfg += '\n[intra_group_policy]\n';
+  GROUPS.forEach(group => {
+    cfg += `${group} ANY ${policy[group][group].toUpperCase()}\n`;
+  });
+  preservedIntraGroupPolicyRules.forEach(rule => {
+    cfg += `${rule.group} ${rule.service} ${rule.action.toUpperCase()}\n`;
+  });
+
+  cfg += '\n[device_policy]\n';
+  generatedDevicePolicyRules.forEach(rule => {
+    const dstValue = (rule.dst === 'gateway') ? 'gateway' : String(rule.dst || '').toUpperCase();
+    cfg += `${rule.src} ${dstValue} ${rule.service} ${String(rule.action || 'allow').toUpperCase()}\n`;
+  });
+
+  cfg += '\n[quarantine]\n';
+  quarantined.forEach(mac => { cfg += `${String(mac || '').toUpperCase()}\n`; });
+  cfg += '\n[exceptions]\n';
+  exceptions.forEach(e => { cfg += `${String(e.src || '').toUpperCase()} ${String(e.dst || '').toUpperCase()} ${e.action}\n`; });
+  return cfg;
+}
+
+function generateFlowPreview() {
+  let flows = '';
+  const cookie = '0x9110';
+  const gatewayMacDisplay = String(gateway.mac || '').toUpperCase();
+  flows += `# --- Table 0: ANTISPOOF ---\n`;
+  flows += `cookie=${cookie},table=0,priority=900,ipv6,nw_proto=58,icmpv6_type=134,dl_src=${gatewayMacDisplay},actions=resubmit(,1)\n`;
+  flows += `cookie=${cookie},table=0,priority=899,ipv6,nw_proto=58,icmpv6_type=134,actions=drop\n`;
+  flows += `cookie=${cookie},table=0,priority=900,ip,udp,tp_src=67,dl_src=${gatewayMacDisplay},actions=resubmit(,1)\n`;
+  flows += `cookie=${cookie},table=0,priority=899,ip,udp,tp_src=67,actions=drop\n`;
+  devices.forEach(d => {
+    const macDisplay = String(d.mac || '').toUpperCase();
+    flows += `cookie=${cookie},table=0,priority=800,arp,dl_src=${macDisplay},arp_spa=${d.ip},actions=resubmit(,1)\n`;
+    flows += `cookie=${cookie},table=0,priority=790,arp,dl_src=${macDisplay},actions=drop\n`;
+    flows += `cookie=${cookie},table=0,priority=780,ip,dl_src=${macDisplay},nw_src=${d.ip},actions=resubmit(,1)\n`;
+    flows += `cookie=${cookie},table=0,priority=770,ip,dl_src=${macDisplay},actions=drop\n`;
+  });
+  flows += `cookie=${cookie},table=0,priority=0,actions=resubmit(,1)\n\n`;
+
+  flows += `# --- Table 1: SRC CLASSIFY ---\n`;
+  devices.forEach(d => {
+    const gid = GROUP_IDS[d.group] || 0;
+    flows += `cookie=${cookie},table=1,priority=100,dl_src=${String(d.mac || '').toUpperCase()},actions=load:${gid}->NXM_NX_REG0[],resubmit(,2)\n`;
+  });
+  flows += `cookie=${cookie},table=1,priority=0,actions=resubmit(,2)\n\n`;
+
+  flows += `# --- Table 2: DST CLASSIFY ---\n`;
+  devices.forEach(d => {
+    const gid = GROUP_IDS[d.group] || 0;
+    flows += `cookie=${cookie},table=2,priority=100,dl_dst=${String(d.mac || '').toUpperCase()},actions=load:${gid}->NXM_NX_REG1[],resubmit(,3)\n`;
+  });
+  flows += `cookie=${cookie},table=2,priority=200,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00,actions=resubmit(,8)\n`;
+  flows += `cookie=${cookie},table=2,priority=0,actions=resubmit(,3)\n\n`;
+
+  flows += `# --- Table 3: QUARANTINE ---\n`;
+  quarantined.forEach(mac => {
+    const macDisplay = String(mac || '').toUpperCase();
+    flows += `cookie=${cookie},table=3,priority=900,dl_src=${macDisplay},actions=drop\n`;
+    flows += `cookie=${cookie},table=3,priority=900,dl_dst=${macDisplay},actions=drop\n`;
+  });
+  flows += `cookie=${cookie},table=3,priority=0,actions=resubmit(,4)\n\n`;
+
+  flows += `# --- Table 4: EXCEPTIONS ---\n`;
+  exceptions.forEach(e => {
+    flows += `cookie=${cookie},table=4,priority=800,dl_src=${String(e.src || '').toUpperCase()},dl_dst=${String(e.dst || '').toUpperCase()},actions=${e.action==='allow'?'NORMAL':'drop'}\n`;
+  });
+  flows += `cookie=${cookie},table=4,priority=0,actions=resubmit(,5)\n\n`;
+
+  flows += `# --- Table 5: SERVICE RULES ---\n`;
+  services.forEach(s => {
+    const gid = GROUP_IDS[s.group] || 0;
+    if (s.target === 'gateway') {
+      flows += `cookie=${cookie},table=5,priority=750,ip,${s.proto},nw_dst=${gateway.ip},${s.proto}_dst=${s.port},reg0=${gid},actions=resubmit(,6)\n`;
+    } else {
+      flows += `cookie=${cookie},table=5,priority=750,ip,${s.proto},dl_dst=${String(s.target || '').toUpperCase()},${s.proto}_dst=${s.port},reg0=${gid},actions=NORMAL\n`;
+    }
+  });
+  // Catch-all drops
+  const seen = new Set();
+  services.forEach(s => {
+    const key = `${s.target}|${s.proto}|${s.port}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    if (s.target === 'gateway') {
+      flows += `cookie=${cookie},table=5,priority=749,ip,${s.proto},nw_dst=${gateway.ip},${s.proto}_dst=${s.port},actions=drop\n`;
+    } else {
+      flows += `cookie=${cookie},table=5,priority=749,ip,${s.proto},dl_dst=${String(s.target || '').toUpperCase()},${s.proto}_dst=${s.port},actions=drop\n`;
+    }
+  });
+  flows += `cookie=${cookie},table=5,priority=0,actions=resubmit(,6)\n\n`;
+
+  flows += `# --- Table 6: GROUP POLICY ---\n`;
+  flows += `cookie=${cookie},table=6,priority=900,dl_dst=${gatewayMacDisplay},actions=NORMAL\n`;
+  flows += `cookie=${cookie},table=6,priority=900,dl_src=${gatewayMacDisplay},actions=NORMAL\n`;
+  const groups = GROUPS;
+  groups.forEach(s => {
+    groups.forEach(d => {
+      if (policy[s][d] === 'drop') {
+        flows += `cookie=${cookie},table=6,priority=100,reg0=${GROUP_IDS[s]},reg1=${GROUP_IDS[d]},actions=drop\n`;
+      }
+    });
+  });
+  flows += `cookie=${cookie},table=6,priority=0,actions=resubmit(,7)\n\n`;
+
+  flows += `# --- Table 7: DISCOVERY ---\n`;
+  flows += `cookie=${cookie},table=7,priority=800,ip,udp,tp_dst=5353,actions=NORMAL\n`;
+  flows += `cookie=${cookie},table=7,priority=800,ipv6,udp,tp_dst=5353,actions=NORMAL\n`;
+  flows += `cookie=${cookie},table=7,priority=800,ip,udp,tp_dst=1900,actions=NORMAL\n`;
+  flows += `cookie=${cookie},table=7,priority=0,actions=NORMAL\n\n`;
+
+  flows += `# --- Table 8: MULTICAST ---\n`;
+  flows += `cookie=${cookie},table=8,priority=0,actions=NORMAL\n`;
+
+  return flows;
+}
+
+function renderConfig() {
+  const cfg = generateConfig();
+  const el = document.getElementById('config-output');
+  el.textContent = cfg;
+
+  const flowEl = document.getElementById('flow-output');
+  flowEl.textContent = INITIAL_GUARDIAN_FLOW_LOG || generateFlowPreview();
+}
+
+function copyConfig() {
+  navigator.clipboard.writeText(generateConfig());
+  toast('Config copied to clipboard');
+}
+
+function downloadConfig() {
+  const blob = new Blob([generateConfig()], {type: 'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'guardian_new.cfg';
+  a.click();
+  toast('Config downloaded');
+}
+
+// ── Init ──
+renderConfig();
+renderDevices();
+renderPolicyMatrix();
+renderServices();
+renderQuarantine();
+renderExceptions();
+updateStats();
+</script>
+</body>
+</html>
