@@ -30,6 +30,7 @@
   };
   $guardianSavedState['quarantine'] = []/*p2j-array*/;
   $guardianSavedState['exceptions'] = []/*p2j-array*/;
+  $guardianConfigContent = "";
   $guardianConfigLines = [];
   $guardianFlowPreviewLines = [];
   $guardianReadStatus = 1;
@@ -39,6 +40,8 @@
     $guardianConfigSize = filesize($guardianConfigPath);
     if ($guardianConfigSize > 0) {
       $guardianConfigContent = fread($guardianConfigFp, $guardianConfigSize);
+      $guardianConfigContent = str_replace("\r\n", "\n", $guardianConfigContent);
+      $guardianConfigContent = str_replace("\r", "\n", $guardianConfigContent);
       $guardianConfigLines = explode("\n", $guardianConfigContent);
       $guardianReadStatus = 0;
     }
@@ -55,143 +58,6 @@
     fclose($guardianLogFp);
   }
   $guardianFlowPreview = (0 == $guardianFlowReadStatus && !empty($guardianFlowPreviewLines)) ? implode("\n", $guardianFlowPreviewLines) : "";
-  if (0 == $guardianReadStatus && !empty($guardianConfigLines)) {
-    $guardianCurrentSection = "";
-    for ($cfgIdx = 0; $cfgIdx < count($guardianConfigLines); $cfgIdx++) {
-      $guardianLine = trim($guardianConfigLines[$cfgIdx]);
-      if ("" == $guardianLine || "#" == substr($guardianLine, 0, 1)) {
-        continue;
-      }
-      $guardianSavedState['hasConfig'] = true;
-      if ("[" == substr($guardianLine, 0, 1) && "]" == substr($guardianLine, strlen($guardianLine) - 1)) {
-        $guardianCurrentSection = strtolower(substr($guardianLine, 1, strlen($guardianLine) - 2));
-        continue;
-      }
-
-      if ("gateway" == $guardianCurrentSection) {
-        $gatewayParts = preg_split('/\s+/', $guardianLine);
-        if (count($gatewayParts) >= 2) {
-          $guardianSavedState['gatewayIp'] = $gatewayParts[1];
-        }
-      }
-      else if ("groups" == $guardianCurrentSection) {
-        $groupParts = preg_split('/\s+/', $guardianLine);
-        if (count($groupParts) >= 2) {
-          $guardianSavedState['groupIds'][strtoupper($groupParts[0])] = intval($groupParts[1]);
-        }
-      }
-      else if ("devices" == $guardianCurrentSection) {
-        $deviceParts = preg_split('/\s+/', $guardianLine);
-        if (count($deviceParts) >= 2) {
-          $guardianSavedState['deviceGroups'][strtolower($deviceParts[0])] = strtoupper($deviceParts[1]);
-        }
-      }
-      else if ("policy" == $guardianCurrentSection) {
-        $policyParts = preg_split('/\s+/', $guardianLine);
-        if (count($policyParts) >= 3) {
-          $policySrc = strtoupper($policyParts[0]);
-          $policyDst = strtoupper($policyParts[1]);
-          if (!isset($guardianSavedState['policy'][$policySrc])) {
-            $guardianSavedState['policy'][$policySrc] = {};
-          }
-          $guardianSavedState['policy'][$policySrc][$policyDst] = strtolower($policyParts[2]);
-          array_push($guardianSavedState['groupPolicyRules'], {
-            'src': $policySrc,
-            'dst': $policyDst,
-            'service': 'ANY',
-            'action': strtolower($policyParts[2])
-          });
-        }
-      }
-      else if ("group_policy" == $guardianCurrentSection) {
-        $policyParts = preg_split('/\s+/', $guardianLine);
-        if (count($policyParts) >= 4) {
-          array_push($guardianSavedState['groupPolicyRules'], {
-            'src': strtoupper($policyParts[0]),
-            'dst': strtoupper($policyParts[1]),
-            'service': strtoupper($policyParts[2]),
-            'action': strtolower($policyParts[3])
-          });
-        }
-      }
-      else if ("intra_group_policy" == $guardianCurrentSection) {
-        $intraParts = preg_split('/\s+/', $guardianLine);
-        if (count($intraParts) >= 3) {
-          array_push($guardianSavedState['intraGroupPolicyRules'], {
-            'group': strtoupper($intraParts[0]),
-            'service': strtoupper($intraParts[1]),
-            'action': strtolower($intraParts[2])
-          });
-        }
-      }
-      else if ("quarantine" == $guardianCurrentSection) {
-        array_push($guardianSavedState['quarantine'], strtolower($guardianLine));
-      }
-      else if ("exceptions" == $guardianCurrentSection) {
-        $exceptionParts = preg_split('/\s+/', $guardianLine);
-        if (count($exceptionParts) >= 3) {
-          array_push($guardianSavedState['exceptions'], {
-            'src': strtolower($exceptionParts[0]),
-            'dst': strtolower($exceptionParts[1]),
-            'action': strtolower($exceptionParts[2])
-          });
-        }
-      }
-      else if ("services" == $guardianCurrentSection) {
-        $serviceLine = $guardianLine;
-        $serviceDesc = "";
-        if (false !== strpos($guardianLine, "#")) {
-          $serviceDescParts = explode("#", $guardianLine, 2);
-          $serviceLine = trim($serviceDescParts[0]);
-          $serviceDesc = trim($serviceDescParts[1]);
-        }
-        $serviceParts = preg_split('/\s+/', $serviceLine);
-        if (count($serviceParts) >= 4 && preg_match('/^(tcp|udp|sctp)$/i', $serviceParts[1])) {
-          array_push($guardianSavedState['services'], {
-            'target': strtolower($serviceParts[0]),
-            'proto': strtolower($serviceParts[1]),
-            'port': intval($serviceParts[2]),
-            'group': strtoupper($serviceParts[3]),
-            'desc': $serviceDesc,
-            'action': 'allow',
-            'serviceName': ''
-          });
-        }
-        else if (count($serviceParts) >= 3 && preg_match('/^(tcp|udp|sctp)$/i', $serviceParts[1])) {
-          $serviceName = strtoupper($serviceParts[0]);
-          $guardianSavedState['serviceDefinitions'][$serviceName] = {
-            'name': $serviceName,
-            'proto': strtolower($serviceParts[1]),
-            'port': $serviceParts[2],
-            'desc': $serviceDesc
-          };
-        }
-      }
-      else if ("service_macros" == $guardianCurrentSection) {
-        $macroParts = preg_split('/\s+/', $guardianLine, 2);
-        if (count($macroParts) >= 2) {
-          $guardianSavedState['serviceMacros'][strtoupper($macroParts[0])] = trim($macroParts[1]);
-        }
-      }
-      else if ("defaults" == $guardianCurrentSection) {
-        $defaultParts = preg_split('/\s+/', $guardianLine, 2);
-        if (count($defaultParts) >= 2) {
-          $guardianSavedState['defaults'][strtolower($defaultParts[0])] = strtolower(trim($defaultParts[1]));
-        }
-      }
-      else if ("device_policy" == $guardianCurrentSection) {
-        $devicePolicyParts = preg_split('/\s+/', $guardianLine);
-        if (count($devicePolicyParts) >= 4) {
-          array_push($guardianSavedState['devicePolicyRules'], {
-            'src': strtoupper($devicePolicyParts[0]),
-            'dst': strtolower($devicePolicyParts[1]),
-            'service': strtoupper($devicePolicyParts[2]),
-            'action': strtolower($devicePolicyParts[3])
-          });
-        }
-      }
-    }
-  }
   function guardianDeviceGroup($hostName, $deviceType) {
     if (stristr($deviceType, "printer") || stristr($hostName, "printer")) {
       return "PRINTER";
@@ -240,7 +106,7 @@
         $deviceInfo['ip'] = ("" != $hostEntry['IPv4Address.1.IPAddress']) ? $hostEntry['IPv4Address.1.IPAddress'] : "--";
         $deviceInfo['online'] = !strcasecmp("true", $hostEntry['Active']);
         $deviceInfo['isConfigured'] = ($guardianSavedState['hasConfig'] && isset($guardianSavedState['deviceGroups'][$macAddress]));
-    		$deviceInfo['group'] = $deviceInfo['isConfigured'] ? $guardianSavedState['deviceGroups'][$macAddress] : "PERSONAL";
+		$deviceInfo['group'] = $deviceInfo['isConfigured'] ? $guardianSavedState['deviceGroups'][$macAddress] : "PERSONAL";
         $deviceInfo['ipv6'] = resolve_IPV6_global_address($hostEntry['IPv6Address.1.IPAddress'], $hostEntry['IPv6Address.3.IPAddress']);
         $deviceInfo['ipv6Local'] = $hostEntry['IPv6Address.2.IPAddress'];
         $deviceInfo['deviceType'] = $hostEntry['X_RDKCENTRAL-COM_DeviceType'];
@@ -586,9 +452,203 @@ select:focus, input:focus { outline: none; border-color: var(--accent); }
 <div class="toast" id="toast"></div>
 
 <script>
-// ── State ──
-const INITIAL_GUARDIAN_STATE = <?% echo(htmlspecialchars(json_encode($guardianSavedState), ENT_NOQUOTES, 'UTF-8')); ?>;
-console.log('[guardian] configLines:', <?% echo(json_encode($guardianConfigLines)); ?>);
+function parseGuardianConfigText(configText, defaultState) {
+  const state = Object.assign({
+    hasConfig: false,
+    gatewayIp: defaultState && defaultState.gatewayIp ? defaultState.gatewayIp : '',
+    groupIds: { PERSONAL: 1, WORK: 2, IOT: 4, PRINTER: 8, CAMERA: 16 },
+    deviceGroups: {},
+    policy: {},
+    groupPolicyRules: [],
+    intraGroupPolicyRules: [],
+    devicePolicyRules: [],
+    serviceDefinitions: {},
+    serviceMacros: {},
+    services: [],
+    defaults: {
+      inter_group_policy: 'drop',
+      intra_group_policy: 'allow',
+      stateful: 'true',
+      policy_precedence: 'specific-first'
+    },
+    quarantine: [],
+    exceptions: []
+  }, defaultState || {});
+
+  const text = String(configText || '');
+  if (!text) {
+    return state;
+  }
+
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  let currentSection = '';
+
+  lines.forEach(rawLine => {
+    const guardianLine = String(rawLine || '').trim();
+    if (!guardianLine || guardianLine.startsWith('#')) {
+      return;
+    }
+
+    state.hasConfig = true;
+    if (guardianLine.startsWith('[') && guardianLine.endsWith(']')) {
+      currentSection = guardianLine.slice(1, -1).toLowerCase();
+      return;
+    }
+
+    if ('gateway' === currentSection) {
+      const gatewayParts = guardianLine.split(/\s+/);
+      if (gatewayParts.length >= 2) {
+        state.gatewayIp = gatewayParts[1];
+      }
+      return;
+    }
+
+    if ('groups' === currentSection) {
+      const groupParts = guardianLine.split(/\s+/);
+      if (groupParts.length >= 2) {
+        state.groupIds[String(groupParts[0] || '').toUpperCase()] = parseInt(groupParts[1], 10) || 0;
+      }
+      return;
+    }
+
+    if ('devices' === currentSection) {
+      const deviceParts = guardianLine.split(/\s+/);
+      if (deviceParts.length >= 2) {
+        state.deviceGroups[String(deviceParts[0] || '').toLowerCase()] = String(deviceParts[1] || '').toUpperCase();
+      }
+      return;
+    }
+
+    if ('policy' === currentSection) {
+      const policyParts = guardianLine.split(/\s+/);
+      if (policyParts.length >= 3) {
+        const policySrc = String(policyParts[0] || '').toUpperCase();
+        const policyDst = String(policyParts[1] || '').toUpperCase();
+        if (!state.policy[policySrc]) {
+          state.policy[policySrc] = {};
+        }
+        state.policy[policySrc][policyDst] = String(policyParts[2] || '').toLowerCase();
+        state.groupPolicyRules.push({
+          src: policySrc,
+          dst: policyDst,
+          service: 'ANY',
+          action: String(policyParts[2] || '').toLowerCase()
+        });
+      }
+      return;
+    }
+
+    if ('group_policy' === currentSection) {
+      const policyParts = guardianLine.split(/\s+/);
+      if (policyParts.length >= 4) {
+        state.groupPolicyRules.push({
+          src: String(policyParts[0] || '').toUpperCase(),
+          dst: String(policyParts[1] || '').toUpperCase(),
+          service: String(policyParts[2] || '').toUpperCase(),
+          action: String(policyParts[3] || '').toLowerCase()
+        });
+      }
+      return;
+    }
+
+    if ('intra_group_policy' === currentSection) {
+      const intraParts = guardianLine.split(/\s+/);
+      if (intraParts.length >= 3) {
+        state.intraGroupPolicyRules.push({
+          group: String(intraParts[0] || '').toUpperCase(),
+          service: String(intraParts[1] || '').toUpperCase(),
+          action: String(intraParts[2] || '').toLowerCase()
+        });
+      }
+      return;
+    }
+
+    if ('quarantine' === currentSection) {
+      state.quarantine.push(String(guardianLine || '').toLowerCase());
+      return;
+    }
+
+    if ('exceptions' === currentSection) {
+      const exceptionParts = guardianLine.split(/\s+/);
+      if (exceptionParts.length >= 3) {
+        state.exceptions.push({
+          src: String(exceptionParts[0] || '').toLowerCase(),
+          dst: String(exceptionParts[1] || '').toLowerCase(),
+          action: String(exceptionParts[2] || '').toLowerCase()
+        });
+      }
+      return;
+    }
+
+    if ('services' === currentSection) {
+      let serviceLine = guardianLine;
+      let serviceDesc = '';
+      const hashIndex = guardianLine.indexOf('#');
+      if (hashIndex !== -1) {
+        serviceLine = guardianLine.slice(0, hashIndex).trim();
+        serviceDesc = guardianLine.slice(hashIndex + 1).trim();
+      }
+      const serviceParts = serviceLine.split(/\s+/);
+      if (serviceParts.length >= 4 && /^(tcp|udp|sctp)$/i.test(serviceParts[1])) {
+        state.services.push({
+          target: String(serviceParts[0] || '').toLowerCase(),
+          proto: String(serviceParts[1] || '').toLowerCase(),
+          port: parseInt(serviceParts[2], 10),
+          group: String(serviceParts[3] || '').toUpperCase(),
+          desc: serviceDesc,
+          action: 'allow',
+          serviceName: ''
+        });
+      } else if (serviceParts.length >= 3 && /^(tcp|udp|sctp)$/i.test(serviceParts[1])) {
+        const serviceName = String(serviceParts[0] || '').toUpperCase();
+        state.serviceDefinitions[serviceName] = {
+          name: serviceName,
+          proto: String(serviceParts[1] || '').toLowerCase(),
+          port: String(serviceParts[2] || ''),
+          desc: serviceDesc
+        };
+      }
+      return;
+    }
+
+    if ('service_macros' === currentSection) {
+      const macroParts = guardianLine.split(/\s+/, 2);
+      if (macroParts.length >= 2) {
+        state.serviceMacros[String(macroParts[0] || '').toUpperCase()] = String(macroParts[1] || '').trim();
+      }
+      return;
+    }
+
+    if ('defaults' === currentSection) {
+      const defaultParts = guardianLine.split(/\s+/, 2);
+      if (defaultParts.length >= 2) {
+        state.defaults[String(defaultParts[0] || '').toLowerCase()] = String(defaultParts[1] || '').trim().toLowerCase();
+      }
+      return;
+    }
+
+    if ('device_policy' === currentSection) {
+      const devicePolicyParts = guardianLine.split(/\s+/);
+      if (devicePolicyParts.length >= 4) {
+        state.devicePolicyRules.push({
+          src: String(devicePolicyParts[0] || '').toUpperCase(),
+          dst: String(devicePolicyParts[1] || '').toLowerCase(),
+          service: String(devicePolicyParts[2] || '').toUpperCase(),
+          action: String(devicePolicyParts[3] || '').toLowerCase()
+        });
+      }
+    }
+  });
+
+  return state;
+}
+
+const RAW_GUARDIAN_CONFIG = <?% echo(json_encode($guardianConfigContent)); ?>;
+const GUARDIAN_CONFIG_LINES = RAW_GUARDIAN_CONFIG ? RAW_GUARDIAN_CONFIG.split(/\r?\n/) : [];
+const INITIAL_GUARDIAN_STATE = parseGuardianConfigText(RAW_GUARDIAN_CONFIG, {
+  gatewayIp: <?% echo(json_encode($guardianGatewayIp)); ?>
+});
+console.log('[guardian] configLines:', GUARDIAN_CONFIG_LINES);
 console.log('[guardian] readStatus:', <?% echo(json_encode($guardianReadStatus)); ?>);
 console.log('[guardian] hasConfig:', INITIAL_GUARDIAN_STATE.hasConfig);
 console.log('[guardian] policy:', INITIAL_GUARDIAN_STATE.policy);
@@ -835,7 +895,11 @@ function switchTab(name) {
 // ── Toast ──
 function toast(msg, type='success') {
   const t = document.getElementById('toast');
-  t.textContent = msg;
+  t.innerHTML = String(msg || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
   t.className = 'toast toast-' + type + ' show';
   setTimeout(() => t.classList.remove('show'), 2500);
 }
