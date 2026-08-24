@@ -135,7 +135,7 @@ else
 {
         $r = ResolveRadioFromSsid($i);
         if ($r == "") {
-                LogStr(" : ResolvedSSid returned security_event:invalid_ssid_mapping ssid:" + substr(String($i), 0, 32));
+                LogStr(" : ResolveRadioFromSsid returned security_event:invalid_ssid_mapping ssid:" + substr(String($i), 0, 32));
                 http_response_code(400);
                 echo( '{"error":"invalid_ssid_mapping"}');
                 exit(0);
