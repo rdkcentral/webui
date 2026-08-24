@@ -6,11 +6,14 @@ $action = isset($_POST['action']) ? strtolower(trim($_POST['action'])) : "";
 $response = {"status": "failure"};
 
 if ("apply" == $action) {
-	$guardianApplyOutput = []/*p2j-array*/;
+	$guardianApplyOutput = [];
 	$guardianApplyStatus = 1;
-	exec("bash /var/tmp/guardian.sh /var/tmp/guardian.cfg apply 2>&1", $guardianApplyOutput, $guardianApplyStatus);
+	exec("/bin/bash /var/tmp/guardian.sh /var/tmp/guardian.cfg apply", $guardianApplyOutput, $guardianApplyStatus);
 	if (0 == $guardianApplyStatus) {
 		$response['status'] = "success";
+		$response['message'] = implode("\n", $guardianApplyOutput);
+	} else {
+		$response['message'] = implode("\n", $guardianApplyOutput);
 	}
 }
 else {

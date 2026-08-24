@@ -2,7 +2,7 @@
 <?%
   $gatewayMACAddress = getStr("Device.X_CISCO_COM_CableModem.MACAddress");
   $guardianGatewayIp = getStr("Device.X_CISCO_COM_DeviceControl.LanManagementEntry.1.LanIPAddress");
-  $guardianConfigPath = "/var/tmp/upd_guardian.cfg";
+  $guardianConfigPath = "/var/tmp/guardian.cfg";
   $guardianLogPath = "/var/tmp/guardian.log";
   $guardianSavedState = {};
   $guardianSavedState['hasConfig'] = false;
@@ -30,12 +30,30 @@
   };
   $guardianSavedState['quarantine'] = []/*p2j-array*/;
   $guardianSavedState['exceptions'] = []/*p2j-array*/;
-  $guardianConfigLines = []/*p2j-array*/;
-  $guardianFlowPreviewLines = []/*p2j-array*/;
+  $guardianConfigLines = [];
+  $guardianFlowPreviewLines = [];
   $guardianReadStatus = 1;
   $guardianFlowReadStatus = 1;
-  exec("cat "+$guardianConfigPath+" 2>/dev/null", $guardianConfigLines, $guardianReadStatus);
-  exec("cat "+$guardianLogPath+" 2>/dev/null", $guardianFlowPreviewLines, $guardianFlowReadStatus);
+  $guardianConfigFp = fopen($guardianConfigPath, "r");
+  if ($guardianConfigFp != false) {
+    $guardianConfigSize = filesize($guardianConfigPath);
+    if ($guardianConfigSize > 0) {
+      $guardianConfigContent = fread($guardianConfigFp, $guardianConfigSize);
+      $guardianConfigLines = explode("\n", $guardianConfigContent);
+      $guardianReadStatus = 0;
+    }
+    fclose($guardianConfigFp);
+  }
+  $guardianLogFp = fopen($guardianLogPath, "r");
+  if ($guardianLogFp != false) {
+    $guardianLogSize = filesize($guardianLogPath);
+    if ($guardianLogSize > 0) {
+      $guardianLogContent = fread($guardianLogFp, $guardianLogSize);
+      $guardianFlowPreviewLines = explode("\n", $guardianLogContent);
+      $guardianFlowReadStatus = 0;
+    }
+    fclose($guardianLogFp);
+  }
   $guardianFlowPreview = (0 == $guardianFlowReadStatus && !empty($guardianFlowPreviewLines)) ? implode("\n", $guardianFlowPreviewLines) : "";
   if (0 == $guardianReadStatus && !empty($guardianConfigLines)) {
     $guardianCurrentSection = "";
@@ -45,9 +63,8 @@
         continue;
       }
       $guardianSavedState['hasConfig'] = true;
-      $guardianSectionMatch = []/*p2j-array*/;
-      if (preg_match('/^\[(.+)\]$/', $guardianLine, $guardianSectionMatch)) {
-        $guardianCurrentSection = strtolower($guardianSectionMatch[1]);
+      if ("[" == substr($guardianLine, 0, 1) && "]" == substr($guardianLine, strlen($guardianLine) - 1)) {
+        $guardianCurrentSection = strtolower(substr($guardianLine, 1, strlen($guardianLine) - 2));
         continue;
       }
 
@@ -571,6 +588,12 @@ select:focus, input:focus { outline: none; border-color: var(--accent); }
 <script>
 // ── State ──
 const INITIAL_GUARDIAN_STATE = <?% echo(htmlspecialchars(json_encode($guardianSavedState), ENT_NOQUOTES, 'UTF-8')); ?>;
+console.log('[guardian] configLines:', <?% echo(json_encode($guardianConfigLines)); ?>);
+console.log('[guardian] readStatus:', <?% echo(json_encode($guardianReadStatus)); ?>);
+console.log('[guardian] hasConfig:', INITIAL_GUARDIAN_STATE.hasConfig);
+console.log('[guardian] policy:', INITIAL_GUARDIAN_STATE.policy);
+console.log('[guardian] groupPolicyRules:', INITIAL_GUARDIAN_STATE.groupPolicyRules);
+console.log('[guardian] deviceGroups:', INITIAL_GUARDIAN_STATE.deviceGroups);
 const INITIAL_GUARDIAN_FLOW_LOG = <?% echo(json_encode($guardianFlowPreview)); ?>;
 const GROUPS = ['PERSONAL','WORK','IOT','PRINTER','CAMERA'];
 const GROUP_IDS = INITIAL_GUARDIAN_STATE.groupIds || {PERSONAL:1,WORK:2,IOT:4,PRINTER:8,CAMERA:16};
@@ -1056,9 +1079,9 @@ function applySettings() {
         console.warn('Unable to parse Guardian apply response', err);
       }
       if (response && response.status === 'success') {
-        toast('Guardian settings applied');
+        toast(response.message || 'Guardian settings applied');
       } else {
-        toast('Unable to apply Guardian settings', 'danger');
+        toast((response && response.message) || 'Unable to apply Guardian settings', 'danger');
       }
     } else {
       toast('Unable to apply Guardian settings', 'danger');
