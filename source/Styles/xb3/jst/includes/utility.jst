@@ -1150,7 +1150,7 @@ function cleanJsonDms($dm_key, $param_json) {
 
 function getValidatedMacSsidValueJs() {
 	var $mac_ssid_v = "";
-	if(isset($_GET['mac_ssid']) && is_numeric($_GET['mac_ssid'])) {
+	if(isset($_GET['mac_ssid']) && preg_match('/^\d+$/', $_GET['mac_ssid']) == 1) {
 		$mac_ssid_v = intval($_GET['mac_ssid']);
 		if ($mac_ssid_v < 1 || $mac_ssid_v > 17)
 			$mac_ssid_v = "";
