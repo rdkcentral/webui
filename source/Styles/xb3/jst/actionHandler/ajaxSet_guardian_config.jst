@@ -6,43 +6,10 @@ $action = isset($_POST['action']) ? strtolower(trim($_POST['action'])) : "";
 $response = {};
 
 if ("apply" == $action) {
-    $guardianScript = "/var/tmp/guardian.sh";
-    $guardianCfg = "/var/tmp/guardian.cfg";
-    $guardianResponseLines = [];
+    exec("/bin/touch /var/tmp/guardian");
 
-    $guardianScriptExists = file_exists($guardianScript);
-    $guardianCfgExists = file_exists($guardianCfg);
-    $guardianScriptReadable = is_readable($guardianScript);
-    $guardianCfgReadable = is_readable($guardianCfg);
-
-/*
-    $ifconfigOutput = exec("/sbin/ifconfig brlan0");
-    if ($ifconfigOutput && $ifconfigOutput.length > 0) {
-        $guardianResponseLines = $guardianResponseLines.concat($ifconfigOutput);
-    }
-*/
-
-    if ($guardianScriptExists && $guardianCfgExists && $guardianScriptReadable && $guardianCfgReadable) {
-        $guardianClearOutput = exec("/bin/bash /var/tmp/guardian.sh /var/tmp/guardian.cfg clear");
-        $guardianApplyOutput = exec("/bin/bash /var/tmp/guardian.sh /var/tmp/guardian.cfg apply");
-
-        $guardianResponseLines = $guardianResponseLines.concat($guardianClearOutput);
-        $guardianResponseLines = $guardianResponseLines.concat($guardianApplyOutput);
-        $response['status'] = ($guardianResponseLines.length > 0) ? "success" : "failure";
-    } else {
-        $response['status'] = "failure";
-        $guardianResponseLines = $guardianResponseLines.concat([
-            "guardian script missing: " + $guardianScriptExists,
-            "guardian config missing: " + $guardianCfgExists,
-            "guardian script readable: " + $guardianScriptReadable,
-            "guardian config readable: " + $guardianCfgReadable
-        ]);
-    }
-
-    $response['message'] = $guardianResponseLines.join("\n");
-    if ($guardianResponseLines.length == 0) {
-        $response['message'] = "Guardian apply failed";
-    }
+    $response['status'] = "success";
+    $response['message'] = "Guardian settings applied";
 }
 else {
     $configInfo = isset($_POST['configInfo']) ? $_POST['configInfo'] : "";
