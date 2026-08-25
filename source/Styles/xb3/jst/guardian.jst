@@ -648,6 +648,69 @@ const GUARDIAN_CONFIG_LINES = RAW_GUARDIAN_CONFIG ? RAW_GUARDIAN_CONFIG.split(/\
 const INITIAL_GUARDIAN_STATE = parseGuardianConfigText(RAW_GUARDIAN_CONFIG, {
   gatewayIp: <?% echo(json_encode($guardianGatewayIp)); ?>
 });
+
+// Ensure built-in service definitions exist even if they are missing
+// from guardian.cfg. Existing definitions are preserved.
+(function ensureDefaultServices(state) {
+  const defaultServices = {
+    SSH:           { name:'SSH',           proto:'tcp', port:'22' },
+    TELNET:        { name:'TELNET',        proto:'tcp', port:'23' },
+    HTTP:          { name:'HTTP',          proto:'tcp', port:'80' },
+    HTTPS:         { name:'HTTPS',         proto:'tcp', port:'443' },
+    DNS_TCP:       { name:'DNS_TCP',       proto:'tcp', port:'53' },
+    DNS_UDP:       { name:'DNS_UDP',       proto:'udp', port:'53' },
+    DHCP_SERVER:   { name:'DHCP_SERVER',   proto:'udp', port:'67' },
+    DHCP_CLIENT:   { name:'DHCP_CLIENT',   proto:'udp', port:'68' },
+    DHCPV6_CLIENT: { name:'DHCPV6_CLIENT', proto:'udp', port:'546' },
+    DHCPV6_SERVER: { name:'DHCPV6_SERVER', proto:'udp', port:'547' },
+    MDNS:          { name:'MDNS',          proto:'udp', port:'5353' },
+    SSDP:          { name:'SSDP',          proto:'udp', port:'1900' },
+    IPP:           { name:'IPP',           proto:'tcp', port:'631' },
+    RAW_PRINT:     { name:'RAW_PRINT',     proto:'tcp', port:'9100' },
+    SMB:           { name:'SMB',           proto:'tcp', port:'445' },
+    NFS:           { name:'NFS',           proto:'tcp', port:'2049' },
+    SNMP:          { name:'SNMP',          proto:'udp', port:'161' },
+    SNMP_TRAP:     { name:'SNMP_TRAP',     proto:'udp', port:'162' },
+    NTP:           { name:'NTP',           proto:'udp', port:'123' },
+    MQTT:          { name:'MQTT',          proto:'tcp', port:'1883' },
+    MQTTS:         { name:'MQTTS',         proto:'tcp', port:'8883' },
+    RTSP:          { name:'RTSP',          proto:'tcp', port:'554' }
+  };
+
+  const defaultServiceMacros = {
+    DNS:          'DNS_TCP,DNS_UDP',
+    WEB:          'HTTP,HTTPS',
+    DHCP:         'DHCP_SERVER,DHCP_CLIENT',
+    DHCPV6:       'DHCPV6_CLIENT,DHCPV6_SERVER',
+    DISCOVERY:    'MDNS,SSDP',
+    PRINT:        'IPP,RAW_PRINT',
+    MQTT_ALL:     'MQTT,MQTTS',
+    FILE_SHARE:   'SMB,NFS',
+    CAMERA_CTRL:  'HTTPS,RTSP',
+    CAMERA_MEDIA: 'RTSP'
+  };
+
+  if (!state.serviceDefinitions) {
+    state.serviceDefinitions = {};
+  }
+
+  if (!state.serviceMacros) {
+    state.serviceMacros = {};
+  }
+
+  Object.keys(defaultServices).forEach(function(name) {
+    if (!state.serviceDefinitions[name]) {
+      state.serviceDefinitions[name] = defaultServices[name];
+    }
+  });
+
+  Object.keys(defaultServiceMacros).forEach(function(name) {
+    if (!state.serviceMacros[name]) {
+      state.serviceMacros[name] = defaultServiceMacros[name];
+    }
+  });
+})(INITIAL_GUARDIAN_STATE);
+
 console.log('[guardian] configLines:', GUARDIAN_CONFIG_LINES);
 console.log('[guardian] readStatus:', <?% echo(json_encode($guardianReadStatus)); ?>);
 console.log('[guardian] hasConfig:', INITIAL_GUARDIAN_STATE.hasConfig);

@@ -3,16 +3,14 @@
 # Group-based pipeline: table0 classify src->reg0, table1 classify dst->reg1,
 # table2 decides on (reg0,reg1). Scales O(N) with devices, not O(N^2) per-pair.
 
-#vi /var/tmp/guardian.sh
-#chmod 777 /var/tmp/guardian.sh
-#vi /var/tmp/guardian.cfg
-#chmod 777 /var/tmp/guardian.sh
+#touch /var/tmp/guardian
+#touch /var/tmp/guardian-event.log
+#cp /usr/hgw/guardianPolling-sh.jst /var/tmp/guardianPolling.sh
+#cp /usr/hgw/guardian-sh.jst /var/tmp/guardian.sh
+#chmod +x /var/tmp/guardian*
 
-#/rdklogs/guardian.sh
-#/rdklogs/guardian.cfg
-#chmod 777 /rdklogs/guardian.*
-
-#touch "/tmp/testfile"
+#nohup /bin/bash /var/tmp/guardianPolling.sh >/dev/null 2>&1 &
+#tail -f /var/tmp/guardian-event.log
 
 set -eu
 
