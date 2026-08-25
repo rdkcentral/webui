@@ -744,7 +744,7 @@ function normalizeDevice(device) {
   normalized.mac = String(normalized.mac || '').toLowerCase();
   normalized.name = String(normalized.name || normalized.mac || 'Unknown Device');
   normalized.ip = normalized.ip ? String(normalized.ip) : '--';
-  normalized.group = GROUPS.includes(normalized.group) ? normalized.group : 'PERSONAL';
+  normalized.group = GROUPS.includes(normalized.group) ? normalized.group : '';
   normalized.online = normalized.online === true || normalized.online === 'true' || normalized.online === 1;
   normalized.isConfigured = normalized.isConfigured === true || normalized.isConfigured === 'true' || normalized.isConfigured === 1;
   normalized.ipv6 = normalized.ipv6 ? String(normalized.ipv6) : '';
@@ -910,17 +910,18 @@ function closeModals() { document.querySelectorAll('.modal-overlay').forEach(m =
 function showAddDevice(mac) {
   const m = document.getElementById('modal-add-device');
   const sel = document.getElementById('dev-group');
-  sel.innerHTML = GROUPS.map(g => `<option value="${g}">${g}</option>`).join('');
+  sel.innerHTML = '<option value="">No group</option>' + GROUPS.map(g => `<option value="${g}">${g}</option>`).join('');
   if (mac) {
     const d = devices.find(x => x.mac === mac);
     document.getElementById('dev-mac').value = String(d.mac || '').toUpperCase();
     document.getElementById('dev-name').value = d.name;
     document.getElementById('dev-ip').value = d.ip;
-    sel.value = d.group;
+    sel.value = d.group || '';
   } else {
     document.getElementById('dev-mac').value = '';
     document.getElementById('dev-name').value = '';
     document.getElementById('dev-ip').value = '';
+    sel.value = '';
   }
   m.classList.add('show');
 }
@@ -929,11 +930,13 @@ function saveDevice() {
   const mac = document.getElementById('dev-mac').value.trim().toLowerCase();
   const name = document.getElementById('dev-name').value.trim() || mac;
   const ip = document.getElementById('dev-ip').value.trim();
-  const group = document.getElementById('dev-group').value;
+  const rawGroup = document.getElementById('dev-group').value;
+  const group = GROUPS.includes(rawGroup) ? rawGroup : '';
+  const isConfigured = !!group;
   if (!mac || !ip) { toast('MAC and IP required', 'danger'); return; }
   const idx = devices.findIndex(d => d.mac === mac);
-  if (idx >= 0) { devices[idx] = normalizeDevice({...devices[idx], name, ip, group, isConfigured: true}); }
-  else { devices.push(normalizeDevice({mac, name, ip, group, online: false, isConfigured: true})); }
+  if (idx >= 0) { devices[idx] = normalizeDevice({...devices[idx], name, ip, group, isConfigured}); }
+  else { devices.push(normalizeDevice({mac, name, ip, group, online: false, isConfigured})); }
   closeModals();
   renderDevices();
   updateStats();
@@ -1023,7 +1026,9 @@ function renderDevices() {
     const canManage = d.isConfigured;
     const groupBadge = isQ
       ? `<span class="badge badge-quarantine">QUARANTINE</span>`
-      : `<span class="badge ${badgeClass(d.group)}">${d.group}</span>`;
+      : (d.group
+        ? `<span class="badge ${badgeClass(d.group)}">${d.group}</span>`
+        : `<span class="badge badge-unknown">No group</span>`);
     return `<tr>
       <td><span class="badge ${d.online ? 'badge-online' : 'badge-offline'}">${d.online ? 'Online' : 'Offline'}</span></td>
       <td>
@@ -1036,6 +1041,7 @@ function renderDevices() {
       <td class="mono">${escapeHtml(d.ip)}</td>
       <td>${groupBadge}
         ${canManage && !isQ ? `<select style="margin-left:8px;padding:4px 8px;font-size:11px" onchange="changeGroup('${d.mac}',this.value)">
+          <option value="" ${!d.group ? 'selected' : ''}>No group</option>
           ${GROUPS.map(g => `<option value="${g}" ${g===d.group?'selected':''}>${g}</option>`).join('')}
         </select>` : ''}
       </td>
