@@ -379,6 +379,9 @@ select:focus, input:focus { outline: none; border-color: var(--accent); }
         <h2>Generated Configuration</h2>
         <div style="display:flex;gap:8px">
           <button class="btn btn-outline btn-sm" onclick="copyConfig()">Copy</button>
+          <input type="file" id="cfg-upload" accept=".cfg" style="display:none" onchange="uploadConfigFile(event)">
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('cfg-upload').click()">Upload .cfg</button>
+          <button class="btn btn-outline btn-sm" onclick="saveConfigFile()">Save .cfg</button>
           <button class="btn btn-primary btn-sm" onclick="downloadConfig()">Download .cfg</button>
         </div>
       </div>
@@ -651,7 +654,7 @@ const INITIAL_GUARDIAN_STATE = parseGuardianConfigText(RAW_GUARDIAN_CONFIG, {
 
 // Ensure built-in service definitions exist even if they are missing
 // from guardian.cfg. Existing definitions are preserved.
-(function ensureDefaultServices(state) {
+function ensureDefaultServices(state) {
   const defaultServices = {
     SSH:           { name:'SSH',           proto:'tcp', port:'22' },
     TELNET:        { name:'TELNET',        proto:'tcp', port:'23' },
@@ -698,18 +701,20 @@ const INITIAL_GUARDIAN_STATE = parseGuardianConfigText(RAW_GUARDIAN_CONFIG, {
     state.serviceMacros = {};
   }
 
-  Object.keys(defaultServices).forEach(function(name) {
+  Object.keys(defaultServices).forEach(name => {
     if (!state.serviceDefinitions[name]) {
       state.serviceDefinitions[name] = defaultServices[name];
     }
   });
 
-  Object.keys(defaultServiceMacros).forEach(function(name) {
+  Object.keys(defaultServiceMacros).forEach(name => {
     if (!state.serviceMacros[name]) {
       state.serviceMacros[name] = defaultServiceMacros[name];
     }
   });
-})(INITIAL_GUARDIAN_STATE);
+}
+
+ensureDefaultServices(INITIAL_GUARDIAN_STATE);
 
 console.log('[guardian] configLines:', GUARDIAN_CONFIG_LINES);
 console.log('[guardian] readStatus:', <?% echo(json_encode($guardianReadStatus)); ?>);
@@ -726,6 +731,9 @@ const GUARDIAN_DEFAULTS = Object.assign({
   stateful: 'true',
   policy_precedence: 'specific-first'
 }, INITIAL_GUARDIAN_STATE.defaults || {});
+
+let uploadedConfigContent = '';
+
 let gateway = {mac: <?% echo(json_encode(strtolower($gatewayMACAddress))); ?>, ip: INITIAL_GUARDIAN_STATE.gatewayIp || <?% echo(json_encode($guardianGatewayIp)); ?>};
 
 let devices = <?% echo(json_encode($guardianDevices)); ?>;
@@ -787,7 +795,7 @@ function normalizeService(service) {
   normalized.target = String(normalized.target || 'gateway');
   normalized.proto = normalized.proto === 'tcp' ? 'tcp' : 'udp';
   normalized.port = parseInt(normalized.port, 10);
-  normalized.group = GROUPS.includes(normalized.group) ? normalized.group : 'PERSONAL';
+  normalized.group = GROUPS.includes(normalized.group) ? normalized.group : '';
   normalized.desc = normalized.desc ? String(normalized.desc) : '';
   normalized.action = normalized.action === 'drop' ? 'drop' : 'allow';
   normalized.serviceName = normalized.serviceName ? String(normalized.serviceName).toUpperCase() : '';
@@ -1010,8 +1018,9 @@ function showAddService() {
   const m = document.getElementById('modal-add-service');
   const tgt = document.getElementById('svc-target');
   tgt.innerHTML = '<option value="gateway">Gateway</option>' +
-    devices.map(d => `<option value="${d.mac}">${escapeHtml(d.name)} (${formatMac(d.mac)})</option>`).join('');
-  document.getElementById('svc-group').innerHTML = GROUPS.map(g => `<option value="${g}">${g}</option>`).join('');
+  devices.map(d => `<option value="${d.mac}">${escapeHtml(d.name)} (${formatMac(d.mac)})</option>`).join('');
+  document.getElementById('svc-group').innerHTML = '<option value="">No group</option>' + GROUPS.map(g => `<option value="${g}">${g}</option>`).join('');
+  document.getElementById('svc-group').value = '';
   document.getElementById('svc-port').value = '';
   document.getElementById('svc-desc').value = '';
   m.classList.add('show');
@@ -1021,7 +1030,7 @@ function saveService() {
   const target = document.getElementById('svc-target').value;
   const proto = document.getElementById('svc-proto').value;
   const port = parseInt(document.getElementById('svc-port').value);
-  const group = document.getElementById('svc-group').value;
+  const group = document.getElementById('svc-group').value || '';
   const desc = document.getElementById('svc-desc').value.trim();
   if (!port || port < 1 || port > 65535) { toast('Valid port required', 'danger'); return; }
   services.push(normalizeService({target, proto, port, group, desc}));
@@ -1123,9 +1132,12 @@ function renderDevices() {
 
 function changeGroup(mac, group) {
   const d = devices.find(x => x.mac === mac);
-  if (d) d.group = group;
+  if (d) {
+    d.group = group;
+    d.isConfigured = !!group;
+  }
   renderDevices();
-  toast(`Moved to ${group}`);
+  toast(group ? `Moved to ${group}` : 'Group cleared');
 }
 
 function renderPolicyMatrix() {
@@ -1239,7 +1251,7 @@ function renderServices() {
       <td>${tgtLabel}</td>
       <td style="text-transform:uppercase">${s.proto}</td>
       <td>${s.port}</td>
-      <td><span class="badge ${badgeClass(s.group)}">${s.group}</span></td>
+      <td>${s.group ? `<span class="badge ${badgeClass(s.group)}">${s.group}</span>` : `<span class="badge badge-unknown">No group</span>`}</td>
       <td style="color:var(--text2)">${escapeHtml((s.action === 'drop' ? '[DROP] ' : '') + (s.desc||'—'))}</td>
       <td><button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="removeService(${i})">Remove</button></td>
     </tr>`;
@@ -1298,6 +1310,9 @@ function generateConfig() {
   const generatedDevicePolicyRules = preservedDevicePolicyRules.slice();
   let generatedServiceIndex = 1;
   services.forEach(service => {
+    if (!service.group) {
+      return;
+    }
     let serviceName = service.serviceName;
     if (!serviceName) {
       do {
@@ -1477,7 +1492,7 @@ function generateFlowPreview() {
 }
 
 function renderConfig() {
-  const cfg = generateConfig();
+  const cfg = uploadedConfigContent || generateConfig();
   const el = document.getElementById('config-output');
   el.textContent = cfg;
 
@@ -1486,17 +1501,181 @@ function renderConfig() {
 }
 
 function copyConfig() {
-  navigator.clipboard.writeText(generateConfig());
+  navigator.clipboard.writeText(
+    uploadedConfigContent || generateConfig()
+  );
   toast('Config copied to clipboard');
 }
 
 function downloadConfig() {
-  const blob = new Blob([generateConfig()], {type: 'text/plain'});
+  const blob = new Blob([uploadedConfigContent || generateConfig()], {type: 'text/plain'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'guardian_new.cfg';
   a.click();
   toast('Config downloaded');
+}
+
+function saveConfigFile() {
+  const blob = new Blob(
+    [uploadedConfigContent || generateConfig()],
+    { type: 'text/plain' }
+  );
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'guardian.cfg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  toast('Configuration saved');
+}
+
+function uploadConfigFile(event) {
+  const file = event.target.files[0];
+
+  if (!file) {
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    const configText = String(e.target.result || '');
+
+    uploadedConfigContent = configText;
+
+    try {
+      loadConfigState(configText);
+      renderConfig();
+      toast('Configuration loaded');
+    } catch (err) {
+      console.error(err);
+      toast('Invalid configuration file', 'danger');
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+function loadConfigState(configText) {
+
+  const parsed = parseGuardianConfigText(configText, {
+    gatewayIp: gateway.ip
+  });
+
+  preservedGroupPolicyRules = [];
+  preservedIntraGroupPolicyRules = [];
+  preservedDevicePolicyRules = [];
+
+  serviceDefinitions = Object.assign({}, parsed.serviceDefinitions || {});
+  serviceMacros = Object.assign({}, parsed.serviceMacros || {});
+
+  ensureDefaultServices({
+    serviceDefinitions,
+    serviceMacros
+  });
+
+  if (Array.isArray(parsed.groupPolicyRules)) {
+    parsed.groupPolicyRules
+      .map(normalizePolicyRule)
+      .forEach(rule => {
+        if (
+          !(rule.service === 'ANY' &&
+            GROUPS.includes(rule.src) &&
+            GROUPS.includes(rule.dst))
+        ) {
+          preservedGroupPolicyRules.push(rule);
+        }
+      });
+  }
+
+  if (Array.isArray(parsed.intraGroupPolicyRules)) {
+    parsed.intraGroupPolicyRules
+      .map(normalizeIntraPolicyRule)
+      .forEach(rule => {
+        if (
+          !(rule.service === 'ANY' &&
+            GROUPS.includes(rule.group))
+        ) {
+          preservedIntraGroupPolicyRules.push(rule);
+        }
+      });
+  }
+
+  if (Array.isArray(parsed.devicePolicyRules)) {
+    parsed.devicePolicyRules
+      .map(normalizeDevicePolicyRule)
+      .forEach(rule => {
+        const resolvedService =
+          resolveServiceReference(rule.service);
+
+        if (
+          !(resolvedService.supported &&
+            resolvedService.port >= 1 &&
+            resolvedService.port <= 65535)
+        ) {
+          preservedDevicePolicyRules.push(rule);
+        }
+      });
+  }
+
+  gateway.ip = parsed.gatewayIp || gateway.ip;
+
+  policy = {};
+  GROUPS.forEach(src => {
+    policy[src] = {};
+    GROUPS.forEach(dst => {
+      policy[src][dst] =
+        (src === dst)
+          ? GUARDIAN_DEFAULTS.intra_group_policy
+          : GUARDIAN_DEFAULTS.inter_group_policy;
+    });
+  });
+
+  if (parsed.groupPolicyRules) {
+    parsed.groupPolicyRules.forEach(rule => {
+      if (
+        rule.service === 'ANY' &&
+        GROUPS.includes(rule.src) &&
+        GROUPS.includes(rule.dst)
+      ) {
+        policy[rule.src][rule.dst] = rule.action;
+      }
+    });
+  }
+
+  devices.forEach(device => {
+    const group = parsed.deviceGroups[device.mac];
+
+    if (group) {
+      device.group = group;
+      device.isConfigured = true;
+    } else {
+      device.group = '';
+      device.isConfigured = false;
+    }
+  });
+
+  services = Array.isArray(parsed.services)
+    ? parsed.services.map(normalizeService)
+    : [];
+
+  quarantined = Array.isArray(parsed.quarantine)
+    ? parsed.quarantine.map(v => v.toLowerCase())
+    : [];
+
+  exceptions = Array.isArray(parsed.exceptions)
+    ? parsed.exceptions.map(normalizeException)
+    : [];
+
+  renderDevices();
+  renderPolicyMatrix();
+  renderServices();
+  renderQuarantine();
+  renderExceptions();
+  updateStats();
 }
 
 // ── Init ──
