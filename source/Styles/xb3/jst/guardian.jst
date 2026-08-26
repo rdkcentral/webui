@@ -1235,6 +1235,11 @@ function applySettings() {
   xhr.send('action=apply');
 }
 
+function changeServiceGroup(index, group) {
+  services[index].group = group;
+  toast(group ? `Service assigned to ${group}` : 'Service group cleared');
+}
+
 function renderServices() {
   const tb = document.getElementById('service-table');
   const ns = document.getElementById('no-services');
@@ -1251,7 +1256,14 @@ function renderServices() {
       <td>${tgtLabel}</td>
       <td style="text-transform:uppercase">${s.proto}</td>
       <td>${s.port}</td>
-      <td>${s.group ? `<span class="badge ${badgeClass(s.group)}">${s.group}</span>` : `<span class="badge badge-unknown">No group</span>`}</td>
+      <td>
+        <select onchange="changeServiceGroup(${i}, this.value)">
+          <option value="" ${!s.group ? 'selected' : ''}>No Group</option>
+            ${GROUPS.map(g =>
+              `<option value="${g}" ${s.group === g ? 'selected' : ''}>${g}</option>`
+            ).join('')}
+        </select>
+      </td>
       <td style="color:var(--text2)">${escapeHtml((s.action === 'drop' ? '[DROP] ' : '') + (s.desc||'—'))}</td>
       <td><button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="removeService(${i})">Remove</button></td>
     </tr>`;
@@ -1517,19 +1529,47 @@ function downloadConfig() {
 }
 
 function saveConfigFile() {
-  const blob = new Blob(
-    [uploadedConfigContent || generateConfig()],
-    { type: 'text/plain' }
+  const configText =
+    document.getElementById('config-output').textContent || '';
+
+  const xhr = new XMLHttpRequest();
+
+  xhr.open(
+    'POST',
+    'actionHandler/ajaxSet_guardian_config.jst',
+    true
   );
 
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'guardian.cfg';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  xhr.setRequestHeader(
+    'Content-Type',
+    'application/x-www-form-urlencoded; charset=UTF-8'
+  );
 
-  toast('Configuration saved');
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) {
+      return;
+    }
+
+    if (xhr.status >= 200 && xhr.status < 300) {
+      try {
+        const response = JSON.parse(xhr.responseText);
+
+        if (response.status === 'success') {
+          toast('Configuration saved to device');
+        } else {
+          toast('Unable to save configuration', 'danger');
+        }
+      } catch (e) {
+        toast('Unable to save configuration', 'danger');
+      }
+    } else {
+      toast('Unable to save configuration', 'danger');
+    }
+  };
+
+  xhr.send(
+    'configInfo=' + encodeURIComponent(configText)
+  );
 }
 
 function uploadConfigFile(event) {
