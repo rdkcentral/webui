@@ -152,10 +152,19 @@ fi
 
 if [ ! -d "/tmp/pcontrol" ]
 then
-     mkdir /tmp/pcontrol
+    mkdir /tmp/pcontrol
 fi
 
-cp -rf /usr/www/cmn/ /tmp/pcontrol
+if [ ! -d "/usr/www/cmn" ]
+then
+    cp -rf /usr/www/cmn/ /tmp/pcontrol
+fi
+
+if [ ! -d "/usr/hgw" ]
+then
+    cp -rf /usr/hgw/cmn/ /tmp/pcontrol
+fi
+
 #Dynamically create pause screen file 
 #removed chmod as part of CISCOXB3-6294 since etc is read-only FileSystem
 sh /etc/pauseBlockGenerateHtml.sh
