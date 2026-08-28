@@ -155,12 +155,12 @@ then
     mkdir /tmp/pcontrol
 fi
 
-if [ ! -d "/usr/www/cmn" ]
+if [ -d "/usr/www/cmn" ]
 then
     cp -rf /usr/www/cmn/ /tmp/pcontrol
 fi
 
-if [ ! -d "/usr/hgw" ]
+if [ -d "/usr/hgw" ]
 then
     cp -rf /usr/hgw/cmn/ /tmp/pcontrol
 fi
