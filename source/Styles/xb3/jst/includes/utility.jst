@@ -1148,6 +1148,19 @@ function cleanJsonDms($dm_key, $param_json) {
 	return $param_json;
 }
 
+function getValidatedMacSsidValueJs() {
+	var $mac_ssid_v = "";
+	if(isset($_GET['mac_ssid']) && preg_match('/^\d+$/', $_GET['mac_ssid']) == 1) {
+		$mac_ssid_v = intval($_GET['mac_ssid']);
+		if ($mac_ssid_v < 1 || $mac_ssid_v > 17)
+			$mac_ssid_v = "";
+		else
+			$mac_ssid_v = String($mac_ssid_v);
+	}
+
+	return htmlspecialchars(json_encode($mac_ssid_v), ENT_NOQUOTES, 'UTF-8');
+}
+
 /**
 * Discription: time rounded to 5 min
 *

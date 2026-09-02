@@ -28,8 +28,6 @@
 <?%
 	$ret = init_psmMode("Gateway > Connection > Wi-Fi", "nav-wifi-config");
 	if ("" != $ret){echo( $ret);	exit(0);}
-	if(isset($_GET['mac_ssid']))
-		if ($_GET['mac_ssid'] > 18) die();
 ?>
 <?%
 $Mesh_Enable 	= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_xOpsDeviceMgmt.Mesh.Enable");
@@ -463,6 +461,9 @@ else {
 		array_remove($ssids,0);
 		array_remove($ssids,6);
 	}
+
+$mac_ssid_v_js = getValidatedMacSsidValueJs();
+
 $dfsEnable= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.DFS.Enable");
 $dfsAtBootup= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.DFSatBootUp.Enable");
 $platformSupported = "false";
@@ -1133,9 +1134,8 @@ $(document).ready(function() {
 
 });
 setTimeout(function(){
-	var mac_ssid_GET	= "<?% echo( $_GET['mac_ssid']);?>";
-	var ssids = "<?% echo( $ssids);?>";
-	if((ssids.includes(mac_ssid_GET)) && mac_ssid_GET) {
+	var mac_ssid_GET = <?% echo($mac_ssid_v_js);?>;
+	if (mac_ssid_GET !== "" && $("#mac_ssid option[value='" + mac_ssid_GET + "']").length > 0) {
 		$("#mac_ssid").val(mac_ssid_GET);
 	}
 	update_Wi_Fi_control_list();
