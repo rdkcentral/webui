@@ -94,13 +94,17 @@ switch ($infoArray[0]) {
 		if($OperatingChannelBandwidth == "6GHz")
 		{
 			delMacFilterTable("1 2 17");
-			setStr("Device.WiFi.X_CISCO_COM_FactoryResetRadioAndAp", "1,2,3;1,2,17",true);
+			LogStr(" : webui_event:wifisettings_restore requested for 1 2 17");
+			$setResult = setStr("Device.WiFi.X_CISCO_COM_FactoryResetRadioAndAp", "1,2,3;1,2,17",true);
+			LogStr(" : webui_event:wifisettings_restore setstr_result=" + ($setResult ? "success" : "failure"));
 		}
 		else
                 {
 			delMacFilterTable("1 2");
-			setStr("Device.WiFi.X_CISCO_COM_FactoryResetRadioAndAp", "1,2;1,2",true);       //radio 1, radio 2; Ap 1, Ap 2
-                }
+			LogStr(" : webui_event:wifisettings_restore requested for 1 2");
+			$setResult = setStr("Device.WiFi.X_CISCO_COM_FactoryResetRadioAndAp", "1,2;1,2",true);       //radio 1, radio 2; Ap 1, Ap 2
+            LogStr(" : webui_event:wifisettings_restore setstr_result=" + ($setResult ? "success" : "failure"));
+				}
 		//setStr("Device.X_CISCO_COM_DeviceControl.FactoryReset", $infoArray[1],true);
 		//when restore, radio can be restart, but also need to force it when no change
 		//setStr("Device.WiFi.X_CISCO_COM_ResetRadios", "true", true);
