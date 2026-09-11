@@ -117,8 +117,6 @@ exec("/usr/ccsp/ccsp_bus_client_tool eRT getv Device.X_CISCO_COM_Security.Intern
 $file= fopen("/tmp/log_parental.txt", "r");
 $partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
 $pos = 50;		//global file pointer where to read the value in a line
-$mintime/=1000;
-$maxtime/=1000;
 $Log = [];
 $value = getStr("Device.X_CISCO_COM_Security.InternetAccess.LogEntryNumberOfEntries");
 if ($file) {
