@@ -1150,8 +1150,10 @@ function cleanJsonDms($dm_key, $param_json) {
 
 function getValidatedMacSsidValueJs() {
 	var $mac_ssid_v = "";
-	if(isset($_GET['mac_ssid']) && preg_match('/^\d+$/', $_GET['mac_ssid']) == 1) {
-		$mac_ssid_v = intval($_GET['mac_ssid']);
+	$mac_ssid_input = isset($_GET['mac_ssid']) ? $_GET['mac_ssid'] : "";
+	// Reject array/malformed query values before passing them to preg_match().
+	if(!is_array($mac_ssid_input) && preg_match('/^\d+$/', $mac_ssid_input) == 1) {
+		$mac_ssid_v = intval($mac_ssid_input);
 		if ($mac_ssid_v < 1 || $mac_ssid_v > 17)
 			$mac_ssid_v = "";
 		else
