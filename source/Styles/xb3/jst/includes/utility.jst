@@ -1152,7 +1152,7 @@ function getValidatedMacSsidValueJs() {
 	var $mac_ssid_v = "";
 	$mac_ssid_input = isset($_GET['mac_ssid']) ? $_GET['mac_ssid'] : "";
 	// Only validate scalar query text; arrays and other values must be ignored.
-	if(is_string($mac_ssid_input) && preg_match('/^\d+$/', $mac_ssid_input) == 1) {
+	if((typeof $mac_ssid_input === "string") && preg_match('/^\d+$/', $mac_ssid_input) == 1) {
 		$mac_ssid_v = intval($mac_ssid_input);
 		if ($mac_ssid_v < 1 || $mac_ssid_v > 17)
 			$mac_ssid_v = "";
