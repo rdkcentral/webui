@@ -1,0 +1,523 @@
+#!/bin/sh
+# guardian.sh - Shield Home Guardian east-west enforcement (OVS OpenFlow PoC).
+# Group-based pipeline: table0 classify src->reg0, table1 classify dst->reg1,
+# table2 decides on (reg0,reg1). Scales O(N) with devices, not O(N^2) per-pair.
+
+#touch /var/tmp/guardian
+#touch /var/tmp/guardian-event.log
+#cp /usr/hgw/guardianPolling-sh.jst /var/tmp/guardianPolling.sh
+#cp /usr/hgw/guardian-sh.jst /var/tmp/guardian.sh
+#chmod +x /var/tmp/guardian*
+
+#nohup /bin/bash /var/tmp/guardianPolling.sh >/dev/null 2>&1 &
+#tail -f /var/tmp/guardian-event.log
+
+set -eu
+
+BRIDGE="brlan0"
+COOKIE="0x9110"
+CT_ZONE="9110"   # dedicated conntrack zone so we don't collide with system NAT
+TMP="/tmp/guardian.flows.$$"
+CONFIG="${1:-guardian.cfg}"
+
+load_config() {
+    if [ ! -f "$CONFIG" ]; then
+        echo "Error: config file '$CONFIG' not found." >&2
+        exit 1
+    fi
+}
+
+parse_section() {
+    local section="$1"
+    awk -v sec="$section" '
+        $0 ~ "^\\[" sec "\\]" { in_section=1; next }
+        in_section && /^\[/ { exit }
+        in_section && !/^#/ && NF > 0 { print }
+    ' "$CONFIG"
+}
+
+parse_devices() {
+    parse_section "devices"
+}
+
+parse_group_policy() {
+    parse_section "group_policy"
+}
+
+parse_intra_group_policy() {
+    parse_section "intra_group_policy"
+}
+
+parse_device_policy() {
+    parse_section "device_policy"
+}
+
+parse_services() {
+    parse_section "services"
+}
+
+parse_service_macros() {
+    parse_section "service_macros"
+}
+
+parse_defaults() {
+    parse_section "defaults"
+}
+
+group_id_for() {
+    local group_name="$1"
+    parse_section "groups" | awk -v g="$group_name" 'toupper($1) == toupper(g) {print $2}' || echo "$group_name"
+}
+
+# Look up a MAC's current OVS port number from the live forwarding DB snapshot ($FDB).
+port_for_mac() {
+    echo "$FDB" | awk -v m="$1" 'tolower($3)==tolower(m){print $1; exit}'
+}
+
+# Return the configured group of a MAC, or empty if the MAC is unmanaged.
+group_for_mac() {
+    echo "$DEVICES" | awk -v m="$1" 'tolower($1)==tolower(m){print $2; exit}'
+}
+
+# Expand a service name to basic service definitions (handle macros).
+# Returns: protocol port (one per line if macro expands to multiple).
+expand_service() {
+    local svc="$1"
+    # Check if it's a macro
+    local macro_expansion=$(echo "$SERVICE_MACROS" | awk -v m="$svc" 'toupper($1)==toupper(m){print $2}')
+    if [ -n "$macro_expansion" ]; then
+        # Expand macro: split by comma, look up each basic service
+        echo "$macro_expansion" | tr ',' '\n' | while read -r basic_svc; do
+            [ -n "$basic_svc" ] || continue
+            echo "$BASIC_SERVICES" | awk -v s="$basic_svc" 'toupper($1)==toupper(s){print $2, $3}'
+        done
+    else
+        # Look up as basic service
+        echo "$BASIC_SERVICES" | awk -v s="$svc" 'toupper($1)==toupper(s){print $2, $3}'
+    fi
+}
+
+# Return 0 (true) only if an explicit drop policy exists for src->dst group.
+policy_is_drop() {
+    local sg="$1" dg="$2"
+    echo "$GROUP_POLICY" | awk -v s="$sg" -v d="$dg" '
+        toupper($1)==toupper(s) && toupper($2)==toupper(d) && toupper($3)=="ANY" && toupper($4)=="DROP" {f=1}
+        END{exit !f}'
+}
+
+# Return 0 (true) if group_policy explicitly ALLOWs proto/port from sg to dg.
+# Used so multicast delivery (table 3) can re-include a recipient that is denied
+# by the coarse ANY DROP but permitted for a specific service (e.g. MDNS).
+service_allows_port() {
+    local sg="$1" dg="$2" proto="$3" port="$4"
+    echo "$GROUP_POLICY" | awk -v s="$sg" -v d="$dg" \
+        'toupper($1)==toupper(s)&&toupper($2)==toupper(d)&&toupper($4)=="ALLOW"&&toupper($3)!="ANY"{print $3}' \
+    | while read -r svc; do
+        [ -n "$svc" ] || continue
+        expand_service "$svc" | while read -r p pt; do
+            [ "$p" = "$proto" ] && [ "$pt" = "$port" ] && echo yes
+        done
+    done | grep -q yes
+}
+
+load_config
+DEVICES=$(parse_devices)
+GROUP_POLICY=$(parse_group_policy)
+INTRA_GROUP_POLICY=$(parse_intra_group_policy)
+DEVICE_POLICY=$(parse_device_policy)
+BASIC_SERVICES=$(parse_services)
+SERVICE_MACROS=$(parse_service_macros)
+DEFAULTS=$(parse_defaults)
+STATEFUL=$(echo "$DEFAULTS" | awk 'tolower($1)=="stateful"{print tolower($2); exit}')
+
+gen_flows() {
+    : > "$TMP"
+
+    # Stateful (conntrack) support is disabled: this OVS build rejects ct actions
+    # (OFPBAC_MATCH_INCONSISTENT). STATEFUL is kept as a dummy; we always use the
+    # stateless path (PT=2). No ct dispatch / table 4 is emitted.
+    STATEFUL="disabled"
+    if [ "${STATEFUL:-}" = "true" ]; then
+        PT=4; NEWM=",ct_state=+new"; ALLOWA="ct(commit,zone=$CT_ZONE),NORMAL"
+    else
+        PT=2; NEWM=""; ALLOWA="NORMAL"
+    fi
+
+    # Table 0: classify source MAC -> reg0, then continue to dst classification.
+    echo "$DEVICES" | while read -r mac grp; do
+        [ -n "${mac:-}" ] || continue
+        grp_id=$(group_id_for "$grp") || grp_id="$grp"
+        echo "cookie=$COOKIE,table=0,priority=100,dl_src=$mac,actions=load:$grp_id->NXM_NX_REG0[],resubmit(,1)" >> "$TMP"
+    done
+    # Unmanaged sources (reg0=0) also go through pipeline for policy evaluation.
+    echo "cookie=$COOKIE,table=0,priority=1,actions=resubmit(,1)" >> "$TMP"
+
+    # Table 1: classify dest MAC -> reg1; unmanaged dst keeps reg1=0 (gateway/Internet/bcast).
+    echo "$DEVICES" | while read -r mac grp; do
+        [ -n "${mac:-}" ] || continue
+        grp_id=$(group_id_for "$grp") || grp_id="$grp"
+        echo "cookie=$COOKIE,table=1,priority=100,dl_dst=$mac,actions=load:$grp_id->NXM_NX_REG1[],resubmit(,2)" >> "$TMP"
+    done
+    # Multicast/broadcast from managed sources: divert to group-scoped delivery (table 3).
+    echo "cookie=$COOKIE,table=1,priority=200,dl_dst=01:00:00:00:00:00/01:00:00:00:00:00,actions=resubmit(,3)" >> "$TMP"
+    echo "cookie=$COOKIE,table=1,priority=0,actions=resubmit(,2)" >> "$TMP"
+
+    # =========================================================================
+    # Table 2: Policy enforcement with priority hierarchy
+    # =========================================================================
+    # Priority 160: Device-specific service policy
+    # Priority 150: Group service policy
+    # Priority 140: Intra-group policy
+    # Priority 100: Group ANY policy
+    # Priority 0: Default NORMAL
+    # =========================================================================
+
+    # Stateful: divert all untracked IP to conntrack; decisions happen in table 4.
+    # (Multicast/broadcast is already diverted to table 3 in table 1, so only
+    #  unicast IP reaches here. ARP stays in table 2 and is unaffected.)
+    if [ "$PT" = "4" ]; then
+        echo "cookie=$COOKIE,table=2,priority=200,ip,ct_state=-trk,actions=ct(table=4,zone=$CT_ZONE)" >> "$TMP"
+        echo "cookie=$COOKIE,table=2,priority=200,ipv6,ct_state=-trk,actions=ct(table=4,zone=$CT_ZONE)" >> "$TMP"
+    fi
+
+    # Priority 160: Device-specific service policy
+    # Format: SRC_GROUP DST_MAC SERVICE ACTION
+    echo "$DEVICE_POLICY" | while read -r src_grp dst_mac svc action; do
+        [ -n "${src_grp:-}" ] || continue
+        [ -n "${dst_mac:-}" ] || continue
+        src_id=$(group_id_for "$src_grp") || src_id="$src_grp"
+
+        # Resolve service to protocol + port
+        if [ "$svc" = "ANY" ] || [ "$svc" = "any" ]; then
+            # ANY means all traffic (no protocol/port match)
+            if [ "$action" = "ALLOW" ] || [ "$action" = "allow" ]; then
+                echo "cookie=$COOKIE,table=$PT,priority=160$NEWM,reg0=$src_id,dl_dst=$dst_mac,actions=$ALLOWA" >> "$TMP"
+            else
+                # Drop stays in table 2 to also block ARP to this device; stateful
+                # adds a NEW-only IP drop in table 4.
+                echo "cookie=$COOKIE,table=2,priority=160,reg0=$src_id,dl_dst=$dst_mac,actions=drop" >> "$TMP"
+                [ "$PT" = "4" ] && echo "cookie=$COOKIE,table=4,priority=160,ct_state=+new,reg0=$src_id,dl_dst=$dst_mac,actions=drop" >> "$TMP" || true
+            fi
+        else
+            # Expand service (handles macros)
+            expand_service "$svc" | while read -r proto port; do
+                [ -n "${proto:-}" ] || continue
+                [ -n "${port:-}" ] || continue
+                # Handle port field based on protocol
+                if [ "$proto" = "sctp" ]; then
+                    port_field="sctp_dst"
+                else
+                    port_field="tp_dst"
+                fi
+                if [ "$action" = "ALLOW" ] || [ "$action" = "allow" ]; then
+                    echo "cookie=$COOKIE,table=$PT,priority=160$NEWM,ip,$proto,dl_dst=$dst_mac,$port_field=$port,reg0=$src_id,actions=$ALLOWA" >> "$TMP"
+                else
+                    echo "cookie=$COOKIE,table=$PT,priority=160$NEWM,ip,$proto,dl_dst=$dst_mac,$port_field=$port,reg0=$src_id,actions=drop" >> "$TMP"
+                fi
+            done
+        fi
+    done
+
+    # Priority 150: Group service policy
+    # Format: SRC_GROUP DST_GROUP SERVICE ACTION
+    echo "$GROUP_POLICY" | while read -r src_grp dst_grp svc action; do
+        [ -n "${src_grp:-}" ] || continue
+        [ -n "${dst_grp:-}" ] || continue
+        [ "$svc" = "ANY" ] || [ "$svc" = "any" ] && continue  # ANY handled at priority 100
+
+        src_id=$(group_id_for "$src_grp") || src_id="$src_grp"
+        dst_id=$(group_id_for "$dst_grp") || dst_id="$dst_grp"
+
+        # Expand service (handles macros)
+        expand_service "$svc" | while read -r proto port; do
+            [ -n "${proto:-}" ] || continue
+            [ -n "${port:-}" ] || continue
+            # Handle port field based on protocol
+            if [ "$proto" = "sctp" ]; then
+                port_field="sctp_dst"
+            else
+                port_field="tp_dst"
+            fi
+            if [ "$action" = "ALLOW" ] || [ "$action" = "allow" ]; then
+                echo "cookie=$COOKIE,table=$PT,priority=150$NEWM,ip,$proto,reg0=$src_id,reg1=$dst_id,$port_field=$port,actions=$ALLOWA" >> "$TMP"
+            else
+                echo "cookie=$COOKIE,table=$PT,priority=150$NEWM,ip,$proto,reg0=$src_id,reg1=$dst_id,$port_field=$port,actions=drop" >> "$TMP"
+            fi
+        done
+    done
+
+    # Priority 140: Intra-group policy
+    # Format: GROUP SERVICE ACTION
+    echo "$INTRA_GROUP_POLICY" | while read -r grp svc action; do
+        [ -n "${grp:-}" ] || continue
+        grp_id=$(group_id_for "$grp") || grp_id="$grp"
+
+        if [ "$svc" = "ANY" ] || [ "$svc" = "any" ]; then
+            # ANY means all same-group traffic
+            if [ "$action" = "ALLOW" ] || [ "$action" = "allow" ]; then
+                echo "cookie=$COOKIE,table=$PT,priority=140$NEWM,reg0=$grp_id,reg1=$grp_id,actions=$ALLOWA" >> "$TMP"
+            else
+                # Drop stays in table 2 to block intra-group ARP too; stateful adds
+                # a NEW-only IP drop in table 4.
+                echo "cookie=$COOKIE,table=2,priority=140,reg0=$grp_id,reg1=$grp_id,actions=drop" >> "$TMP"
+                [ "$PT" = "4" ] && echo "cookie=$COOKIE,table=4,priority=140,ct_state=+new,reg0=$grp_id,reg1=$grp_id,actions=drop" >> "$TMP" || true
+            fi
+        else
+            # Service-specific intra-group policy
+            expand_service "$svc" | while read -r proto port; do
+                [ -n "${proto:-}" ] || continue
+                [ -n "${port:-}" ] || continue
+                if [ "$proto" = "sctp" ]; then
+                    port_field="sctp_dst"
+                else
+                    port_field="tp_dst"
+                fi
+                if [ "$action" = "ALLOW" ] || [ "$action" = "allow" ]; then
+                    echo "cookie=$COOKIE,table=$PT,priority=140$NEWM,ip,$proto,reg0=$grp_id,reg1=$grp_id,$port_field=$port,actions=$ALLOWA" >> "$TMP"
+                else
+                    echo "cookie=$COOKIE,table=$PT,priority=140$NEWM,ip,$proto,reg0=$grp_id,reg1=$grp_id,$port_field=$port,actions=drop" >> "$TMP"
+                fi
+            done
+        fi
+    done
+# Priority 110: ARP allowance for any group pair with an ALLOW policy.
+# Any ALLOW (ANY or a specific port/service) requires L2 reachability, so ARP
+# must resolve even when the coarse group policy is DROP. Bidirectional so
+# replies get back. Duplicate emits for the same pair are harmless (same match).
+echo "$GROUP_POLICY" | while read -r src_grp dst_grp svc action; do
+    [ -n "${src_grp:-}" ] || continue
+    [ -n "${dst_grp:-}" ] || continue
+    [ "$action" = "ALLOW" ] || [ "$action" = "allow" ] || continue
+
+    src_id=$(group_id_for "$src_grp") || src_id="$src_grp"
+    dst_id=$(group_id_for "$dst_grp") || dst_id="$dst_grp"
+
+    # Bidirectional ARP: src↔dst
+    echo "cookie=$COOKIE,table=2,priority=110,arp,reg0=$src_id,reg1=$dst_id,actions=NORMAL" >> "$TMP"
+    echo "cookie=$COOKIE,table=2,priority=110,arp,reg0=$dst_id,reg1=$src_id,actions=NORMAL" >> "$TMP"
+    # IPv6 has no ARP: allow ICMPv6 Neighbor Discovery (NS=135, NA=136) both ways.
+    for t in 135 136; do
+        echo "cookie=$COOKIE,table=2,priority=110,icmp6,icmpv6_type=$t,reg0=$src_id,reg1=$dst_id,actions=NORMAL" >> "$TMP"
+        echo "cookie=$COOKIE,table=2,priority=110,icmp6,icmpv6_type=$t,reg0=$dst_id,reg1=$src_id,actions=NORMAL" >> "$TMP"
+    done
+done
+
+# Priority 105: stateless "reflexive" return traffic for ANY ALLOW pairs.
+# No conntrack here, so we approximate return handling by permitting reply-shaped
+# packets in the reverse direction: ICMP echo-replies and TCP with ACK set
+# (SYN-ACK + established). Reverse NEW connections (pure SYN, echo-request, UDP)
+# still fall through to the group DROP, so the unidirectional intent is preserved.
+echo "$GROUP_POLICY" | while read -r src_grp dst_grp svc action; do
+    [ -n "${src_grp:-}" ] || continue
+    [ -n "${dst_grp:-}" ] || continue
+    [ "$svc" = "ANY" ] || [ "$svc" = "any" ] || continue
+    [ "$action" = "ALLOW" ] || [ "$action" = "allow" ] || continue
+
+    src_id=$(group_id_for "$src_grp") || src_id="$src_grp"
+    dst_id=$(group_id_for "$dst_grp") || dst_id="$dst_grp"
+
+    # Reverse (dst->src) reply traffic for an allowed src->dst flow.
+    echo "cookie=$COOKIE,table=2,priority=105,icmp,reg0=$dst_id,reg1=$src_id,icmp_type=0,actions=NORMAL" >> "$TMP"
+    echo "cookie=$COOKIE,table=2,priority=105,icmp6,reg0=$dst_id,reg1=$src_id,icmpv6_type=129,actions=NORMAL" >> "$TMP"
+    echo "cookie=$COOKIE,table=2,priority=105,tcp,reg0=$dst_id,reg1=$src_id,tcp_flags=+ack,actions=NORMAL" >> "$TMP"
+done
+
+# Priority 100: Group ANY policy (coarse group-to-group allow/drop)
+# Format: SRC_GROUP DST_GROUP ANY ACTION
+echo "$GROUP_POLICY" | while read -r src_grp dst_grp svc action; do
+    [ -n "${src_grp:-}" ] || continue
+    [ -n "${dst_grp:-}" ] || continue
+    [ "$svc" = "ANY" ] || [ "$svc" = "any" ] || continue  # Only process ANY rules here
+
+    src_id=$(group_id_for "$src_grp") || src_id="$src_grp"
+    dst_id=$(group_id_for "$dst_grp") || dst_id="$dst_grp"
+
+    if [ "$action" = "DROP" ] || [ "$action" = "drop" ]; then
+        # Table 2 drop blocks ARP for isolated pairs; stateful adds NEW-only IP drop.
+        echo "cookie=$COOKIE,table=2,priority=100,reg0=$src_id,reg1=$dst_id,actions=drop" >> "$TMP"
+        [ "$PT" = "4" ] && echo "cookie=$COOKIE,table=4,priority=100,ct_state=+new,reg0=$src_id,reg1=$dst_id,actions=drop" >> "$TMP" || true
+    fi
+    # Note: ALLOW at priority 100 falls through to default (NORMAL / commit), so no explicit rule needed
+done
+
+# Default: normal L2 forwarding (covers reg1=0 Internet/gateway and all allowed pairs).
+echo "cookie=$COOKIE,table=2,priority=0,actions=NORMAL" >> "$TMP"
+
+# Table 4: stateful decision table (only reached when stateful=true).
+# Established/related return traffic is auto-permitted; invalid is dropped;
+# NEW connections fall through to the +new policy rules emitted above, and any
+# NEW traffic with no explicit deny is permitted and committed to conntrack.
+if [ "$PT" = "4" ]; then
+    echo "cookie=$COOKIE,table=4,priority=210,ct_state=+inv,actions=drop" >> "$TMP"
+    echo "cookie=$COOKIE,table=4,priority=200,ct_state=+est,actions=NORMAL" >> "$TMP"
+    echo "cookie=$COOKIE,table=4,priority=200,ct_state=+rel,actions=NORMAL" >> "$TMP"
+    echo "cookie=$COOKIE,table=4,priority=1,ct_state=+new,actions=ct(commit,zone=$CT_ZONE),NORMAL" >> "$TMP"
+    echo "cookie=$COOKIE,table=4,priority=0,actions=NORMAL" >> "$TMP"
+fi
+
+# Table 3: multicast/broadcast delivered as per-recipient UNICAST (mc2uc).
+# For a managed source group, send one unicast copy to every device currently
+# in the FDB EXCEPT managed peers denied by policy. This works even when
+# recipients share a Wi-Fi SSID/port, and leaves unmanaged devices unaffected
+# (they still receive the frame, just addressed to their own MAC).
+FDB=$(ovs-appctl fdb/show "$BRIDGE" 2>/dev/null)
+src_groups=$(echo "$DEVICES" | awk 'NF>=2{print $2}' | sort -u)
+for sg in $src_groups; do
+    sg_id=$(group_id_for "$sg")
+    actions=""
+    # FDB columns: port  VLAN  MAC  Age
+    while read -r port vlan mac age; do
+        case "$port" in ''|port|LOCAL) continue ;; esac
+        case "$port" in *[!0-9]*) continue ;; esac   # numeric ports only
+        [ -n "$mac" ] || continue
+        rgrp=$(group_for_mac "$mac")
+        # Managed recipient denied by policy -> omit this copy.
+        if [ -n "$rgrp" ] && policy_is_drop "$sg" "$rgrp"; then continue; fi
+        actions="${actions:+$actions,}mod_dl_dst:$mac,output:$port"
+    done <<EOF
+$FDB
+EOF
+    [ -n "$actions" ] || actions="drop"
+    echo "cookie=$COOKIE,table=3,priority=100,reg0=$sg_id,actions=$actions" >> "$TMP"
+
+    # Service-scoped multicast exceptions: a specific multicast service (e.g. MDNS)
+    # may be allowed to a group that is otherwise ANY DROP. Emit higher-priority
+    # per-port flows (v4 + v6) that re-include those recipients for that port only.
+    svc_ports=$(echo "$GROUP_POLICY" | awk -v s="$sg" \
+        'toupper($1)==toupper(s)&&toupper($4)=="ALLOW"&&toupper($3)!="ANY"{print $3}' \
+        | while read -r svc; do [ -n "$svc" ] && expand_service "$svc"; done | sort -u)
+    echo "$svc_ports" | while read -r proto port; do
+        [ -n "${proto:-}" ] || continue
+        [ -n "${port:-}" ] || continue
+        if [ "$proto" = "sctp" ]; then pf="sctp_dst"; else pf="tp_dst"; fi
+        pacts=""
+        while read -r rport rvlan rmac rage; do
+            case "$rport" in ''|port|LOCAL) continue ;; esac
+            case "$rport" in *[!0-9]*) continue ;; esac
+            [ -n "$rmac" ] || continue
+            rgrp=$(group_for_mac "$rmac")
+            # Skip only if dropped AND not rescued by a service allow for this port.
+            if [ -n "$rgrp" ] && policy_is_drop "$sg" "$rgrp" && ! service_allows_port "$sg" "$rgrp" "$proto" "$port"; then
+                continue
+            fi
+            pacts="${pacts:+$pacts,}mod_dl_dst:$rmac,output:$rport"
+        done <<EOF
+$FDB
+EOF
+        [ -n "$pacts" ] || pacts="drop"
+        echo "cookie=$COOKIE,table=3,priority=110,reg0=$sg_id,$proto,$pf=$port,actions=$pacts" >> "$TMP"
+        echo "cookie=$COOKIE,table=3,priority=110,reg0=$sg_id,${proto}6,$pf=$port,actions=$pacts" >> "$TMP"
+    done
+done
+# Unmanaged sources (reg0=0) reaching here: flood normally.
+echo "cookie=$COOKIE,table=3,priority=0,actions=NORMAL" >> "$TMP"
+}
+
+case "${2:-}" in
+    apply)
+        gen_flows
+        ovs-ofctl del-flows "$BRIDGE" "cookie=$COOKIE/-1"
+        ovs-ofctl add-flows "$BRIDGE" "$TMP"
+        rm -f "$TMP"
+        echo "Guardian policy applied to $BRIDGE."
+        ;;
+    dry-run)
+        gen_flows
+        cat "$TMP"
+        rm -f "$TMP"
+        ;;
+    clear)
+        ovs-ofctl del-flows "$BRIDGE" "cookie=$COOKIE/-1"
+        echo "Guardian policy removed from $BRIDGE."
+        ;;
+    show)
+        ovs-ofctl dump-flows "$BRIDGE" | grep -i "$COOKIE" || echo "No Guardian flows."
+        ;;
+    stats)
+        pid=$(pidof ovs-vswitchd 2>/dev/null || pgrep ovs-vswitchd 2>/dev/null | head -n1 || true)
+        if [ -n "${pid:-}" ]; then
+            echo "== ovs-vswitchd (pid $pid) =="
+            ps -o pid,pcpu,pmem,rss,vsz,comm -p "$pid" 2>/dev/null || true
+            grep -E 'VmRSS|VmHWM' "/proc/$pid/status" 2>/dev/null || true
+        else
+            echo "ovs-vswitchd not found."
+        fi
+        echo "OpenFlow flows ($BRIDGE): $(ovs-ofctl dump-flows "$BRIDGE" 2>/dev/null | wc -l)"
+        echo "  of which Guardian : $(ovs-ofctl dump-flows "$BRIDGE" 2>/dev/null | grep -ic "$COOKIE")"
+        echo "Datapath flows      : $(ovs-dpctl dump-flows 2>/dev/null | wc -l)"
+        ;;
+    diagnostics)
+        pid=$(pidof ovs-vswitchd 2>/dev/null || pgrep ovs-vswitchd 2>/dev/null | head -n1 || true)
+        echo "=== OVS Diagnostics ==="
+        echo "Datapath (megaflow cache):"
+        ovs-dpctl show 2>/dev/null | head -n 10 || echo "  (unavailable)"
+        echo ""
+        echo "Upcall stats (should be ~0 at rest):"
+        ovs-appctl upcall/show 2>/dev/null | head -n 5 || echo "  (unavailable)"
+        echo ""
+        echo "Flow revalidation rate (watch for spikes under load):"
+        ovs-appctl coverage/show 2>/dev/null | grep -E 'revalidate|upcall|flow_extract' | head -n 5 || echo "  (unavailable)"
+        echo ""
+        echo "CPU samples over next 10s (busybox ps has no pcpu; using /proc jiffies delta):"
+        hz=$(getconf CLK_TCK 2>/dev/null || echo 100)
+        for i in 1 2; do
+            t1=$(awk '{print $14+$15}' "/proc/$pid/stat" 2>/dev/null || echo 0)
+            sleep 5
+            t2=$(awk '{print $14+$15}' "/proc/$pid/stat" 2>/dev/null || echo 0)
+            dt=$(expr "$t2" - "$t1")
+            pcpu=$(awk -v d="$dt" -v hz="$hz" 'BEGIN{printf "%.1f", (d/hz/5.0)*100}')
+            vmrss=$(grep VmRSS "/proc/$pid/status" 2>/dev/null | awk '{print $2}' || echo "N/A")
+            echo "  Sample $i: CPU=$pcpu%, RSS=${vmrss}KB"
+        done
+        ;;
+    load-test)
+        echo "Load test mode: measure CPU under sustained denied traffic."
+        if [ -z "${2:-}" ] || [ -z "${3:-}" ] || [ -z "${4:-}" ]; then
+            echo "Usage: $0 load-test <SRC_MAC> <DST_MAC> <DURATION_SEC>"
+            echo "Example: $0 load-test ce:a2:24:dd:d2:70 dc:a6:32:52:f8:23 30"
+            exit 0
+        fi
+        src_mac="$2"
+        dst_mac="$3"
+        duration="$4"
+
+        pid=$(pidof ovs-vswitchd 2>/dev/null || pgrep ovs-vswitchd 2>/dev/null | head -n1 || true)
+
+        echo "=== Load Test Start ==="
+        echo "Source MAC: $src_mac"
+        echo "Dest MAC:   $dst_mac"
+        echo "Duration:   ${duration}s"
+        echo ""
+        dflows_before=$(ovs-dpctl dump-flows 2>/dev/null | wc -l)
+        cpu_before=$(ps -o pcpu= -p "$pid" 2>/dev/null || echo "N/A")
+        echo "Baseline: Datapath flows=$dflows_before, CPU=$cpu_before%"
+        echo ""
+        echo "Start traffic from $src_mac to $dst_mac, then return here."
+        echo "Collecting for ${duration}s..."
+        sleep "$duration"
+        echo ""
+        echo "=== Load Test Results ==="
+        dflows_after=$(ovs-dpctl dump-flows 2>/dev/null | wc -l)
+        cpu_after=$(ps -o pcpu= -p "$pid" 2>/dev/null || echo "N/A")
+        flow_delta=$(expr "$dflows_after" - "$dflows_before")
+        echo "After traffic: Datapath flows=$dflows_after (delta: +$flow_delta)"
+        echo "CPU (vswitchd): $cpu_after%"
+        echo "Interpretation:"
+        echo "  - If delta > 100: megaflow churn (not offloaded)"
+        echo "  - If CPU > 30%: accelerator hitting limits or upcall storm"
+        echo "  - If delta ~0 and CPU low: offloaded (good)"
+        ;;
+    *)
+        echo "Usage: $0 [config_file] {apply|dry-run|clear|show|stats|diagnostics|load-test}" >&2
+        echo "  Config file defaults to 'guardian.cfg' if omitted." >&2
+        echo "  Commands:" >&2
+        echo "    apply         - install policy" >&2
+        echo "    dry-run       - show generated OpenFlow rules" >&2
+        echo "    clear         - remove all Guardian flows" >&2
+        echo "    show          - list active Guardian flows" >&2
+        echo "    stats         - basic CPU/memory/flow counts" >&2
+        echo "    diagnostics   - detailed OVS cache/upcall stats" >&2
+        echo "    load-test     - measure CPU during denied traffic" >&2
+        exit 1
+        ;;
+esac
