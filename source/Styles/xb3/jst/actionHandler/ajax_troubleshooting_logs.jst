@@ -62,28 +62,32 @@ function str2time($str){
 }
 $mode=$_GET['mode'];
 $timef=$_GET['timef'];
-$timef = str_replace("+"," ",str_replace("+"," ",$timef));
-$timef=rawurldecode($timef);
+$timef_key = "";
 switch($timef){			//	[$mintime, $maxtime)
-	case "Today":
+	case "today":
 		$maxtime=strtotime("now");
 		$mintime=strtotime("today");
+		$timef_key = "today";
 	break;
-	case "Yesterday":
+	case "yesterday":
 		$maxtime=strtotime("today");
 		$mintime=strtotime("yesterday");
+		$timef_key = "yesterday";
 	break;
-	case "Last week":
+	case "week":
 		$maxtime=strtotime("now");
 		$mintime=strtotime("last Monday");
+		$timef_key = "week";
 	break;
-	case "Last month":
+	case "month":
 		$maxtime=strtotime("now");
 		$mintime=strtotime("last month");
+		$timef_key = "month";
 	break;
-	case "Last 90 days":
+	case "last":
 		$maxtime=strtotime("now");
 		$mintime=strtotime("-90 days");
+		$timef_key = "last";
 	break;
 	default:
 		throw Error('Invalid timeframe');
@@ -97,30 +101,27 @@ if ($mode=="system"){
 	$Log = []/*p2j-array*/;
 	// for($i=0; !feof($file); $i++)
     $value = getStr("Device.X_CISCO_COM_Diagnostics.Syslog.EntryNumberOfEntries");
-	$k=0;
-	for(var $i=0; $i < $value; $i++ )
-	{
-		$time 	= substr(fgets($file),$pos);
-		$Tag	= substr(fgets($file),$pos);	//don't need, but have to read
-		$Level 	= substr(fgets($file),$pos);
-		$Des 	= substr(fgets($file),$pos);
-		// $Log[$i] =	array("time"=>$time, "Level"=>$Level, "Des"=>$Des);
-		if (feof($file)) break;					//PHP read last line will return false, not EOF!
-		$timeArr = str2time(trim($time));
-		$timeU = $timeArr['timeU'];
-		$timeArr = str2time(trim(UTC_to_local_date_logs($time)));
-		if ($timeU > $maxtime || $timeU < $mintime) continue;	//only store the needed line
-		$Log[$k] = {"time":$timeArr['formatted_time'], "Level":$Level, "Des":$Des}/*p2j-array*/;
-		$k++;
+	if ($file) {
+		for(var $i=0; $i < $value; $i++ ) {
+			$timeLine=fgets($file); $TagLine=fgets($file); $LevelLine=fgets($file); $DesLine=fgets($file);
+			if (!$timeLine || !$TagLine || !$LevelLine || !$DesLine) break;
+			$time=trim(substr($timeLine,$pos)); $Tag=trim(substr($TagLine,$pos)); $Level=trim(substr($LevelLine,$pos)); $Des=trim(substr($DesLine,$pos));
+			$timeArr = str2time($time);
+			if ($timeArr['timeU'] > $maxtime || $timeArr['timeU'] < $mintime) continue;
+			$timeArr = str2time(UTC_to_local_date_logs($time));
+			array_push($Log, {"time":$timeArr['formatted_time'], "Level":$Level, "Des":$Des}/*p2j-array*/);
+		}
+		fclose($file);
 	}
-	fclose($file);
 	// array_pop($Log);	
 	$sysLog = $Log;
-	$fh=fopen("/tmp/troubleshooting_logs_"+$mode+"_"+$timef+".txt","w+");
+	$fh=fopen("/tmp/troubleshooting_logs_"+$mode+"_"+$timef_key+".txt","w+");
+	if ($fh) {
 	for(var $key in $sysLog) { var $value=$sysLog[$key];/*p2j-foreach*/
 		fwrite($fh, $value["Des"]+"\t"+$value["time"]+"\t"+$value["Level"]+"\r\n");
 	}
 	fclose($fh);
+	}
 	header("Content-Type: application/json");
 	echo( htmlspecialchars(json_encode($sysLog), ENT_NOQUOTES, 'UTF-8'));
 }
@@ -129,31 +130,28 @@ else if ($mode=="event") {
 	$file= fopen("/tmp/log_event.txt", "r");
 	$Log = []/*p2j-array*/;
 	// for($i=0; !feof($file); $i++)
-	$n=0;
     $value = getStr("Device.X_CISCO_COM_Diagnostics.Eventlog.EntryNumberOfEntries");
-	for(var $i=0; $i < $value ; $i++)
-	{
-		$time 	= substr(fgets($file),$pos);
-		$ID 	= substr(fgets($file),$pos);	//don't need, but have to read
-		$Level 	= substr(fgets($file),$pos);
-		$Des 	= substr(fgets($file),$pos);
-		// $Log[$i] =	array("time"=>$time, "Level"=>$Level, "Des"=>$Des);
-		if (feof($file)) break;					//PHP read last line will return false, not EOF!
-		$timeArr = str2time(trim($time));
-		$timeU = $timeArr['timeU'];
-		$timeArr = str2time(trim(UTC_to_local_date_logs($time)));
-		if ($timeU > $maxtime || $timeU < $mintime) continue;	//only store the needed line
-		$Log[$n] = {"time":$timeArr['formatted_time'], "Level":$Level, "Des":$Des}/*p2j-array*/;
-		$n++;
+	if ($file) {
+		for(var $i=0; $i < $value ; $i++) {
+			$timeLine=fgets($file); $IDLine=fgets($file); $LevelLine=fgets($file); $DesLine=fgets($file);
+			if (!$timeLine || !$IDLine || !$LevelLine || !$DesLine) break;
+			$time=trim(substr($timeLine,$pos)); $ID=trim(substr($IDLine,$pos)); $Level=trim(substr($LevelLine,$pos)); $Des=trim(substr($DesLine,$pos));
+			$timeArr = str2time($time);
+			if ($timeArr['timeU'] > $maxtime || $timeArr['timeU'] < $mintime) continue;
+			$timeArr = str2time(UTC_to_local_date_logs($time));
+			array_push($Log, {"time":$timeArr['formatted_time'], "Level":$Level, "Des":$Des}/*p2j-array*/);
+		}
+		fclose($file);
 	}
-	fclose($file);
 	// array_pop($Log);	
 	$docLog = $Log;
-	$fh=fopen("/tmp/troubleshooting_logs_"+$mode+"_"+$timef+".txt","w+");
+	$fh=fopen("/tmp/troubleshooting_logs_"+$mode+"_"+$timef_key+".txt","w+");
+	if ($fh) {
 	for(var $key in $docLog) { var $value=$docLog[$key];/*p2j-foreach*/
 		fwrite($fh, $value["Des"]+"\t"+$value["time"]+"\t"+$value["Level"]+"\r\n");
 	}
 	fclose($fh);
+	}
 	header("Content-Type: application/json");
 	echo( htmlspecialchars(json_encode($docLog), ENT_NOQUOTES, 'UTF-8'));
 }
@@ -163,32 +161,26 @@ else if ($mode=="firewall") {
 	$Log = []/*p2j-array*/;
 	// for($i=0; !feof($file); $i++)
     $value = getStr("Device.X_CISCO_COM_Security.InternetAccess.LogEntryNumberOfEntries");
-	$p=0;
-	for(var $i=0; $i < $value; $i++)
-	{
-		$Count		= substr(fgets($file),$pos);
-		$SourceIP	= substr(fgets($file),$pos);	//don't need, but have to read
-		$User		= substr(fgets($file),$pos);
-		$TargetIP	= substr(fgets($file),$pos);
-		$Type		= substr(fgets($file),$pos);
-		$time		= substr(fgets($file),$pos);
-		$Des		= substr(fgets($file),$pos);
-		// $Log[$i] =	array("time"=>$time, "Des"=>$Des, "Count"=>$Count, "Target"=>$TargetIP,"Source"=>$SourceIP,"Type"=>$Type);
-		if (feof($file)) break;						//PHP read last line will return false, not EOF!
-		$timeArr = str2time(trim($time));
-		$timeU = $timeArr['timeU'];
-		$timeArr = str2time(trim(UTC_to_local_date_logs($time)));
-		if ($timeU > $maxtime || $timeU < $mintime) continue;	//only store the needed line
-		$Log[$p] = {"time":$timeArr['firewall_time'], "Des":$Des, "Count":$Count, "Target":$TargetIP,"Source":$SourceIP,"Type":$Type}/*p2j-array*/;
-		$p++;
+	if ($file) {
+		for(var $i=0; $i < $value; $i++) {
+			$CountLine=fgets($file); $SourceIPLine=fgets($file); $UserLine=fgets($file); $TargetIPLine=fgets($file); $TypeLine=fgets($file); $timeLine=fgets($file); $DesLine=fgets($file);
+			if (!$CountLine || !$SourceIPLine || !$UserLine || !$TargetIPLine || !$TypeLine || !$timeLine || !$DesLine) break;
+			$Count=trim(substr($CountLine,$pos)); $SourceIP=trim(substr($SourceIPLine,$pos)); $User=trim(substr($UserLine,$pos)); $TargetIP=trim(substr($TargetIPLine,$pos)); $Type=trim(substr($TypeLine,$pos)); $time=trim(substr($timeLine,$pos)); $Des=trim(substr($DesLine,$pos));
+			$timeArr = str2time($time);
+			if ($timeArr['timeU'] > $maxtime || $timeArr['timeU'] < $mintime) continue;
+			$timeArr = str2time(UTC_to_local_date_logs($time));
+			array_push($Log, {"time":$timeArr['firewall_time'], "Des":$Des, "Count":$Count, "Target":$TargetIP,"Source":$SourceIP,"Type":$Type}/*p2j-array*/);
+		}
+		fclose($file);
 	}
-	fclose($file);
 	$firewallLog = $Log;	
-	$fh=fopen("/tmp/troubleshooting_logs_"+$mode+"_"+$timef+".txt","w+");
+	$fh=fopen("/tmp/troubleshooting_logs_"+$mode+"_"+$timef_key+".txt","w+");
+	if ($fh) {
 	for(var $key in $firewallLog) { var $value=$firewallLog[$key];/*p2j-foreach*/
 		fwrite($fh, $value["Des"]+", "+$value["Count"]+" Attempts, "+$value["time"]+"\t"+$value["Type"]+"\r\n");
 	}
 	fclose($fh);
+	}
 	header("Content-Type: application/json");
 	echo( htmlspecialchars(json_encode($firewallLog), ENT_NOQUOTES, 'UTF-8'));
 }

@@ -40,156 +40,24 @@ $(document).ready(function() {
 	$('.print').prop("disabled",true).addClass("disabled");
 	$('.downloadbtn').prop("disabled",true).addClass("disabled");
 	$('.print').click(function() {
-    		var mode=$("select#log_type").val();
-                var timef=$("select#time_frame").val();
-                var $table = $('#'+mode+'_logs_'+timef2);
-                var numOfRows = $table.find('tbody tr').length;
-                $table.comcastPaginator({ entriesInPage: numOfRows+1});
-                if(numOfRows<=20){
-			$('#comcastPaginator').remove();
-		}
-                window.print();
-                $table.comcastPaginator();
-                if(numOfRows<=20){
-			$('#comcastPaginator').remove();
-		}
+		window.print();
 	});
 	$("#showlogs").click(function() {
 		var mode=$("select#log_type").val();
 		var timef=$("select#time_frame").val();
+		var timefLabel=$("select#time_frame option:selected").text();
 		jConfirm(
 		$.i18n("This action may take more than one minute. Do you want to continue?")
 		, $.i18n("Are you sure?")
 		, function(ret){
 			if(ret){
-		if(mode == "system") {
-			$("#event").hide();
-			$("#firewall").hide();
-			$("#system").show();
-            if(timef == "Today"){
-				$("#system_logs_today").show();
-				$("#system_logs_yesterday").hide();
-				$("#system_logs_week").hide();
-				$("#system_logs_month").hide();
-				$("#system_logs_last").hide();
-			}
-			else if(timef == "Yesterday"){
-				$("#system_logs_today").hide();
-            	$("#system_logs_yesterday").show();
-				$("#system_logs_week").hide();
-				$("#system_logs_month").hide();
-				$("#system_logs_last").hide();
-			}
-			else if(timef == "Last week"){
-				$("#system_logs_today").hide();
-				$("#system_logs_yesterday").hide();
-				$("#system_logs_week").show();
-				$("#system_logs_month").hide();
-				$("#system_logs_last").hide();
-			}
-			else if(timef == "Last month"){
-				$("#system_logs_today").hide();
-			  	$("#system_logs_yesterday").hide();
-				$("#system_logs_week").hide();
-				$("#system_logs_month").show();
-				$("#system_logs_last").hide();
-			}
-			else if(timef == "Last 90 days"){
-				$("#system_logs_today").hide();
-				$("#system_logs_yesterday").hide();
-				$("#system_logs_week").hide();
-				$("#system_logs_month").hide();
-				$("#system_logs_last").show();
-			}
-		}
-		else if(mode == "event") {
-			$("#event").show();
-			$("#firewall").hide();
-			$("#system").hide();
-	        if(timef == "Today"){
-				$("#event_logs_today").show();
-				$("#event_logs_yesterday").hide();
-				$("#event_logs_week").hide();
-				$("#event_logs_month").hide();
-				$("#event_logs_last").hide();
-			}
-			else if(timef == "Yesterday"){
-				$("#event_logs_today").hide();
-				$("#event_logs_yesterday").show();
-				$("#event_logs_week").hide();
-				$("#event_logs_month").hide();
-				$("#event_logs_last").hide();
-			}
-			else if(timef == "Last week"){
-				$("#event_logs_today").hide();
-				$("#event_logs_yesterday").hide();
-				$("#event_logs_week").show();
-				$("#event_logs_month").hide();
-				$("#event_logs_last").hide();
-			}
-			else if(timef == "Last month"){
-				$("#event_logs_today").hide();
-	            $("#event_logs_yesterday").hide();
-				$("#event_logs_week").hide();
-				$("#event_logs_month").show();
-				$("#event_logs_last").hide();
-			}
-			else if(timef == "Last 90 days"){
-				$("#event_logs_today").hide();
-				$("#event_logs_yesterday").hide();
-				$("#event_logs_week").hide();
-				$("#event_logs_month").hide();
-				$("#event_logs_last").show();
-			}
-		}
-        else if(mode == "firewall") {
-			$("#event").hide();
-			$("#firewall").show();
-		    $("#system").hide();
-			if(timef == "Today"){
-				//$("#firewall_time").text(" All logs for Today");
-				$("#firewall_logs_today").show();
-				$("#firewall_logs_yesterday").hide();
-				$("#firewall_logs_week").hide();
-				$("#firewall_logs_month").hide();
-				$("#firewall_logs_last").hide();
-			}
-			else if(timef == "Yesterday"){
-				//$("#firewall_time").text("All logs for Yesterday");
-				$("#firewall_logs_today").hide();
-				$("#firewall_logs_yesterday").show();
-				$("#firewall_logs_week").hide();
-				$("#firewall_logs_month").hide();
-				$("#firewall_logs_last").hide();
-			}
-			else if(timef == "Last week"){
-				//$("#firewall_time").text("All logs for Last week");
-				$("#firewall_logs_today").hide();
-				$("#firewall_logs_yesterday").hide();
-				$("#firewall_logs_week").show();
-				$("#firewall_logs_month").hide();
-				$("#firewall_logs_last").hide();
-			}
-			else if(timef == "Last month"){
-				//$("#firewall_time").text("All logs for Last month");
-				$("#firewall_logs_today").hide();
-				$("#firewall_logs_yesterday").hide();
-				$("#firewall_logs_week").hide();
-				$("#firewall_logs_month").show();
-				$("#firewall_logs_last").hide();
-			}
-			else if(timef == "Last 90 days"){
-				//$("#firewall_time").text("All logs for Last 90 days");
-				$("#firewall_logs_today").hide();
-				$("#firewall_logs_yesterday").hide();
-				$("#firewall_logs_week").hide();
-				$("#firewall_logs_month").hide();
-				$("#firewall_logs_last").show();
-			}
-	    }
+		$("#system, #event, #firewall").hide();
+		$("#"+mode).show();
+		$("#"+mode+"_logs_today, #"+mode+"_logs_yesterday, #"+mode+"_logs_week, #"+mode+"_logs_month, #"+mode+"_logs_last").hide();
+		$("#"+mode+"_logs_"+timef).show();
 		$('.print:visible').prop("disabled",true).addClass("disabled");
 		$('.downloadbtn:visible').prop("disabled",true).addClass("disabled");
-		ajaxDo(mode,timef);
+		ajaxDo(mode,timef,timefLabel);
 			}
 		});
 	});
@@ -216,26 +84,11 @@ function adjust_acs_tb(tb_summary, th_array){
 		}
 	});
 }
-function ajaxDo(mode,timef){
+function ajaxDo(mode,timef,timefLabel){
 	var token = "<?% echo(  $_SESSION['Csrf_token'] );?>";
-	switch(timef){
-		case "Today":
-			timef2="today";
-			break;
-		case "Yesterday":
-			timef2="yesterday";
-			break;
-		case "Last week":
-			timef2="week";
-			break;
-		case "Last month":
-			timef2="month";
-			break;
-		default:
-			timef2="last";
-	}
+	var timef2=timef;
 	jProgress($.i18n('This may take several seconds.'),180);
-	$.ajax({
+	ajaxrequest=$.ajax({
 		type:"GET",
 		url:"actionHandler/ajax_troubleshooting_logs.jst",
 		data:{mode:mode,timef:timef},
@@ -247,6 +100,7 @@ function ajaxDo(mode,timef){
 			var trClass="odd";
 			$("#"+mode+"_logs_"+timef2+" > tbody").empty();
 			$.each(results,function(key,value){
+				if (!value) return;
 				if (mode=="system") {
 					$("#"+mode+"_logs_"+timef2+" > tbody").append("<tr class='"+trClass+"'><td>"+value.Des+"</td><td>"+value.time+"</td><td>"+value.Level+"</td></tr>");
 				} else if (mode=="event") {
@@ -269,7 +123,7 @@ function ajaxDo(mode,timef){
                             $('#comcastPaginator').remove();
                             }
 			//adjust current data table
-			adjust_acs_tb("This is "+mode+" logs, for "+timef, Array("Discription", "Time", "Level"));
+			adjust_acs_tb("This is "+mode+" logs, for "+timefLabel, Array("Discription", "Time", "Level"));
 		},
 		error: function(){
 			jHide();
@@ -299,11 +153,11 @@ function ajaxDo(mode,timef){
 			</select>
 			<label for="time_frame" class="readonlyLabel" id="parrepmess5">Time Frame:</label>
 			<select id="time_frame" name="time_frame">
-				<option value="Today" selected="selected" id="parrepmess6">Today</option>
-				<option value="Yesterday" id="parrepmess7">Yesterday</option>
-				<option value="Last week" id="parrepmess8">Last week</option>
-				<option value="Last month" id="parrepmess9">Last month</option>
-				<option value="Last 90 days" id="parrepmess10">Last 90 days</option>
+				<option value="today" selected="selected" id="parrepmess6">Today</option>
+				<option value="yesterday" id="parrepmess7">Yesterday</option>
+				<option value="week" id="parrepmess8">Last week</option>
+				<option value="month" id="parrepmess9">Last month</option>
+				<option value="last" id="parrepmess10">Last 90 days</option>
 			</select>
 			<input  id="showlogs" type="button" value="Show Logs" class="btn alt" />
 	</div>

@@ -46,203 +46,19 @@ $(document).ready(function() {
     $("#generate-report").click(function() {
 		var mode=$("select#report_type").val();
 		var timef=$("select#time_frame").val();
+		var timefLabel=$("select#time_frame option:selected").text();
 		jConfirm(
 		$.i18n("This action may take more than one minute. Do you want to continue?")
 		,$.i18n("Are you sure?")
 		,function(ret){
 			if(ret){
-		if(mode == "site") {
-			$("#device").hide();
-			$("#all").hide();
-			$("#service").hide();
-			$("#site").show();
-			if(timef == "Today")
-			{
-				$("#site_report_today").show();
-				$("#site_report_yesterday").hide();
-				$("#site_report_week").hide();
-				$("#site_report_month").hide();
-				$("#site_report_last").hide();
-			}
-			else if(timef == "Yesterday")
-			{
-				$("#site_report_today").hide();
-				$("#site_report_yesterday").show();
-				$("#site_report_week").hide();
-				$("#site_report_month").hide();
-				$("#site_report_last").hide();
-			}
-			else if(timef == "Last week")
-			{
-				$("#site_report_today").hide();
-				$("#site_report_yesterday").hide();
-				$("#site_report_week").show();
-				$("#site_report_month").hide();
-				$("#site_report_last").hide();
-			}
-			else if(timef == "Last month")
-			{
-				$("#site_report_today").hide();
-				$("#site_report_yesterday").hide();
-				$("#site_report_week").hide();
-				$("#site_report_month").show();
-				$("#site_report_last").hide();
-			}
-			else if(timef == "Last 90 days")
-			{
-				$("#site_report_today").hide();
-				$("#site_report_yesterday").hide();
-				$("#site_report_week").hide();
-				$("#site_report_month").hide();
-				$("#site_report_last").show();
-			}
-		}
-		else if(mode == "all") {
-			$("#service").hide();
-			$("#all").show();
-			$("#site").hide();
-			$("#device").hide();
-			if(timef == "Today")
-			{
-				$("#all_report_today").show();
-				$("#all_report_yesterday").hide();
-				$("#all_report_week").hide();
-				$("#all_report_month").hide();
-				$("#all_report_last").hide();
-			}
-			if(timef == "Yesterday")
-			{
-				$("#all_report_today").hide();
-				$("#all_report_yesterday").show();
-				$("#all_report_week").hide();
-				$("#all_report_month").hide();
-				$("#all_report_last").hide();
-			}
-			else if(timef == "Last week")
-			{
-				$("#all_report_today").hide();
-				$("#all_report_yesterday").hide();
-				$("#all_report_week").show();
-				$("#all_report_month").hide();
-				$("#all_report_last").hide();
-			}
-			else if(timef == "Last month")
-			{
-				$("#all_report_today").hide();
-				$("#all_report_yesterday").hide();
-				$("#all_report_week").hide();
-				$("#all_report_month").show();
-				$("#all_report_last").hide();
-			}
-			else if(timef == "Last 90 days")
-			{
-				$("#all_report_today").hide();
-				$("#all_report_yesterday").hide();
-				$("#all_report_week").hide();
-				$("#all_report_month").hide();
-				$("#all_report_last").show();
-			}
-		}
-		else if(mode == "service") {
-			$("#service").show();
-			$("#all").hide();
-			$("#site").hide();
-			$("#device").hide();
-			if(timef == "Today")
-			{
-				$("#service_report_today").show();
-				$("#service_report_yesterday").hide();
-				$("#service_report_week").hide();
-				$("#service_report_month").hide();
-				$("#service_report_last").hide();
-			}
-			if(timef == "Yesterday")
-			{
-				$("#service_report_today").hide();
-				$("#service_report_yesterday").show();
-				$("#service_report_week").hide();
-				$("#service_report_month").hide();
-				$("#service_report_last").hide();
-			}
-			else if(timef == "Last week")
-			{
-				$("#service_report_today").hide();
-				$("#service_report_yesterday").hide();
-				$("#service_report_week").show();
-				$("#service_report_month").hide();
-				$("#service_report_last").hide();
-			}
-			else if(timef == "Last month")
-			{
-				$("#service_report_today").hide();
-				$("#service_report_yesterday").hide();
-				$("#service_report_week").hide();
-				$("#service_report_month").show();
-				$("#service_report_last").hide();
-			}
-			else if(timef == "Last 90 days")
-			{
-				$("#service_report_today").hide();
-				$("#service_report_yesterday").hide();
-				$("#service_report_week").hide();
-				$("#service_report_month").hide();
-				$("#service_report_last").show();
-			}
-		}
-		else if(mode == "device") {
-			$("#site").hide();
-			$("#all").hide();
-			$("#device").show();
-			$("#service").hide();
-			if(timef == "Today")
-			{
-				//$("#firewall_time").text(" Reports for Today");
-				$("#device_report_today").show();
-				$("#device_report_yesterday").hide();
-				$("#device_report_week").hide();
-				$("#device_report_month").hide();
-				$("#device_report_last").hide();
-			}	
-			if(timef == "Yesterday")
-			{
-				//$("#firewall_time").text("Reports from Yesterday");
-				$("#device_report_today").hide();
-				$("#device_report_yesterday").show();
-				$("#device_report_week").hide();
-				$("#device_report_month").hide();
-				$("#device_report_last").hide();
-			}
-			else if(timef == "Last week")
-			{
-				//$("#firewall_time").text("Reports from Last week");
-				$("#device_report_today").hide();
-				$("#device_report_yesterday").hide();
-				$("#device_report_week").show();
-				$("#device_report_month").hide();
-				$("#device_report_last").hide();
-			}
-			else if(timef == "Last month")
-			{
-				//$("#firewall_time").text("Reports from Last month");
-				$("#device_report_today").hide();
-				$("#device_report_yesterday").hide();
-				$("#device_report_week").hide();
-				$("#device_report_month").show();
-				$("#device_report_last").hide();
-			}
-			else if(timef == "Last 90 days")
-			{
-				//$("#firewall_time").text("Reports from Last 90 days");
-				$("#device_report_today").hide();
-				$("#device_report_yesterday").hide();
-				$("#device_report_week").hide();
-				$("#device_report_month").hide();
-				$("#device_report_last").show();
-			}
-		}
+		$("#site, #all, #service, #device").hide();
+		$("#"+mode).show();
+		$("#"+mode+"_report_today, #"+mode+"_report_yesterday, #"+mode+"_report_week, #"+mode+"_report_month, #"+mode+"_report_last").hide();
+		$("#"+mode+"_report_"+timef).show();
 		$('.print:visible').prop("disabled",true).addClass("disabled");
 		$('.downloadbtn:visible').prop("disabled",true).addClass("disabled");
-		ajaxDo(mode,timef);
+		ajaxDo(mode,timef,timefLabel);
 			}
 		});
     });
@@ -269,24 +85,9 @@ function adjust_acs_tb(tb_summary, th_array){
 		}
 	});
 }
-function ajaxDo(mode,timef){
+function ajaxDo(mode,timef,timefLabel){
 	var token = "<?% echo(  $_SESSION['Csrf_token'] );?>";
-	switch(timef){
-			case "Today":
-				timef2="today";
-				break;
-			case "Yesterday":
-				timef2="yesterday";
-				break;
-			case "Last week":
-				timef2="week";
-				break;
-			case "Last month":
-				timef2="month";
-				break;
-			default:
-				timef2="last";
-	}
+	var timef2=timef;
 	jProgress($.i18n('This may take several seconds.'),120);
 	ajaxrequest=$.ajax({
 		type:"GET",
@@ -300,6 +101,7 @@ function ajaxDo(mode,timef){
 			var trClass="odd";
 			$("#"+mode+"_report_"+timef2+" > tbody").empty();
 			$.each(results,function(key,value){
+				if (!value) return;
 				$("#"+mode+"_report_"+timef2+" > tbody").append("<tr class='"+trClass+"'><td>"+value.Des+", "+value.Count+" Attempts, "+value.time+"</td><td>"+value.Type+"</td></tr>");
 				trClass=((trClass=="")?"odd":"");
 				length++;
@@ -312,7 +114,7 @@ function ajaxDo(mode,timef){
 				$('#'+mode+'_report_'+timef2).comcastPaginator();
 			}
 			//adjust current data table
-			adjust_acs_tb("This is "+mode+" logs for "+timef, Array("log-details", "log-type"));
+			adjust_acs_tb("This is "+mode+" logs for "+timefLabel, Array("log-details", "log-type"));
 		},
 		error: function(){
 			jHide();
@@ -347,11 +149,11 @@ function ajaxDo(mode,timef){
 			</select>
 			<label for="time_frame" class="readonlyLabel" id="parrepmess5">Time Frame:</label>
 			<select id="time_frame" name="time_frame">
-				<option selected="selected" value="Today" id="parrepmess6">Today</option>
-				<option value="Yesterday" id="parrepmess7">Yesterday</option>
-				<option value="Last week" id="parrepmess8">Last week</option>
-				<option value="Last month" id="parrepmess9">Last month</option>
-				<option value="Last 90 days" id="parrepmess10">Last 90 days</option>
+				<option selected="selected" value="today" id="parrepmess6">Today</option>
+				<option value="yesterday" id="parrepmess7">Yesterday</option>
+				<option value="week" id="parrepmess8">Last week</option>
+				<option value="month" id="parrepmess9">Last month</option>
+				<option value="last" id="parrepmess10">Last 90 days</option>
 			</select>
 			<input  id="generate-report" type="button" value="GENERATE REPORT" class="btn"/>
 	</div>

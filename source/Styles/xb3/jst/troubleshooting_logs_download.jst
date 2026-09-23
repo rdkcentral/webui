@@ -95,29 +95,12 @@ function file_download($file_path, $file_name)
 //MROLLINS FIXME set_time_limit(0) not implemented
 //set_time_limit(0);
 $timeFrame=$_POST["time_frame"];
-if($locale=="it"){
-	if($timeFrame == "Today")
-		$timeFrame = "Oggi";
-	else if($timeFrame == "Yesterday")
-		$timeFrame = "Ieri";
-	else if($timeFrame == "Last week")
-		$timeFrame = "Ultima settimana";
-	else if($timeFrame == "Last month")
-		 $timeFrame = "Ultimo mese";
-	else if($timeFrame == "Last 90 days")
-		$timeFrame = "Ultimi 90 giorni";
-}
 $log=$_POST["log_type"]+"_"+$timeFrame;
-$log1=$_POST["log_type"]+"_"+$_POST["time_frame"];
 $log_type_array = ["system", "event", "firewall"]/*p2j-array*/;
-if($locale=="it"){
-	$time_frame_array = ["Oggi", "Ieri", "Ultima settimana", "Ultimo mese", "Ultimi 90 giorni"]/*p2j-array*/;
-}else{
-	$time_frame_array = ["Today", "Yesterday", "Last week", "Last month", "Last 90 days"]/*p2j-array*/;
-}
+$time_frame_array = ["today", "yesterday", "week", "month", "last"]/*p2j-array*/;
 if (!in_array($_POST["log_type"], $log_type_array))	die('Not allowed!');
 if (!in_array($timeFrame, $time_frame_array)) die('Not allowed!');
-$file_path="/tmp/troubleshooting_logs_"+$log1+".txt";
+$file_path="/tmp/troubleshooting_logs_"+$log+".txt";
 $file_name="troubleshooting_logs_"+$log+".txt";
 file_download($file_path, $file_name);
 //file_download('troubleshooting_logs_sample.txt','troubleshooting_logs_sample.txt');
