@@ -109,7 +109,16 @@ switch($mode){
 	default:
 		throw Error('Not allowed!');
 }
-exec("/usr/ccsp/ccsp_bus_client_tool eRT getv Device.X_CISCO_COM_Security.InternetAccess.LogEntry. | grep 'type:' > /tmp/log_parental.txt");
+$execOutput = [];
+$execOutput = exec("/usr/ccsp/ccsp_bus_client_tool eRT getv Device.X_CISCO_COM_Security.InternetAccess.LogEntry.");
+$logFile = fopen("/tmp/log_parental.txt", "w");
+for (var $outputKey in $execOutput) {
+	$line = $execOutput[$outputKey];
+	if (strpos($line, "type:") !== false) {
+		fwrite($logFile, $line.replace(/[\r\n]/g, '') + "\n");
+	}
+}
+fclose($logFile);
 $file= fopen("/tmp/log_parental.txt", "r");
 $partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
 $pos = 50;		//global file pointer where to read the value in a line
