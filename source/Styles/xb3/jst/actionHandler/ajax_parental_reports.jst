@@ -134,7 +134,7 @@ for (var $i=0; $i < $value; $i++) {
 	var $TargetIP 	= substr(fgets($file),$pos);
 	var $Type 	    = trim(substr(fgets($file),$pos)); //need to trim the blank char in string end, otherwise $type never equal to $Type
 	var $time 	    = substr(fgets($file),$pos);
-	var $Des 	    = substr(fgets($file),$pos);
+	var $Des 	    = trim(substr(fgets($file),$pos));
 	if (feof($file)) break;					//PHP read last line will return false, not EOF!
 	$timeArr = str2time(trim($time));
         $timeU = $timeArr['timeU'];

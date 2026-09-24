@@ -117,7 +117,7 @@ if ($mode=="system"){
 		$time 	= substr(fgets($file),$pos);
 		$Tag	= substr(fgets($file),$pos);	//don't need, but have to read
 		$Level 	= substr(fgets($file),$pos);
-		$Des 	= substr(fgets($file),$pos);
+		$Des 	= trim(substr(fgets($file),$pos));
 		// $Log[$i] =	array("time"=>$time, "Level"=>$Level, "Des"=>$Des);
 		if (feof($file)) break;					//PHP read last line will return false, not EOF!
 		$timeArr = str2time(trim($time));
@@ -150,7 +150,7 @@ else if ($mode=="event") {
 		$time 	= substr(fgets($file),$pos);
 		$ID 	= substr(fgets($file),$pos);	//don't need, but have to read
 		$Level 	= substr(fgets($file),$pos);
-		$Des 	= substr(fgets($file),$pos);
+		$Des 	= trim(substr(fgets($file),$pos));
 		// $Log[$i] =	array("time"=>$time, "Level"=>$Level, "Des"=>$Des);
 		if (feof($file)) break;					//PHP read last line will return false, not EOF!
 		$timeArr = str2time(trim($time));
@@ -186,7 +186,7 @@ else if ($mode=="firewall") {
 		$TargetIP	= substr(fgets($file),$pos);
 		$Type		= substr(fgets($file),$pos);
 		$time		= substr(fgets($file),$pos);
-		$Des		= substr(fgets($file),$pos);
+		$Des		= trim(substr(fgets($file),$pos));
 		// $Log[$i] =	array("time"=>$time, "Des"=>$Des, "Count"=>$Count, "Target"=>$TargetIP,"Source"=>$SourceIP,"Type"=>$Type);
 		if (feof($file)) break;						//PHP read last line will return false, not EOF!
 		$timeArr = str2time(trim($time));
