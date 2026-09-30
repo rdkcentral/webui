@@ -342,33 +342,33 @@ ZEND_GET_MODULE(cosa)
 
 static void php_cosa_init_globals(zend_cosa_globals *cosa_globals)
 {
-    FILE *fp = NULL;
+    int fd = -1;
     struct stat st;
 
     /* If file exists, we'll open the debug flag */
-    if (stat(COSA_PHP_EXT_DEBUG_FILE, &st) == 0) {
-        /* Only enable debug if file is owned by root and not world-writable */
-        if (st.st_uid == 0 && (st.st_mode & 0222) == 0) {
-            fp = fopen(COSA_PHP_EXT_DEBUG_FILE, "r");
-            if (fp)
-            {
+    fd = open(COSA_PHP_EXT_DEBUG_FILE, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    if (fd >= 0) {
+        /* Validate the opened file descriptor */
+        if (fstat(fd, &st) == 0) {
+            /* Only enable debug if file is owned by root, is a regular file, and not world-writable */
+            if (st.st_uid == 0 && S_ISREG(st.st_mode) && (st.st_mode & 0222) == 0) {
                 debugFlag = 1;
-                close(fp);
             }
         }
+        close(fd);
     }
 
     /* Check if this is a PC simulation */
-    if (stat(COSA_PHP_EXT_PCSIM, &st) == 0) {
-        /* Only enable PC sim if file is owned by root and not world-writable */
-        if (st.st_uid == 0 && (st.st_mode & 0222) == 0) {
-            fp = fopen(COSA_PHP_EXT_PCSIM, "r");
-            if (fp)
-            {
+    fd = open(COSA_PHP_EXT_PCSIM, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    if (fd >= 0) {
+        /* Validate the opened file descriptor */
+        if (fstat(fd, &st) == 0) {
+            /* Only enable PC sim if file is owned by root, is a regular file, and not world-writable */
+            if (st.st_uid == 0 && S_ISREG(st.st_mode) && (st.st_mode & 0222) == 0) {
                 gPcSim = 1;
-                close(fp);
             }
         }
+        close(fd);
     }
 }
 
