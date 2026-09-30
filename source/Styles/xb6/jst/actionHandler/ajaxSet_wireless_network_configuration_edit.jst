@@ -1,4 +1,5 @@
 <?%
+session_start();
 /*
  If not stated otherwise in this file or this component's Licenses.txt file the
  following copyright and licenses apply:
@@ -27,6 +28,14 @@ $jsConfig = $_POST['configInfo'];
 $arConfig = json_decode($jsConfig, true);
 //print_r($arConfig);
 $thisUser = $arConfig['thisUser'];
+if (!isset($_SESSION["loginuser"]) || empty($_SESSION["loginuser"])) {
+	echo('{"error":"Unauthorized: user mismatch"}');
+	exit(0);
+}
+if ($thisUser != $_SESSION["loginuser"]) {
+	echo('{"error":"Unauthorized: user mismatch"}');
+	exit(0);
+}
 /*********************************************************************************************/
 $i = $arConfig['ssid_number'];
 $partnerId = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
