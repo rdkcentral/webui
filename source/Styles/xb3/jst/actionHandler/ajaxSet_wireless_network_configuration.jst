@@ -56,8 +56,9 @@ function validFilterParam($ft){
 }
 if ($_POST['configInfo']) {
         $jsConfig = $_POST['configInfo'];
-} else if ($_GET['configInfo']){
-	$jsConfig = rawurldecode($_GET['configInfo']);
+} else {
+	http_response_code(405);
+	exit;
 }
 //$jsConfig = '{"ssid_number":"1", "ft":[["1","2"],["c","d"]], "target":"save_filter"}';
 $arConfig = json_decode($jsConfig, true);
