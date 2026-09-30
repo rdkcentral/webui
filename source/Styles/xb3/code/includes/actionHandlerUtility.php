@@ -24,7 +24,7 @@ include_once __DIR__ .'/../CSRF-Protector-PHP/libs/csrf/csrfprotector_rdkb.php';
 //Initialise CSRFGuard library
 csrfprotector_rdkb::init();
 session_start();
-if (!isset($_SESSION['loginStatus']) || $_SESSION['loginStatus'] != 'logged_in') {
+if (!isset($_SESSION["loginuser"]) || empty($_SESSION["loginuser"])) {
     http_response_code(403);
     exit;
 }
