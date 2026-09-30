@@ -16,6 +16,10 @@
 ?>
 <?php include('../includes/actionHandlerUtility.php') ?>
 <?php
+if (!isset($_SESSION["loginuser"]) || empty($_SESSION["loginuser"])) {
+    http_response_code(403);
+    exit;
+}
 $jsConfig = $_POST['configInfo'];
 $arConfig = json_decode($jsConfig, true);
 $response_message = '';
