@@ -21,6 +21,12 @@
 ?>
 <?% include('includes/php.jst'); ?>
 <?%
+session_start();
+if (!isset($_SESSION["loginuser"]) || empty($_SESSION["loginuser"])) {
+    http_response_code(403);
+    exit;
+}
+?>
 function printableCharacters($input){
 	//check only if range is set
 	if(is_array($input)){
