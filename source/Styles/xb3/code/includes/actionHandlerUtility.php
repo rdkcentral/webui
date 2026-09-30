@@ -23,6 +23,11 @@
 include_once __DIR__ .'/../CSRF-Protector-PHP/libs/csrf/csrfprotector_rdkb.php';
 //Initialise CSRFGuard library
 csrfprotector_rdkb::init();
+session_start();
+if (!isset($_SESSION['loginStatus']) || $_SESSION['loginStatus'] != 'logged_in') {
+    http_response_code(403);
+    exit;
+}
 ?>
 <?php
 function printableCharacters($input){
@@ -140,10 +145,6 @@ function remove_special_char($name){
 
 ?>
 <?php
-/*
- * Start the session
- */
-session_start();
 /*
  * Set the Locale for the Web UI based on the LANG setting or current linux locale
  */
