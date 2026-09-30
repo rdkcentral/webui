@@ -1,0 +1,42 @@
+#!/bin/sh
+
+#vi /var/tmp/guardianPolling.sh
+#chmod +x /var/tmp/guardianPolling.sh
+#nohup /bin/bash /var/tmp/guardianPolling.sh >/dev/null 2>&1 &
+
+#ps | grep guardianPolling.sh
+#touch /var/tmp/guardian-event.log
+#tail -f /var/tmp/guardian-event.log
+
+WATCH_FILE="/var/tmp/guardian"
+LOG_FILE="/var/tmp/guardian-event.log"
+LAST_MTIME=0
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
+}
+
+while true; do
+    if [ -f "$WATCH_FILE" ]; then
+        MTIME=$(stat -c %Y "$WATCH_FILE")
+
+        if [ "$MTIME" -ne "$LAST_MTIME" ]; then
+            LAST_MTIME="$MTIME"
+
+            log "Detected update on $WATCH_FILE"
+
+            log "Running: guardian.sh clear"
+            /bin/bash /var/tmp/guardian.sh /var/tmp/guardian.cfg clear >> "$LOG_FILE" 2>&1
+            log "Completed: guardian.sh clear (rc=$?)"
+
+            log "Running: guardian.sh apply"
+            /bin/bash /var/tmp/guardian.sh /var/tmp/guardian.cfg apply >> "$LOG_FILE" 2>&1
+            log "Completed: guardian.sh apply (rc=$?)"
+
+            log "--------------------------------------------------"
+        fi
+    fi
+
+    sleep 1
+done
+
