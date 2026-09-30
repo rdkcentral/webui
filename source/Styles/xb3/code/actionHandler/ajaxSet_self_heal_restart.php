@@ -16,7 +16,7 @@
 ?>
 <?php include('../includes/actionHandlerUtility.php') ?>
 <?php
-if (!isset($_SESSION['loginStatus']) || $_SESSION['loginStatus'] != 'logged_in') {
+if (!isset($_SESSION["loginuser"]) || empty($_SESSION["loginuser"])) {
     http_response_code(403);
     exit;
 }
