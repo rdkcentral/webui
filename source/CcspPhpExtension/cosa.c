@@ -48,6 +48,7 @@
 #include "php_ini.h"
 #include "ext/standard/info.h"
 #include "php_cosa.h"
+#include <sys/stat.h>
 
 #if PHP_MAJOR_VERSION < 7
 #define _RETURN_STRING(str) RETURN_STRING(str, 1)
@@ -342,21 +343,32 @@ ZEND_GET_MODULE(cosa)
 static void php_cosa_init_globals(zend_cosa_globals *cosa_globals)
 {
     FILE *fp = NULL;
+    struct stat st;
 
     /* If file exists, we'll open the debug flag */
-    fp = fopen(COSA_PHP_EXT_DEBUG_FILE, "r");
-    if (fp)
-    {
-        debugFlag = 1;
-        close(fp);
+    if (stat(COSA_PHP_EXT_DEBUG_FILE, &st) == 0) {
+        /* Only enable debug if file is owned by root and not world-writable */
+        if (st.st_uid == 0 && (st.st_mode & 0222) == 0) {
+            fp = fopen(COSA_PHP_EXT_DEBUG_FILE, "r");
+            if (fp)
+            {
+                debugFlag = 1;
+                close(fp);
+            }
+        }
     }
 
     /* Check if this is a PC simulation */
-    fp = fopen(COSA_PHP_EXT_PCSIM, "r");
-    if (fp)
-    {
-        gPcSim = 1;
-        close(fp);
+    if (stat(COSA_PHP_EXT_PCSIM, &st) == 0) {
+        /* Only enable PC sim if file is owned by root and not world-writable */
+        if (st.st_uid == 0 && (st.st_mode & 0222) == 0) {
+            fp = fopen(COSA_PHP_EXT_PCSIM, "r");
+            if (fp)
+            {
+                gPcSim = 1;
+                close(fp);
+            }
+        }
     }
 }
 
