@@ -328,7 +328,7 @@ $(document).ready(function() {
 		    e.preventDefault();
 		    var message = ($(this).attr("title").length > 0) ? "<?php echo _('Are you sure you want to ')?>" + $(this).attr("title") + "?" : "<?php echo _('Are you sure?')?>";
 		    var name = $(this).attr('name');
-		    var devInfo = eval("("+name+")");
+		    var devInfo = JSON.parse(name);
 		    //alert(devInfo.mac_addr);
 		    if($(this).hasClass('XfinitySSID')){
 				var devBlockInfo = '{"XfinitySSID": "true", "hostName": "'+devInfo.dev_name+'", "macAddr": "'+devInfo.mac_addr+'"}';
@@ -618,7 +618,7 @@ $(document).ready(function() {
          	$mac_addr = $onlinePrivateNetworkHost["$x"]['PhysAddress'];
          	$AddrSrc  = $onlinePrivateNetworkHost["$x"]['AddressSource'];
 		if(($CloudUIEnable == "true" ) || $onlinePrivateNetworkHost["$x"]['Blocked']) $style = "&nbsp;";
-		else $style = "<input type='button' id=" . "'online-X-" .$k. "'" . " value='X' tabindex='0' title=\""._('add this device to Blocked Devices List')." \" name='{\"dev_name\":\"$dev_name\", \"mac_addr\":\"$mac_addr\"}'  class=\"btn confirm private\"></input>";
+		else $style = "<input type='button' id=" . "'online-X-" .$k. "'" . " value='X' tabindex='0' title=\""._('add this device to Blocked Devices List')." \" name='".htmlspecialchars(json_encode(array('dev_name'=>$dev_name, 'mac_addr'=>$mac_addr)), ENT_QUOTES, 'UTF-8')."'  class=\"btn confirm private\"></input>";
          	if($k % 2)  $odd = "";
 				else $odd = " class='odd'";
          	echo "
@@ -675,7 +675,7 @@ $(document).ready(function() {
     	$mac_addr = $offlinePrivateNetworkHost["$x"]['PhysAddress'];
     	$AddrSrc  = $offlinePrivateNetworkHost["$x"]['AddressSource'];
 		if(($CloudUIEnable == "true" ) || $offlinePrivateNetworkHost["$x"]['Blocked']) $style = "&nbsp;";
-		else $style = "<input type='button' id=" . "'offline-X-" .$k. "'" . " value='X' tabindex='0' title=\"".sprintf(_('remove computer named %s'), $dev_name)."\" name='{\"dev_name\":\"$dev_name\", \"mac_addr\":\"$mac_addr\"}'  class=\"btn confirm private\"></input>";
+		else $style = "<input type='button' id=" . "'offline-X-" .$k. "'" . " value='X' tabindex='0' title=\"".sprintf(_('remove computer named %s'), $dev_name)."\" name='".htmlspecialchars(json_encode(array('dev_name'=>$dev_name, 'mac_addr'=>$mac_addr)), ENT_QUOTES, 'UTF-8')."'  class=\"btn confirm private\"></input>";
     	if($k % 2) $odd = "";
     	else $odd = " class='odd'";
     	echo "
@@ -803,7 +803,7 @@ $(document).ready(function() {
                 echo '<td headers="XHS-ipv4-address">'. $IPv4Address;
                 echo '<td headers="XHS-rssi-level">'. $RSSILevel." dBm";
                 echo '<td headers="XHS-mac-address">'. $MACAddress;
-                echo "<td headers=\"XHS-disconnect-button\"><input type='button' id=" . "'xhs-X-" .$i. "'" . "  value='X' tabindex='0' name=\"{'xhs-ssid':'3','dev_name':'$Hostname','mac_addr':'$MACAddress'}\" title='disconnect and deny Wi-Fi access to this device'  class='xhsSSID btn confirm'></input></td>";
+                echo "<td headers=\"XHS-disconnect-button\"><input type='button' id=" . "'xhs-X-" .$i. "'" . "  value='X' tabindex='0' name='".htmlspecialchars(json_encode(array('xhs-ssid'=>'3','dev_name'=>$Hostname,'mac_addr'=>$MACAddress)), ENT_QUOTES, 'UTF-8')."' title='disconnect and deny Wi-Fi access to this device'  class='xhsSSID btn confirm'></input></td>";
 		    	echo '</tr>';
 			} //end of for
       		echo '<tfoot>';
@@ -844,7 +844,7 @@ $(document).ready(function() {
                 echo '</td>';
                 echo '<td headers="offXHS-ipv4-address">'. $IPv4Address;
                 echo '<td headers="offXHS-mac-address">'. $MACAddress;
-                echo "<td headers=\"offXHS-disconnect-button\"><input type='button' id=" . "'xhs-X-" .$i. "'" . "  value='X' tabindex='0' name=\"{'xhs-ssid':'3','dev_name':'$Hostname','mac_addr':'$MACAddress'}\" title='"._('disconnect and deny Wi-Fi access to this device')."'  class='xhsSSID btn confirm'></input></td>";
+                echo "<td headers=\"offXHS-disconnect-button\"><input type='button' id=" . "'xhs-X-" .$i. "'" . "  value='X' tabindex='0' name='".htmlspecialchars(json_encode(array('xhs-ssid'=>'3','dev_name'=>$Hostname,'mac_addr'=>$MACAddress)), ENT_QUOTES, 'UTF-8')."' title='"._('disconnect and deny Wi-Fi access to this device')."'  class='xhsSSID btn confirm'></input></td>";
 		    	echo '</tr>';
 			} //end of for
       		echo '<tfoot>';
@@ -926,7 +926,7 @@ $(document).ready(function() {
                         echo '<td headers="xfinitywifi-ipv4-address">'. $IPv4Address;
                         echo '<td headers="xfinitywifi-rssi-level">'. $RSSILevel." dBm";
                         echo '<td headers="xfinitywifi-mac-address">'. $MACAddress;
-                        echo "<td headers=\"xfinitywifi-disconnect-button\"><input type='button' id=" . "'hotspot-X-" .$i. "'" . "  value='X' tabindex='0' name=\"{'gre_ssid':'$gre_ssid','dev_name':'$Hostname','mac_addr':'$MACAddress'}\" title='"._('disconnect and deny Wi-Fi access to this device')."'  class='XfinitySSID btn confirm'></input></td>";
+                        echo "<td headers=\"xfinitywifi-disconnect-button\"><input type='button' id=" . "'hotspot-X-" .$i. "'" . "  value='X' tabindex='0' name='".htmlspecialchars(json_encode(array('gre_ssid'=>$gre_ssid,'dev_name'=>$Hostname,'mac_addr'=>$MACAddress)), ENT_QUOTES, 'UTF-8')."' title='"._('disconnect and deny Wi-Fi access to this device')."'  class='XfinitySSID btn confirm'></input></td>";
 		    	echo '</tr>';
                    }
       		}//end of for;
