@@ -896,7 +896,7 @@ $("#f_i_option1").click(function(){
 			$WiFiPass.addClass("error").removeClass("success");
 			messageHandler("password", "<?php echo $lang["wifi_password"]; ?>", "<?php echo $lang["please_enter_p"]; ?>");
 		}
-		else if("<?php echo $network_pass;?>" == val){
+		else if("********" == val){
 			goNextPassword	= false;
 			$WiFiPass.addClass("error").removeClass("success");
 			messageHandler("password", "<?php echo $lang["lets_try_again"]; ?>", "<?php echo $lang["choose_diff"]; ?>");
