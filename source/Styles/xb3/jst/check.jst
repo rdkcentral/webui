@@ -164,7 +164,7 @@ else
 		/*===============================================*/
 
 	LogStr(" : webui_event:login_user = " + $_POST["username"]);
-        if ($_POST["username"] == "mso")
+        if ($_POST["username"] == "mso" && ($iface == "cm_ip"))
         {
             if ($iface == "lan_ip" || $iface == "docsis_ip") {
                 LogStr(" : Unauthorized attempt to access the page as " + $_POST["username"] + " user" );
