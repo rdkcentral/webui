@@ -68,8 +68,9 @@ function validFilterParam($ft){
 }
 if ($_POST['configInfo']) {
         $jsConfig = $_POST['configInfo'];
-} else if ($_GET['configInfo']){
-        $jsConfig = rawurldecode($_GET['configInfo']);
+} else {
+	echo('{"error":"configInfo parameter required"}');
+	exit(0);
 }
 
 //$jsConfig = '{"ssid_number":"1", "ft":[["1","2"],["c","d"]], "target":"save_filter"}';
