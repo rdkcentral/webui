@@ -139,6 +139,18 @@ if(!$isMSO) {
         $ip_addr = strpos($SERVER_ADDR, ":") == false ? $LanGwIPv4 : $LanGwIPv6 ;
         $SecWebUI = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SecureWebUI.Enable");
         $LocFqdn = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SecureWebUI.LocalFqdn");
+
+function isLocalIPv6($addr)
+{
+    $addr = $addr.toLowerCase();
+    $isLocalAddr = (strcmp($addr,$LanGwIPv6.toLowerCase()) == 0
+        || strcmp($addr,$LanGwIP['localAddr'].toLowerCase()) == 0
+        || strcmp($addr,$LanGwIP['globalAddr'].toLowerCase()) == 0
+        || strcmp($addr,$LanGwIP['ulaAddr'].toLowerCase()) == 0);
+
+    return $isLocalAddr &&
+        ($_SERVER['SERVER_PORT'] == "80" || $_SERVER['SERVER_PORT'] == "443");
+}
         if(strpos($partnerId, "sky-") !== false) {
                 if (strcmp($SecWebUI, "true")==0) {
                         if (strcmp($url, $LocFqdn)!=0) {
