@@ -68,7 +68,7 @@ fi
 if [ "x$BOX_TYPE" != "xrpi" ] && [ "x$BOX_TYPE" != "xbpi" ] && [ "x$BOX_TYPE" != "xturris" ] && [ "x$BOX_TYPE" != "xemulator" ]; then
 #upstreamed webgui_script_https_support.patch to Secure webui redirection as part of RDKB-42686.
 mkdir -p /tmp/.webui/
-ID="/tmp/trpfizyanrln"
+ID="/tmp/myrouter-webui"
 itr=0
 
 while [ $itr -le 10 ]
@@ -97,7 +97,7 @@ else
 fi
 
 done
-if [ ! -f /tmp/trpfizyanrln ];then
+if [ ! -f /tmp/myrouter-webui ];then
 	echo "Error: Lighttpd key is not generated"
 	exit 1
 fi
