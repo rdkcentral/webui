@@ -638,6 +638,9 @@ $(document).ready(function() {
 			$("#password_show").change();
 			$("#wireless_mode").change();
 		}
+		if ($dfsBoot == "false" && platformSupported == "true") {
+			$("#channel_bandwidth3").prop("disabled", true);
+		}
 	}).trigger("change");
 	<?%if($rf == 2)
 	{?>
