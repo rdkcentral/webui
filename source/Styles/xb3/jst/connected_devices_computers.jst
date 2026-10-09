@@ -305,41 +305,32 @@ if($locale=="it" || $locale=="en_GB"){
 					}
 		      	}
 		      	else {
-		            for (var $didx in $displayConnectionList) {
-					$displayConnection = $displayConnectionList[$didx];/*p2j-foreach*/
-					$offlinePrivateNetworkHost['hostNum'] += 1;
-					$offlinePrivateNetworkHost[$k]={};
-					$offlinePrivateNetworkHost[$k.toString()]['instanceID'] = $Host[$i.toString()]['instanceID'];
-					$offlinePrivateNetworkHost[$k.toString()]['ShowActions'] = ($didx == 0);
-					if ($didx == 0) {
+						$offlinePrivateNetworkHost['hostNum'] += 1;
+						$offlinePrivateNetworkHost[$k]={};
+						$offlinePrivateNetworkHost[$k.toString()]['instanceID'] = $Host[$i.toString()]['instanceID'];
+						$offlinePrivateNetworkHost[$k.toString()]['ShowActions'] = true;
 						array_push($offlinePrivateInstanceArr, $offlinePrivateNetworkHost[$k.toString()]['instanceID']);
-					}
 					if ((strlen($Host[$i]['HostName']) != 0) && isValidHostname($Host[$i]['HostName']))
 							$offlinePrivateNetworkHost[$k.toString()]['HostName'] = $Host[$i.toString()]['HostName'];
 					else
 						$offlinePrivateNetworkHost[$k.toString()]['HostName'] = strtoupper($Host[$i.toString()]['PhysAddress']);
-					if ($didx == 0) {
 						array_push($offlineHostNameArr, $offlinePrivateNetworkHost[$k.toString()]['HostName']);
-					}
 					$offlinePrivateNetworkHost[$k.toString()]['IPv4Address'] = $Host[$i.toString()]['IPv4Address.1.IPAddress'];
 					// IPV6 link-local address
 					$offlinePrivateNetworkHost[$k.toString()]['IPv6Address1'] = $Host[$i.toString()]['IPv6Address.2.IPAddress'];
 					// IPV6 global address
 					$offlinePrivateNetworkHost[$k.toString()]['IPv6Address2'] = resolve_IPV6_global_address($Host[$i.toString()]['IPv6Address.1.IPAddress'], $Host[$i.toString()]['IPv6Address.3.IPAddress']);
 					$offlinePrivateNetworkHost[$k.toString()]['PhysAddress'] = strtoupper($Host[$i.toString()]['PhysAddress']);
-					if ($didx == 0) {
-						array_push($offlineHostMAC, $offlinePrivateNetworkHost[$k.toString()]['PhysAddress']);
-					}
+					array_push($offlineHostMAC, $offlinePrivateNetworkHost[$k.toString()]['PhysAddress']);
 					$offlinePrivateNetworkHost[$k.toString()]['AddressSource'] = $Host[$i.toString()]['AddressSource'];
 					$offlinePrivateNetworkHost[$k.toString()]['Comments'] = $Host[$i.toString()]['Comments'];
-						$offlinePrivateNetworkHost[$k.toString()]['Connection'] = ($isExtendedDevice) ? $extDeviceConnType+' '+$displayConnection : $displayConnection;
-						if(in_array(strtolower($offlinePrivateNetworkHost[$k.toString()]['PhysAddress']), $arrayBlockMAC)){
-							$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = true;
-						} else {
-							$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = false;
-						}
-					$k++;
+					$offlinePrivateNetworkHost[$k.toString()]['Connection'] = ($isExtendedDevice) ? $extDeviceConnType+' '+$tmpHost['connectionType'] : $tmpHost['connectionType'];
+					if(in_array(strtolower($offlinePrivateNetworkHost[$k.toString()]['PhysAddress']), $arrayBlockMAC)){
+						$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = true;
+					} else {
+						$offlinePrivateNetworkHost[$k.toString()]['Blocked'] = false;
 					}
+					$k++;
 		      	}	
 		      }		     
 		    }//end of for
