@@ -306,7 +306,7 @@ if($locale=="it" || $locale=="en_GB"){
 		      	}
 		      	else {
 						$offlinePrivateNetworkHost['hostNum'] += 1;
-						$offlinePrivateNetworkHost[$k]={};
+						$offlinePrivateNetworkHost[$k.toString()]={};
 						$offlinePrivateNetworkHost[$k.toString()]['instanceID'] = $Host[$i.toString()]['instanceID'];
 						$offlinePrivateNetworkHost[$k.toString()]['ShowActions'] = true;
 						array_push($offlinePrivateInstanceArr, $offlinePrivateNetworkHost[$k.toString()]['instanceID']);
