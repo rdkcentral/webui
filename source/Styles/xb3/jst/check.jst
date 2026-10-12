@@ -667,7 +667,13 @@ else
 				$cm_ip  = get_ips("wan0");
 			} //upstreamed webui_pod_jst.patch (RDKB-21882) as part of RDKB-41235
 		}
-        $remote_ip = get_ips("erouter0");
+        $remote_if = "erouter0";
+        $wanStatus = getStr("Device.X_RDK_WanManager.InterfaceActiveStatus");
+        if (strtolower($currentOpMode) != "ethernet" &&
+            (strstr($wanStatus, "WANOE,1") || strstr($wanStatus, "EPON,1") || strstr($wanStatus, "XGSPON,1"))){
+            $remote_if = getStr("Device.X_RDK_WanManager.CurrentActiveInterface");
+        }
+        $remote_ip = get_ips($remote_if);
         $ip_addr = parseIP($ip_addr);
         if (ip_in_array($ip_addr, $lan_ip)){
 			return "lan_ip";
