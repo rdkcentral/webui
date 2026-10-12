@@ -512,6 +512,37 @@ else
 		}
 		return $ret;
 	}
+    function get_cm_ip_addresses(){
+		$wan_enabled = getStr("Device.Ethernet.X_RDKCENTRAL-COM_WAN.Enabled");
+		if ($wan_enabled == "true"){
+			$Wan_IPv4 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IP");
+			$Wan_IPv6 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IPv6");
+		}else{
+			$Wan_IPv4 = getStr("Device.X_CISCO_COM_CableModem.IPAddress");
+			$Wan_IPv6 = getStr("Device.X_CISCO_COM_CableModem.IPv6Address");
+		}
+        $cm_ips = [];
+		if ($Wan_IPv4 != null && $Wan_IPv4 != ""){
+            $cm_ips.push($Wan_IPv4);
+		}
+		if ($Wan_IPv6 != null && $Wan_IPv6 != ""){
+            $cm_ips.push($Wan_IPv6);
+		}
+        return $cm_ips;
+	}
+    function ip_in_array($ip_addr, $ip_list){
+        $ip_bytes = inet_pton(parseIP($ip_addr));
+        if ($ip_bytes === false || $ip_bytes === ""){
+            return false;
+        }
+        for ($ip_index in $ip_list){
+            $list_ip_bytes = inet_pton(parseIP($ip_list[$ip_index]));
+            if ($list_ip_bytes !== false && $list_ip_bytes !== "" && $list_ip_bytes === $ip_bytes){
+                return true;
+            }
+        }
+        return false;
+    }
 	function if_type($ip_addr){
 		var $tmp;
 		$lxc_check = [];
@@ -524,15 +555,19 @@ else
 		} else {
 			if (($Manufacturer == "Technicolor") || ($Manufacturer == "Sercomm")) {
 				$cm_ip  = get_ips("privbr");
+                $cm_ips = get_cm_ip_addresses();
+                for ($cm_ip_index in $cm_ips){
+                    $cm_ip.push($cm_ips[$cm_ip_index]);
+				}
 			} else {
 				$cm_ip  = get_ips("wan0");
 			} //upstreamed webui_pod_jst.patch (RDKB-21882) as part of RDKB-41235
 		}
     		$ip_addr = parseIP($ip_addr);
-		if (in_array($ip_addr, $lan_ip)){
+        if (ip_in_array($ip_addr, $lan_ip)){
 			return "lan_ip";
 		}
-		else if (in_array($ip_addr, $cm_ip)){
+        else if (ip_in_array($ip_addr, $cm_ip)){
 			return "cm_ip";
 		}
 		else{
