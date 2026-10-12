@@ -514,7 +514,8 @@ else
 	}
     function get_cm_ip_addresses(){
 		$wan_enabled = getStr("Device.Ethernet.X_RDKCENTRAL-COM_WAN.Enabled");
-		if ($wan_enabled == "true"){
+        $wanStatus = getStr("Device.X_RDK_WanManager.InterfaceActiveStatus");
+        if ($wan_enabled == "true" || strstr($wanStatus, "EPON,1") || strstr($wanStatus, "XGSPON,1")){
 			$Wan_IPv4 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IP");
 			$Wan_IPv6 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IPv6");
 		}else{
@@ -563,11 +564,13 @@ else
 				$cm_ip  = get_ips("wan0");
 			} //upstreamed webui_pod_jst.patch (RDKB-21882) as part of RDKB-41235
 		}
-    		$ip_addr = parseIP($ip_addr);
+        $remote_ip = get_ips("erouter0");
+        $ip_addr = parseIP($ip_addr);
         if (ip_in_array($ip_addr, $lan_ip)){
 			return "lan_ip";
 		}
-        else if (ip_in_array($ip_addr, $cm_ip)){
+        else if (ip_in_array($ip_addr, $cm_ip) &&
+            !($_POST["username"] == "admin" && ip_in_array($ip_addr, $remote_ip))){
 			return "cm_ip";
 		}
 		else{
@@ -581,8 +584,7 @@ else
 			$wanStatus = getStr("Device.X_RDK_WanManager.InterfaceActiveStatus");
 			$adminOnlyMode = "true";
 			if(strtolower($currentOpMode) =="ethernet"){
-				$remote_ip=get_ips("erouter0");
-				if (in_array($server_ip,$remote_ip)){
+                if (ip_in_array($server_ip,$remote_ip)){
 					$adminOnlyMode= "false";
 					if( $remoteAcess && ($httpRemoteEnable || $httpsRemoteEnable) && (($server_port==$httpRemotePort)|| ($server_port==$httpsRemotePort))){
 							return "rm_ip";
@@ -595,7 +597,7 @@ else
 			}else if(strstr($wanStatus,"WANOE,1") || strstr($wanStatus,"EPON,1") || strstr($wanStatus,"XGSPON,1")){
                                 $currentIface = getStr("Device.X_RDK_WanManager.CurrentActiveInterface");
                                 $remote_ip=get_ips($currentIface);                                                     
-                                if (in_array($server_ip,$remote_ip)){             
+                                if (ip_in_array($server_ip,$remote_ip)){
                                         $adminOnlyMode= "false";                     
                                         if( $remoteAcess && ($httpRemoteEnable || $httpsRemoteEnable) && (($server_port==$httpRemotePort)|| ($server_port==$httpsRemotePort))){
                                                 return "rm_ip";
