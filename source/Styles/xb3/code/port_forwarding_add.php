@@ -546,7 +546,7 @@ $('#device').click(function(){
 			$hostNums = "2";
 		}*/
 		for ($i=0; $i < $hostNums; $i++) { 
-			$HostName  = getStr("Device.Hosts.Host.$hostsInstanceArr[$i].HostName");
+			$HostName  = htmlspecialchars(getStr("Device.Hosts.Host.$hostsInstanceArr[$i].HostName"), ENT_QUOTES, 'UTF-8');
 			$IPAddress = getStr("Device.Hosts.Host.$hostsInstanceArr[$i].IPAddress");
 			$Active    = getStr("Device.Hosts.Host.$hostsInstanceArr[$i].Active");
 			$IPv6Addr = "EMPTY";
