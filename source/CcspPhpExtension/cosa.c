@@ -807,7 +807,9 @@ PHP_FUNCTION(getInstanceIds)
 
     for(loop1=0,loop2=0; loop1<(InstNum); loop1++) 
     {
-        len =sprintf(&format_s[loop2],"%d,", pInstNumList[loop1]);
+        if (loop2 >= sizeof(format_s) - 20) break;
+        len =snprintf(&format_s[loop2], sizeof(format_s) - loop2, "%d,", pInstNumList[loop1]);
+        if (len < 0 || loop2 + len >= sizeof(format_s)) break;
         loop2=loop2+len;
     }
 
