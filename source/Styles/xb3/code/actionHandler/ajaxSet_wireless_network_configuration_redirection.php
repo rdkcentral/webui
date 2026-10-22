@@ -16,6 +16,12 @@
 ?>
 <?php include('../includes/actionHandlerUtility.php') ?>
 <?php
+if (!isset($_SESSION["loginuser"]) || empty($_SESSION["loginuser"])) {
+    http_response_code(403);
+    exit;
+}
+?>
+<?php
 $isCaptiveMode = false;
 $CONFIGUREWIFI = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_ConfigureWiFi");
 $CaptivePortalEnable = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_CaptivePortalEnable");
