@@ -164,7 +164,7 @@ else
 		/*===============================================*/
 
 	LogStr(" : webui_event:login_user = " + $_POST["username"]);
-        if ($_POST["username"] == "mso")
+        if ($_POST["username"] == "mso" && ($iface == "cm_ip"))
         {
             if ($iface == "lan_ip" || $iface == "docsis_ip") {
                 LogStr(" : Unauthorized attempt to access the page as " + $_POST["username"] + " user" );
@@ -512,6 +512,141 @@ else
 		}
 		return $ret;
 	}
+    function get_cm_ip_addresses(){
+		$wan_enabled = getStr("Device.Ethernet.X_RDKCENTRAL-COM_WAN.Enabled");
+        $wanStatus = getStr("Device.X_RDK_WanManager.InterfaceActiveStatus");
+        if ($wan_enabled == "true" || strstr($wanStatus, "EPON,1") || strstr($wanStatus, "XGSPON,1")){
+			$Wan_IPv4 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IP");
+			$Wan_IPv6 = getStr("Device.DeviceInfo.X_COMCAST-COM_WAN_IPv6");
+		}else{
+			$Wan_IPv4 = getStr("Device.X_CISCO_COM_CableModem.IPAddress");
+			$Wan_IPv6 = getStr("Device.X_CISCO_COM_CableModem.IPv6Address");
+		}
+        $cm_ips = [];
+		if ($Wan_IPv4 != null && $Wan_IPv4 != ""){
+            $cm_ips.push($Wan_IPv4);
+		}
+		if ($Wan_IPv6 != null && $Wan_IPv6 != ""){
+            $cm_ips.push($Wan_IPv6);
+		}
+        return $cm_ips;
+	}
+    function normalize_ip_bytes($ip_bytes){
+        if ($ip_bytes.length != 16){
+            return $ip_bytes;
+        }
+        $is_ipv4_mapped = true;
+        for (var $byte_index = 0; $byte_index < 10; $byte_index++){
+            if ($ip_bytes.charCodeAt($byte_index) != 0){
+                $is_ipv4_mapped = false;
+                break;
+            }
+        }
+        if ($is_ipv4_mapped && $ip_bytes.charCodeAt(10) == 255 && $ip_bytes.charCodeAt(11) == 255){
+            return substr($ip_bytes, 12, 4);
+        }
+        return $ip_bytes;
+    }
+    function ip_in_array($ip_addr, $ip_list){
+        $ip_bytes = inet_pton(parseIP($ip_addr));
+        if ($ip_bytes === false || $ip_bytes === ""){
+            return false;
+        }
+        $ip_bytes = normalize_ip_bytes($ip_bytes);
+        for ($ip_index in $ip_list){
+            $list_ip_bytes = inet_pton(parseIP($ip_list[$ip_index]));
+            if ($list_ip_bytes !== false && $list_ip_bytes !== ""){
+                $list_ip_bytes = normalize_ip_bytes($list_ip_bytes);
+                if ($list_ip_bytes === $ip_bytes){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    function ip_in_interface_subnet($ip_addr, $if_name){
+        $ip_bytes = inet_pton(parseIP($ip_addr));
+        if ($ip_bytes === false || $ip_bytes === ""){
+            return false;
+        }
+        $ip_bytes = normalize_ip_bytes($ip_bytes);
+        $bin = exec("which ip");
+        $xbin = $bin[0].replace(/ /g,'').replace(/\n/g,'');
+        $out = exec($xbin+" addr show "+$if_name);
+        for ($k in $out){
+            $v = $out[$k];
+            if (strstr($v, 'inet')){
+                $cidr_parts = explode('/', trim($v));
+                if ($cidr_parts.length >= 2){
+                    $address_parts = explode(' ', trim($cidr_parts[0]));
+                    $interface_ip = parseIP(trim($address_parts.pop()));
+                    $prefix_parts = explode(' ', trim($cidr_parts[1]));
+                    $prefix_length = parseInt($prefix_parts[0]);
+                    $interface_bytes = inet_pton($interface_ip);
+                    if ($interface_bytes !== false && $interface_bytes !== ""){
+                        $interface_bytes = normalize_ip_bytes($interface_bytes);
+                    }
+                    if ($interface_bytes !== false && $interface_bytes !== "" &&
+                        $interface_bytes.length == $ip_bytes.length &&
+                        $prefix_length > 0 && $prefix_length <= $ip_bytes.length * 8){
+                        $full_bytes = parseInt($prefix_length / 8);
+                        $remaining_bits = $prefix_length % 8;
+                        $matches = true;
+                        for (var $byte_index = 0; $byte_index < $full_bytes; $byte_index++){
+                            if ($ip_bytes.charCodeAt($byte_index) != $interface_bytes.charCodeAt($byte_index)){
+                                $matches = false;
+                                break;
+                            }
+                        }
+                        if ($matches && $remaining_bits > 0){
+                            $mask = (255 << (8 - $remaining_bits)) & 255;
+                            if (($ip_bytes.charCodeAt($full_bytes) & $mask) !=
+                                ($interface_bytes.charCodeAt($full_bytes) & $mask)){
+                                $matches = false;
+                            }
+                        }
+                        if ($matches){
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    // Resolve known modem proxies via SNMP; never trust a client-supplied X-Forwarded-For header.
+    function get_verified_client_ip(){
+        $remote_peer = parseIP($_SERVER["REMOTE_ADDR"]);
+        if ($remote_peer == ""){
+            return false;
+        }
+        $trusted_proxy_ips = ["172.31.255.45", "fe80::ffff:ac1f:ff2d", "fd00::ffff:ac1f:ff2d"];
+        if (!ip_in_array($remote_peer, $trusted_proxy_ips)){
+            return $remote_peer;
+        }
+        $client_ip = parseIP($clientIp);
+        if ($client_ip == "" || ip_in_array($client_ip, $trusted_proxy_ips)){
+            $client_ip = parseIP(client_IP());
+        }
+        if ($client_ip == "" || ip_in_array($client_ip, $trusted_proxy_ips)){
+            return false;
+        }
+        return $client_ip;
+    }
+    function is_lan_client(){
+        $client_ip = get_verified_client_ip();
+        if ($client_ip === false){
+            return false;
+        }
+        $lan_if = "brlan0";
+        $lxc_check = [];
+        $status = 1;
+        exec('grep -a container=lxc /proc/1/environ', $lxc_check, $status);
+        if (0 == $status && $_POST["username"] == "admin"){
+            $lan_if = "eth0";
+        }
+        return ip_in_interface_subnet($client_ip, $lan_if);
+    }
 	function if_type($ip_addr){
 		var $tmp;
 		$lxc_check = [];
@@ -524,15 +659,28 @@ else
 		} else {
 			if (($Manufacturer == "Technicolor") || ($Manufacturer == "Sercomm")) {
 				$cm_ip  = get_ips("privbr");
+                $cm_ips = get_cm_ip_addresses();
+                for ($cm_ip_index in $cm_ips){
+                    $cm_ip.push($cm_ips[$cm_ip_index]);
+				}
 			} else {
 				$cm_ip  = get_ips("wan0");
 			} //upstreamed webui_pod_jst.patch (RDKB-21882) as part of RDKB-41235
 		}
-    		$ip_addr = parseIP($ip_addr);
-		if (in_array($ip_addr, $lan_ip)){
+        $remote_if = "erouter0";
+        $wanStatus = getStr("Device.X_RDK_WanManager.InterfaceActiveStatus");
+        if (strtolower($currentOpMode) != "ethernet" &&
+            (strstr($wanStatus, "WANOE,1") || strstr($wanStatus, "EPON,1") || strstr($wanStatus, "XGSPON,1"))){
+            $remote_if = getStr("Device.X_RDK_WanManager.CurrentActiveInterface");
+        }
+        $remote_ip = get_ips($remote_if);
+        $ip_addr = parseIP($ip_addr);
+        if (ip_in_array($ip_addr, $lan_ip)){
 			return "lan_ip";
 		}
-		else if (in_array($ip_addr, $cm_ip)){
+        else if (ip_in_array($ip_addr, $cm_ip) &&
+            !($_POST["username"] == "admin" && is_lan_client() &&
+                ip_in_array($ip_addr, $remote_ip))){
 			return "cm_ip";
 		}
 		else{
@@ -546,8 +694,7 @@ else
 			$wanStatus = getStr("Device.X_RDK_WanManager.InterfaceActiveStatus");
 			$adminOnlyMode = "true";
 			if(strtolower($currentOpMode) =="ethernet"){
-				$remote_ip=get_ips("erouter0");
-				if (in_array($server_ip,$remote_ip)){
+                if (ip_in_array($server_ip,$remote_ip)){
 					$adminOnlyMode= "false";
 					if( $remoteAcess && ($httpRemoteEnable || $httpsRemoteEnable) && (($server_port==$httpRemotePort)|| ($server_port==$httpsRemotePort))){
 							return "rm_ip";
@@ -560,7 +707,7 @@ else
 			}else if(strstr($wanStatus,"WANOE,1") || strstr($wanStatus,"EPON,1") || strstr($wanStatus,"XGSPON,1")){
                                 $currentIface = getStr("Device.X_RDK_WanManager.CurrentActiveInterface");
                                 $remote_ip=get_ips($currentIface);                                                     
-                                if (in_array($server_ip,$remote_ip)){             
+                                if (ip_in_array($server_ip,$remote_ip)){
                                         $adminOnlyMode= "false";                     
                                         if( $remoteAcess && ($httpRemoteEnable || $httpsRemoteEnable) && (($server_port==$httpRemotePort)|| ($server_port==$httpsRemotePort))){
                                                 return "rm_ip";
