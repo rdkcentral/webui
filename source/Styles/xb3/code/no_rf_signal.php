@@ -297,8 +297,13 @@ setInterval(function() {
   session_start();
 $defaultLanguage= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.DefaultLanguage");
   $partnerId= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId");
+  if ($defaultLanguage != "eng" && $defaultLanguage != "fre") {
+      $defaultLanguage = "eng";
+  }
   if($_GET['lang']!=""){
-      $defaultLanguage= $_GET['lang'];
+      if ($_GET['lang'] == "eng" || $_GET['lang'] == "fre") {
+          $defaultLanguage= $_GET['lang'];
+      }
   }
   if($defaultLanguage=="fre"){
       $header="Aucun signal de câble détecté.";
@@ -317,6 +322,9 @@ $defaultLanguage= getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UI
       $_SESSION['lang'] = "eng";
     else if ($_GET['lang'] == "fre")
       $_SESSION['lang'] = "fre";
+  }
+  if ($_SESSION['lang'] != "eng" && $_SESSION['lang'] != "fre") {
+      $_SESSION['lang'] = "eng";
   }
   require_once "includes/".$_SESSION['lang'].".php";
 ?>
