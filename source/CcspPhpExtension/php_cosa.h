@@ -79,7 +79,7 @@ PHP_FUNCTION(DmExtGetInstanceIds);
 #define DST_PATHNAME    "/com/cisco/spvtg/ccsp/pnm"
 #define COMPONENT_NAME  "ccsp.phpextension"
 //#define CONF_FILENAME   "msg_daemon.cfg"
-#define CONF_FILENAME   "/tmp/ccsp_msg.cfg"
+#define CONF_FILENAME   "/etc/ccsp_msg.cfg"
 
 #ifndef  DSLH_MPA_ACCESS_CONTROL_WEBUI
     #define  DSLH_MPA_ACCESS_CONTROL_WEBUI                0x00000001
