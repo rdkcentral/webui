@@ -114,7 +114,8 @@ $psmMode = $DeviceControl_value['psmMode'];
 	$LanGwIP['localAddr'] = '';
 	$LanGwIP['globalAddr'] = '';
 	$LanGwIP['ulaAddr'] = '';
-	if(strpos($partnerId, "sky-") !== false) {
+	$secureWebUIRedirectPartner = (strpos($partnerId, "sky-") !== false) || !strcmp($partnerId, "comcast");
+	if($secureWebUIRedirectPartner) {
 		$lan_ip = [];
 		$bin = exec("which ifconfig");
 		$xbin=$bin[0].replace(/ /g,'').replace(/\n/g,'');
@@ -176,14 +177,18 @@ function isLocalIPv6($url){
 	$ip_addr = strpos($SERVER_ADDR, ":") == false ? $LanGwIPv4 : $LanGwIPv6 ;
 	$SecWebUI = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SecureWebUI.Enable");
 	$LocFqdn = getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SecureWebUI.LocalFqdn");
-	if(strpos($partnerId, "sky-") !== false) {
+	if($secureWebUIRedirectPartner) {
 		if (strcmp($SecWebUI, "true")==0) {
 			if (strcmp($url, $LocFqdn)!=0) {
-				if( (strcmp($url,$ip_addr)==0) || isLocalIPv6($url) )
+				if( (strcmp($url,$ip_addr)==0) || isLocalIPv6($url) ) {
 					header('Location:https://'+$LocFqdn);
+					exit(0);
+				}
 			}
-			else if ((strcmp($url, $LocFqdn)==0) && ($_SERVER["SERVER_PORT"]=="80"))
-                                header('Location:https://'+$LocFqdn);
+			else if ((strcmp($url, $LocFqdn)==0) && ($_SERVER["SERVER_PORT"]=="80")) {
+				header('Location:https://'+$LocFqdn);
+				exit(0);
+			}
 		}
 	}
 	if(!strcmp($CaptivePortalEnable, "true")) {
