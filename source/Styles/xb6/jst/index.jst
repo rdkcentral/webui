@@ -124,7 +124,9 @@ $psmMode = $DeviceControl_value['psmMode'];
                                 else $LanGwIP['ulaAddr'] = trim($tmp[0]);
                         }
                 }
-                $LanGwIPv6 = $LanGwIP['ulaAddr'];
+				if($LanGwIP['ulaAddr'] != "") {
+					$LanGwIPv6 = $LanGwIP['ulaAddr'];
+				}
         }
 
 if(!$isMSO) {
