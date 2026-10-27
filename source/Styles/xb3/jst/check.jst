@@ -43,7 +43,6 @@ function client_IP()
     $fp=fopen($FILEID,"r");
     if($fp)
     {
-                                
         $pos = 0;
         $buffer=trim(substr(fgets($fp),$pos));
         fclose($fp);
@@ -60,8 +59,6 @@ function client_IP()
     
 }
 
-
-
 function sendError($code)
 {
   echo('\
@@ -69,13 +66,13 @@ function sendError($code)
   <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">\
   <head>\
   <input type="hidden" name="loc" id="loc" value='+$locale+'>\
-      <link rel="stylesheet" type="text/css" media="screen" href="./cmn/css/common-min.css" />\
-      <!--Character Encoding-->\
-      <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />\
-      <script type="text/javascript" src="./cmn/js/lib/jquery-3.7.1.js"></script>\
-      <script type="text/javascript" src="./cmn/js/lib/jquery-migrate-1.2.1.js"></script>\
-      <script type="text/javascript" src="./cmn/js/lib/jquery.alerts.js"></script>\
-      <script src="./locale/CLDRPluralRuleParser.js"></script>\
+	<link rel="stylesheet" type="text/css" media="screen" href="./cmn/css/common-min.css" />\
+	<!--Character Encoding-->\
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />\
+	<script type="text/javascript" src="./cmn/js/lib/jquery-3.7.1.js"></script>\
+	<script type="text/javascript" src="./cmn/js/lib/jquery-migrate-1.2.1.js"></script>\
+	<script type="text/javascript" src="./cmn/js/lib/jquery.alerts.js"></script>\
+	<script src="./locale/CLDRPluralRuleParser.js"></script>\
 	<script src="./locale/jquery.i18n.js"></script>\
 	<script src="./locale/jquery.i18n.messagestore.js"></script>\
 	<script src="./locale/jquery.i18n.fallbacks.js"></script>\
@@ -85,10 +82,10 @@ function sendError($code)
 	<script src="./locale/jquery.i18n.emitter.bidi.js"></script>\
 	<script src="./locale/global.js"></script>\
 	<script type="text/javascript">\
-	var locale=document.getElementById("loc").value;\
-	$.i18n().locale = locale;\
- 	$.i18n().load( {\
-                        it: {\
+		var locale=document.getElementById("loc").value;\
+		$.i18n().locale = locale;\
+		$.i18n().load( {\
+			it: {\
 				"Access denied!":"Accesso negato",\
 				"You have ":"Sono stati effettuati ",\
 				" failed login attempts and your account will be locked for ":" tentativi di accesso non riusciti: il tuo account sarà bloccato per ",\
@@ -101,8 +98,8 @@ function sendError($code)
 				"You are using default password. Please change the password.":"Si sta utilizzando la password predefinita. Modificare la password.",\
 				"Incorrect user name!":"Nome utente errato",\
 				"Access level is none!":"Il livello di accesso è nessuno"\
-                        }\
-                });\
+			}\
+		});\
 	</script>\
   </head>\
   ');
@@ -133,8 +130,6 @@ else
     $clientIp = $_SERVER["REMOTE_ADDR"];
 }
 
-
-
     if (isset($_POST["username"]))
     {
         $iface = if_type( $server_ip );
@@ -163,10 +158,15 @@ else
 		}*/
 		/*===============================================*/
 
-	LogStr(" : webui_event:login_user = " + $_POST["username"]);
+		LogStr(" : webui_event:login_user = " + $_POST["username"]);
         if ($_POST["username"] == "mso")
         {
-            if ($iface == "lan_ip" || $iface == "docsis_ip") {
+			if($iface != "cm_ip"){
+				LogStr(" : Unauthorized attempt to access the page as " + $_POST["username"] + " user over IP " + $clientIp);
+				sendError('<script type="text/javascript"> alert($.i18n("Incorrect username to access this page!")); history.back(); </script>');
+				exit(0);
+			}
+			if ($iface == "lan_ip" || $iface == "docsis_ip") {
                 LogStr(" : Unauthorized attempt to access the page as " + $_POST["username"] + " user" );
                 sendError('<script type="text/javascript"> alert($.i18n("Incorrect username to access this page!")); history.back(); </script>');
                 exit(0);
@@ -423,7 +423,14 @@ else
         if (isset($_GET['token']))
         {
             $ADToken = $_GET['token'];
-            $tokenvalid = VerifyToken( $ADToken );
+            $tokenvalid = false;
+            if (typeof($ADToken) == "string") {
+                $tokensegs = explode('.', $ADToken);
+                $cnt = count($tokensegs);
+                if ($cnt == 3) {
+                    $tokenvalid = VerifyToken( $ADToken );
+                }
+            }
             if( $tokenvalid == true )
             {
                 LogStr( " : OAUTH SUCCESS" );
@@ -503,7 +510,7 @@ else
 		$xbin=$bin[0].replace(/ /g,'').replace(/\n/g,'');
 		$out = exec($xbin+" addr show "+$if_name);
 		for ($k in $out){
-      			$v = $out[$k];
+			$v = $out[$k];
 			if (strstr($v, 'inet')){
 				$tmp = explode('/', $v);
 				$tmp = explode(' ', $tmp[0]);
@@ -528,7 +535,10 @@ else
 				$cm_ip  = get_ips("wan0");
 			} //upstreamed webui_pod_jst.patch (RDKB-21882) as part of RDKB-41235
 		}
-    		$ip_addr = parseIP($ip_addr);
+		for (var $i in $cm_ip) {
+			$cm_ip[$i] = parseIP($cm_ip[$i]);
+		}
+		$ip_addr = parseIP($ip_addr);
 		if (in_array($ip_addr, $lan_ip)){
 			return "lan_ip";
 		}
@@ -558,24 +568,23 @@ else
 				}
 				return "eth_ip";
 			}else if(strstr($wanStatus,"WANOE,1") || strstr($wanStatus,"EPON,1") || strstr($wanStatus,"XGSPON,1")){
-                                $currentIface = getStr("Device.X_RDK_WanManager.CurrentActiveInterface");
-                                $remote_ip=get_ips($currentIface);                                                     
-                                if (in_array($server_ip,$remote_ip)){             
-                                        $adminOnlyMode= "false";                     
-                                        if( $remoteAcess && ($httpRemoteEnable || $httpsRemoteEnable) && (($server_port==$httpRemotePort)|| ($server_port==$httpsRemotePort))){
-                                                return "rm_ip";
-                                        }
-                                }                              
-                                if(($lanMode=="bridge-static")&&($adminOnlyMode=="true")){
-                                        return "rm_ip";
-                                }
-                                return "eth_ip"; 
+				$currentIface = getStr("Device.X_RDK_WanManager.CurrentActiveInterface");
+				$remote_ip=get_ips($currentIface);
+				if (in_array($server_ip,$remote_ip)){
+					$adminOnlyMode= "false";
+					if( $remoteAcess && ($httpRemoteEnable || $httpsRemoteEnable) && (($server_port==$httpRemotePort)|| ($server_port==$httpsRemotePort))){
+						return "rm_ip";
+					}
+				}
+				if(($lanMode=="bridge-static")&&($adminOnlyMode=="true")){
+					return "rm_ip";
+				}
+				return "eth_ip";
 			}else if(!$currentOpMode || strtolower($currentOpMode) =="docsis"){
-                         	return "docsis_ip";
+				return "docsis_ip";
 			}else{
-                                return "rg_ip";
-                        }
-			
+				return "rg_ip";
+			}
 		//	return "rg_ip";
 		}
 		// print_r($lan_ip);
@@ -644,26 +653,25 @@ else
                         $fp=fopen($FILEID,"r");
                         if($fp)
                         {
-                                
-                                $pos = 0;
-                                $buffer=trim(substr(fgets($fp),$pos));
-                                fclose($fp);
-                                $OutIP = explode(" ", $buffer);
-                                exec("rm "+ $FILEID);
-                                $AcPort = $OutIP[1];
-                                if ($AcPort == 80 || $AcPort == 443)
-                                {
-                                    $IP_ADDR = $OutIP[0];
-                                    if (!isset($_SESSION['PREV_REMOTEADDR'])) {
-                                        $_SESSION['PREV_REMOTEADDR'] = $IP_ADDR;
-                                    }
-                                }
-                                else
-                                {
-                                    if (isset($_SESSION['PREV_REMOTEADDR'])) {
-                                        $IP_ADDR = $_SESSION['PREV_REMOTEADDR'];
-                                    }
-                                }
+							$pos = 0;
+							$buffer=trim(substr(fgets($fp),$pos));
+							fclose($fp);
+							$OutIP = explode(" ", $buffer);
+							exec("rm "+ $FILEID);
+							$AcPort = $OutIP[1];
+							if ($AcPort == 80 || $AcPort == 443)
+							{
+								$IP_ADDR = $OutIP[0];
+								if (!isset($_SESSION['PREV_REMOTEADDR'])) {
+									$_SESSION['PREV_REMOTEADDR'] = $IP_ADDR;
+								}
+							}
+							else
+							{
+								if (isset($_SESSION['PREV_REMOTEADDR'])) {
+									$IP_ADDR = $_SESSION['PREV_REMOTEADDR'];
+								}
+							}
                         }
                     }
                     else {
