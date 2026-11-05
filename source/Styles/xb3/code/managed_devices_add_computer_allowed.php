@@ -267,15 +267,16 @@ $(document).ready(function() {
 						$hostsInstance["$i"] = $hostsInstanceArr["$key"];
 					}
 					foreach ($hostIDs as $key=>$i) {
-						$hostsInstance["$i"]["HostName"] = htmlspecialchars($hostsInstance["$i"]["HostName"], ENT_NOQUOTES, 'UTF-8');
+						$hostsInstance["$i"]["HostName"] = htmlspecialchars($hostsInstance["$i"]["HostName"], ENT_QUOTES, 'UTF-8');
+						$hostsInstance["$i"]["PhysAddress"] = htmlspecialchars($hostsInstance["$i"]["PhysAddress"], ENT_QUOTES, 'UTF-8');
 						if ($iclass=="") {$iclass="odd";} else {$iclass="";}
 						$hostName = $hostsInstance["$i"]["HostName"]; 
 						$hostMac = $hostsInstance["$i"]["PhysAddress"]; 
 						echo "
 						<tr class=$iclass>
 							<th class=\"row-label alt\"><input name=\"computer\" id=\"$hostMac\" type=\"radio\" value=\"$hostName\" /></th>
-							<td>".$hostName."</td>
-							<td>".$hostMac."</td>
+							<td>$hostName</td>
+							<td>$hostMac</td>
 						</tr>";
 					} 
 				?>
