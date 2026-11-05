@@ -37,18 +37,53 @@ get ()
 }  
 
 restore ()
-{	
+{
+	archive="$1"
+	tmpdir="$(mktemp -d ${TMPDIR:-/tmp}/confPhp.XXXXXX)" || return 1
+	trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
+	db_version_found=0
+	syscfg_found=0
+	bbhm_found=0
+	while IFS= read -r member; do
+		case "$member" in
+			nvram/db_version|./nvram/db_version)
+				[ "$db_version_found" = "0" ] || return 1
+				db_version_found=1
+				;;
+			nvram/syscfg.db|./nvram/syscfg.db)
+				[ "$syscfg_found" = "0" ] || return 1
+				syscfg_found=1
+				;;
+			nvram/bbhm_bak_cfg.xml|./nvram/bbhm_bak_cfg.xml)
+				[ "$bbhm_found" = "0" ] || return 1
+				bbhm_found=1
+				;;
+			*)
+				return 1
+				;;
+		esac
+	done <<EOF
+$(tar -tf "$archive")
+EOF
+	if [ "$db_version_found" != "1" ] || [ "$syscfg_found" != "1" ] || [ "$bbhm_found" != "1" ]; then
+		echo "CONF_RECOVER_STATUS_FAILURE" > /tmp/confPhp.status
+		return 1
+	fi
+	if ! tar -xf "$archive" -C "$tmpdir" || [ -L "$tmpdir/nvram/db_version" ] || [ -L "$tmpdir/nvram/syscfg.db" ] || [ -L "$tmpdir/nvram/bbhm_bak_cfg.xml" ] || [ ! -f "$tmpdir/nvram/db_version" ] || [ ! -f "$tmpdir/nvram/syscfg.db" ] || [ ! -f "$tmpdir/nvram/bbhm_bak_cfg.xml" ]; then
+		echo "CONF_RECOVER_STATUS_FAILURE" > /tmp/confPhp.status
+		return 1
+	fi
 	mv /nvram/syscfg.db /nvram/syscfg.db.prev
 	mv /nvram/bbhm_bak_cfg.xml /nvram/bbhm_bak_cfg.xml.prev
-	cd /
-	tar -xvf "$1"
-	if [ "$?" != "0" ] ; then
+	if ! cp "$tmpdir/nvram/syscfg.db" /nvram/syscfg.db || ! cp "$tmpdir/nvram/bbhm_bak_cfg.xml" /nvram/bbhm_bak_cfg.xml; then
 		mv /nvram/syscfg.db.prev /nvram/syscfg.db
 		mv /nvram/bbhm_bak_cfg.xml.prev /nvram/bbhm_bak_cfg.xml
 		echo "CONF_RECOVER_STATUS_FAILURE" > /tmp/confPhp.status
-		#my_log(LOG_ERR, "Failed writing back config file");
+		return 1
 	fi
-    rm /nvram/db_version
+	rm -rf "$tmpdir"
+	trap - EXIT HUP INT TERM
+	rm /nvram/db_version 2>/dev/null || true
 	syscfg set restore_reboot true
 	touch /nvram/restore_reboot
 	echo "CONF_RECOVER_STATUS_NEED_REBOOT" > /tmp/confPhp.status
