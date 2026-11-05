@@ -37,7 +37,7 @@ $portMapping_param = array(
 		"Enable_Port_Range"	=> "Device.NAT.PortMapping.$i.Enable",
 	);
     $portMapping_value = KeyExtGet("Device.NAT.PortMapping.", $portMapping_param);
-$service_name 		= $portMapping_value["service_name"];
+$service_name 		= htmlspecialchars($portMapping_value["service_name"], ENT_QUOTES, 'UTF-8');
 $Service_Type		= $portMapping_value["Service_Type"];
 $Server_IP_Address	= $portMapping_value["Server_IP_Address"];
 $Start_Public_Port	= $portMapping_value["Start_Public_Port"];
