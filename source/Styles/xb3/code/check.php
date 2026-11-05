@@ -378,6 +378,7 @@ header('X-robots-tag: noindex,nofollow');
 	}
 	function create_session(){
 		session_start();
+		session_regenerate_id(true);
 		
 		/*
 		 * Set the Locale for the Web UI based on the LANG setting or current linux locale
