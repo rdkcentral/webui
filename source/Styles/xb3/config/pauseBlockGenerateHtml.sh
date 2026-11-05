@@ -25,6 +25,21 @@ DEFAULT_LANG=`dmcli eRT getv Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB
 PARTNER_PRODUCTNAME=`dmcli eRT getv Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.RDKB_UIBranding.CloudUI.productname | grep value | cut -f3 -d : | cut -f2 -d " "`
 PARTNER_ID=`dmcli eRT getv Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId | grep value | cut -f3 -d : | cut -f2 -d " "`
 
+# HTML escape function to prevent XSS
+html_escape() {
+    local s="$1"
+    s="${s//&/&amp;}"
+    s="${s//</&lt;}"
+    s="${s//>/&gt;}"
+    s="${s//\"/&quot;}"
+    s="${s//\'/&#39;}"
+    printf '%s' "$s"
+}
+
+PARTNER_BRANDNAME=$(html_escape "$PARTNER_BRANDNAME")
+PARTNER_PRODUCTNAME=$(html_escape "$PARTNER_PRODUCTNAME")
+PARTNER_LOGO_FILE=$(html_escape "$PARTNER_LOGO_FILE")
+
 if [ "$PARTNER_ID" == "comcast" ];then
   LOGO='<!-- XFINITY logo placement -->
     <?xml version="1.0" encoding="UTF-8" standalone="no"?>
