@@ -54,11 +54,15 @@ function validFilterParam($ft){
 	}
 	return true;
 }
-if ($_POST['configInfo']) {
-        $jsConfig = $_POST['configInfo'];
-} else if ($_GET['configInfo']){
-	$jsConfig = rawurldecode($_GET['configInfo']);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+	http_response_code(405);
+	exit;
 }
+if (!isset($_POST['configInfo'])) {
+	http_response_code(400);
+	exit;
+}
+$jsConfig = $_POST['configInfo'];
 //$jsConfig = '{"ssid_number":"1", "ft":[["1","2"],["c","d"]], "target":"save_filter"}';
 $arConfig = json_decode($jsConfig, true);
 //print_r($arConfig);
