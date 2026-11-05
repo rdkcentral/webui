@@ -91,6 +91,10 @@ else if (array_key_exists('prefer_private', $arConfig)) {
 else
 {
 	$i = $arConfig['ssid_number'];
+	if (!ctype_digit($i) || intval($i) < 1 || intval($i) > 16) {
+		echo "ERROR: Invalid SSID number";
+		exit;
+	}
 	// this method for only restart a certain SSID
 	function MiniApplySSID($ssid) {
 		$apply_id = (1 << intval($ssid)-1);
