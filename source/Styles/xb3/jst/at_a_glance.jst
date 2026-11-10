@@ -308,7 +308,7 @@ function popUp(URL) {
 							echo( '<span class="readonlyLabel white_space" id="wifissid"'); echo( $width_pass); echo( '>Wi-Fi SSID:</span>');
 							echo( '<span class="value white_space">');echo( $wifi_ssid);echo( '</span>');
 						echo( '</div>');
-						if ("admin" == $_SESSION["loginuser"] && "None" != $wifi_sec_mode ) {
+						if (("admin" == $_SESSION["loginuser"] || "mso" == $_SESSION["loginuser"]) && "None" != $wifi_sec_mode ) {
                                         ?>
                                                     <div class="form-row even" >
                                                         <label for="wifipass" class="readonlyLabel white_space pass_key_label" id="wifipass" <?% echo($width_pass); ?> >Wi-Fi Passkey:</label>
@@ -329,7 +329,7 @@ function popUp(URL) {
 							echo( '<span class="readonlyLabel white_space" id="wifissid24"'); echo( $width_pass); echo( '>Wi-Fi SSID (2.4 GHz):</span>');
 							echo( '<span class="value white_space">');echo( $wifi_24_ssid);echo( '</span>');
 						echo( '</div>');
-						if ("admin" == $_SESSION["loginuser"] && "None" != $wifi_24_secmode) {
+						if (("admin" == $_SESSION["loginuser"] || "mso" == $_SESSION["loginuser"]) && "None" != $wifi_24_secmode) {
                                        ?>
                                                     <div class="form-row even" >
                                                         <label for="wifipasskey24" class="readonlyLabel white_space pass_key_label" id="wifipasskey24" <?% echo($width_pass); ?> >Wi-Fi Passkey (2.4 GHz):</label>
@@ -349,7 +349,7 @@ function popUp(URL) {
 							echo( '<span class="readonlyLabel white_space" id="wifissid5"'); echo( $width_pass); echo( '>Wi-Fi SSID (5 GHz):</span>');
 							echo( '<span class="value white_space">');echo( $wifi_50_ssid);echo( '</span>');
 						echo( '</div>');
-						if ("admin" == $_SESSION["loginuser"] && "None" != $wifi_50_secmode) {
+						if (("admin" == $_SESSION["loginuser"] || "mso" == $_SESSION["loginuser"]) && "None" != $wifi_50_secmode) {
                                        ?>
                                                     <div class="form-row odd" >
                                                         <label for="wifipasskey5" class="readonlyLabel white_space pass_key_label" id="wifipasskey5" <?% echo($width_pass); ?> >Wi-Fi Passkey (5 GHz):</label>
