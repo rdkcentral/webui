@@ -74,7 +74,7 @@ function isOAuthHostAllowed($http_host)
     }
     else {
         $firstColon = strpos($host, ":");
-        $lastColon = strrpos($host, ":");
+        $lastColon = $host.lastIndexOf(":");
         if ($firstColon !== false && $firstColon == $lastColon) {
             $port = substr($host, $firstColon + 1);
             if (preg_match('/^[0-9]+$/', $port) != 1) return false;
