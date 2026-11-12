@@ -89,7 +89,7 @@ function isOAuthHostAllowed($http_host)
         if ($ipv6Host == "::" || $ipv6Host == "::1" ||
             preg_match('/^(fc|fd)/i', $ipv6Host) == 1 ||
             preg_match('/^fe[89ab]/i', $ipv6Host) == 1 ||
-            preg_match('/^fec/i', $ipv6Host) == 1 ||
+            preg_match('/^fe[c-f]/i', $ipv6Host) == 1 ||
             preg_match('/^::ffff:/i', $ipv6Host) == 1) return false;
         return true;
     }
