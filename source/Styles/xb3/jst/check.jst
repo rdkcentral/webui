@@ -460,8 +460,20 @@ else
     }
     else
     {
-        if (isset($_GET['token']) && isset($_SERVER['HTTP_HOST']) && isOAuthHostAllowed($_SERVER['HTTP_HOST']))
+        if (isset($_GET['token']) && isset($_SERVER['SERVER_ADDR']) && isset($_SERVER['HTTP_HOST']) && isOAuthHostAllowed($_SERVER['HTTP_HOST']))
         {
+            $iface = if_type($_SERVER['SERVER_ADDR']);
+            // Apply the same destination restrictions as MSO password login.
+            if (!$iface || $iface == "lan_ip" || $iface == "docsis_ip" ||
+                innerIP($client_ip) || ($iface == "rg_ip" && strtolower($currentOpMode) != "ethernet")) {
+                LogStr(" : OAUTH Interface check FAILED");
+                setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS", "ui_failed", true);
+                if (session_status() == PHP_SESSION_ACTIVE) {
+                    session_destroy();
+                }
+                sendError('<script type="text/javascript"> alert($.i18n("Access denied!")); history.back(); </script>');
+                exit(0);
+            }
             $ADToken = $_GET['token'];
             $tokenvalid = VerifyToken( $ADToken );
             if( $tokenvalid == true )
