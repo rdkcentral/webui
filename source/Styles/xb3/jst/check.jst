@@ -60,7 +60,47 @@ function client_IP()
     
 }
 
+function isOAuthHostAllowed($http_host)
+{
+    $host = $http_host;
+    $bracketedHost = false;
+    if (substr($host, 0, 1) == "[") {
+        $bracketedHost = true;
+        $closeBracket = strpos($host, "]");
+        if ($closeBracket === false) return false;
+        $suffix = substr($host, $closeBracket + 1);
+        if ($suffix != "" && preg_match('/^:[0-9]+$/', $suffix) != 1) return false;
+        $host = substr($host, 1, $closeBracket - 1);
+    }
+    else {
+        $firstColon = strpos($host, ":");
+        $lastColon = $host.lastIndexOf(":");
+        if ($firstColon !== false && $firstColon == $lastColon) {
+            $port = substr($host, $firstColon + 1);
+            if (preg_match('/^[0-9]+$/', $port) != 1) return false;
+            $host = substr($host, 0, $firstColon);
+        }
+    }
 
+    $packedHost = inet_pton($host);
+    if ($packedHost !== false) {
+        if (strlen($packedHost) != 16) return false;
+        $ipv6Host = inet_ntop($packedHost);
+        if ($ipv6Host == "::" || $ipv6Host == "::1" ||
+            preg_match('/^(fc|fd)/i', $ipv6Host) == 1 ||
+            preg_match('/^fe[89ab]/i', $ipv6Host) == 1 ||
+            preg_match('/^fe[c-f]/i', $ipv6Host) == 1 ||
+            preg_match('/^::ffff:/i', $ipv6Host) == 1) return false;
+        return true;
+    }
+    if ($bracketedHost || preg_match('/^[0-9.]+$/', $host) == 1) return false;
+
+    $host = strtolower($host);
+    if (strpos($host, ".") === false ||
+        preg_match('/(^|\\.)(localhost|localdomain|local|lan|home|internal|home\\.arpa)$/', $host) == 1) return false;
+
+    return preg_match('/^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)+([A-Za-z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])$/', $host) == 1;
+}
 
 function sendError($code)
 {
@@ -420,8 +460,20 @@ else
     }
     else
     {
-        if (isset($_GET['token']))
+        if (isset($_GET['token']) && isset($_SERVER['SERVER_ADDR']) && isset($_SERVER['HTTP_HOST']) && isOAuthHostAllowed($_SERVER['HTTP_HOST']))
         {
+            $iface = if_type($_SERVER['SERVER_ADDR']);
+            // Apply the same destination restrictions as MSO password login.
+            if (!$iface || $iface == "lan_ip" || $iface == "docsis_ip" ||
+                innerIP($client_ip) || ($iface == "rg_ip" && strtolower($currentOpMode) != "ethernet")) {
+                LogStr(" : OAUTH Interface check FAILED");
+                setStr("Device.DeviceInfo.X_RDKCENTRAL-COM_UI_ACCESS", "ui_failed", true);
+                if (session_status() == PHP_SESSION_ACTIVE) {
+                    session_destroy();
+                }
+                sendError('<script type="text/javascript"> alert($.i18n("Access denied!")); history.back(); </script>');
+                exit(0);
+            }
             $ADToken = $_GET['token'];
             $tokenvalid = VerifyToken( $ADToken );
             if( $tokenvalid == true )
