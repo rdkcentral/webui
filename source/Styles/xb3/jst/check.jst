@@ -60,7 +60,47 @@ function client_IP()
     
 }
 
+function isOAuthHostAllowed($http_host)
+{
+    $host = $http_host;
+    $bracketedHost = false;
+    if (substr($host, 0, 1) == "[") {
+        $bracketedHost = true;
+        $closeBracket = strpos($host, "]");
+        if ($closeBracket === false) return false;
+        $suffix = substr($host, $closeBracket + 1);
+        if ($suffix != "" && preg_match('/^:[0-9]+$/', $suffix) != 1) return false;
+        $host = substr($host, 1, $closeBracket - 1);
+    }
+    else {
+        $firstColon = strpos($host, ":");
+        $lastColon = strrpos($host, ":");
+        if ($firstColon !== false && $firstColon == $lastColon) {
+            $port = substr($host, $firstColon + 1);
+            if (preg_match('/^[0-9]+$/', $port) != 1) return false;
+            $host = substr($host, 0, $firstColon);
+        }
+    }
 
+    $packedHost = inet_pton($host);
+    if ($packedHost !== false) {
+        if (strlen($packedHost) != 16) return false;
+        $ipv6Host = inet_ntop($packedHost);
+        if ($ipv6Host == "::" || $ipv6Host == "::1" ||
+            preg_match('/^(fc|fd)/i', $ipv6Host) == 1 ||
+            preg_match('/^fe[89ab]/i', $ipv6Host) == 1 ||
+            preg_match('/^fec/i', $ipv6Host) == 1 ||
+            preg_match('/^::ffff:/i', $ipv6Host) == 1) return false;
+        return true;
+    }
+    if ($bracketedHost || preg_match('/^[0-9.]+$/', $host) == 1) return false;
+
+    $host = strtolower($host);
+    if (strpos($host, ".") === false ||
+        preg_match('/(^|\\.)(localhost|localdomain|local|lan|home|internal|home\\.arpa)$/', $host) == 1) return false;
+
+    return preg_match('/^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)+([A-Za-z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])$/', $host) == 1;
+}
 
 function sendError($code)
 {
@@ -420,7 +460,7 @@ else
     }
     else
     {
-        if (isset($_GET['token']))
+        if (isset($_GET['token']) && isset($_SERVER['HTTP_HOST']) && isOAuthHostAllowed($_SERVER['HTTP_HOST']))
         {
             $ADToken = $_GET['token'];
             $tokenvalid = VerifyToken( $ADToken );
