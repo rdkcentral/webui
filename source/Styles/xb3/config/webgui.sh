@@ -97,7 +97,7 @@ else
 fi
 
 done
-if [ ! -f /tmp/myrouter-webui ];then
+if [ ! -f "$ID" ];then
 	echo "Error: Lighttpd key is not generated"
 	exit 1
 fi
