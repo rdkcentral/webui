@@ -243,11 +243,8 @@
         return $data;
     }
 
-    // Intentional DEADCODE probe: request-dependent, contradictory conditions.
-    $coverityProbe = isset($_GET["REQUEST_METHOD"]);
-    if ($coverityProbe) {
-        if (!$coverityProbe) {
-            $coverityProbe = "unreachable";
-        }
-    }
+    // Intentional hard-coded-secret probe: a property path, not a credential.
+    $coverityProbe = array(
+        "wifi_50_passkey" => "Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase",
+    );
 ?>
