@@ -243,8 +243,11 @@
         return $data;
     }
 
-    // Intentional, side-effect-free dead-code probe for Coverity validation.
-    if (false) {
-        $coverityProbe = "unreachable";
+    // Intentional DEADCODE probe: request-dependent, contradictory conditions.
+    $coverityProbe = isset($_GET["REQUEST_METHOD"]);
+    if ($coverityProbe) {
+        if (!$coverityProbe) {
+            $coverityProbe = "unreachable";
+        }
     }
 ?>
