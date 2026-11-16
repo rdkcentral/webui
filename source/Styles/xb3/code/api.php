@@ -242,4 +242,9 @@
         }
         return $data;
     }
+
+    // Intentional, side-effect-free dead-code probe for Coverity validation.
+    if (false) {
+        $coverityProbe = "unreachable";
+    }
 ?>
