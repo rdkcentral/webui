@@ -572,7 +572,7 @@ function popUp(URL) {
 							$HostName = strtoupper($HostInfo[$i]['PhysAddress']);
 						}
 						echo( "\
-						   <div class=\""+ $divClass +"\"><span class=\"on-off sprite_cont\"><img src=\"./cmn/img/icn_on_off.png\" alt='Host On' /></span> <span class=\"readonlyLabel\">"+$HostName+"</span></div>\
+						   <div class=\""+ $divClass +"\"><span class=\"on-off sprite_cont\"><img src=\"./cmn/img/icn_on_off.png\" alt='Host On' /></span> <span class=\"readonlyLabel\">"+htmlspecialchars($HostName, ENT_NOQUOTES, 'UTF-8')+"</span></div>\
 						");
 					}//end of for
 				}//end of empty $host

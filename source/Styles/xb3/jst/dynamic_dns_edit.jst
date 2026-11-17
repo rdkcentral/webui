@@ -75,23 +75,18 @@ $(document).ready(function() {
 		}
 	});
 	var ID = <?% echo( $i );?>;
-	var jsSP = "<?% echo( $sp );?>";
-	var jsUser	= "<?% echo( htmlspecialchars($username, ENT_NOQUOTES, 'UTF-8')); ?>";
-	var jsPwd	= "<?% echo( htmlspecialchars($password, ENT_NOQUOTES, 'UTF-8')); ?>";
-	var jsHost	= "<?% echo( htmlspecialchars($hostname, ENT_NOQUOTES, 'UTF-8')); ?>";
+	var jsSP = <?% echo(json_encode($sp).replace(/</g, '\\u003C')); ?>;
+	var jsUser	= <?% echo(json_encode($username).replace(/</g, '\\u003C')); ?>;
+	var jsPwd	= <?% echo(json_encode($password).replace(/</g, '\\u003C')); ?>;
+	var jsHost	= <?% echo(json_encode($hostname).replace(/</g, '\\u003C')); ?>;
 	var hostArr	= jsHost.split(",");
 	var cnt = hostArr.length;
 	$("#Service_Provider1").val(jsSP);
-	jsUser = jsUser.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
 	$("#User_name").val(jsUser);
-	jsPwd = jsPwd.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
 	$("#Password").val(jsPwd);
-	$.each(hostArr, function($index, $value) {
-		$value = $value.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
-	});
-	$("#Host_Name1").val(hostArr[0].replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
+	$("#Host_Name1").val(hostArr[0]);
 	for(var i=1;i<hostArr.length;i++) {
-		add(hostArr[i].replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
+		add(hostArr[i]);
 	}
 	// If Enable UPnP is not checked, disable the next two form fields
     $("#btn-saveloc").click(function() {
@@ -223,8 +218,10 @@ button.onclick=add1
 						for($key in $ids) { $j=$ids[$key];/*p2j-foreach*/
 							$spName		=getStr("Device.X_CISCO_COM_DDNS.Service."+$j+".ServiceName");
 							$serviceStatus	=getStr("Device.X_CISCO_COM_DDNS.Service."+$j+".Enable");
-							if(strcasecmp($sp,$spName) == 0) echo( '<option value="'+$spName+'">'+$spName+'</option>');
-							else if(strcasecmp($serviceStatus,"false") == 0) echo( '<option value="'+$spName+'">'+$spName+'</option>');
+							$spNameHtml = htmlspecialchars($spName, ENT_NOQUOTES, 'UTF-8');
+							$spNameAttr = $spNameHtml.replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+							if(strcasecmp($sp,$spName) == 0) echo( '<option value="'+$spNameAttr+'">'+$spNameHtml+'</option>');
+							else if(strcasecmp($serviceStatus,"false") == 0) echo( '<option value="'+$spNameAttr+'">'+$spNameHtml+'</option>');
 						}
 					?>
 					</select>

@@ -157,7 +157,7 @@ $(document).ready(function() {
 	<div class="module forms">
 		<h2 id="hsporteditmess1">Edit HS Port Forward</h2>
 		<div class="form-row odd">
-			<label for="service_name" id="servname">Service Name:</label> <input type="text" class="text" value="<?% echo( $service_name); ?>" id="service_name" name="service_name" />
+			<label for="service_name" id="servname">Service Name:</label> <input type="text" class="text" value="<?% echo(htmlspecialchars($service_name, ENT_NOQUOTES, 'UTF-8').replace(/"/g, '&quot;').replace(/'/g, '&#039;')); ?>" id="service_name" name="service_name" />
 		</div>
 		<div class="form-row">
 			<label for="service_type" id="servtyp">Service Type:</label>
