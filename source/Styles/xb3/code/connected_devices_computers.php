@@ -523,7 +523,6 @@ $(document).ready(function() {
 		    //This for loop aims to construct online and offline network host arrays based on $Host		    
 		    for ($i=0,$j=0,$k=0,$x=0; $i < $HostNum; $i++) { 
                 $Host["$i"]['instanceID'] = $i + 1;
-                $Host[$i]['HostName'] = htmlspecialchars($Host[$i]['HostName'], ENT_NOQUOTES, 'UTF-8');
                 $Host[$i]['Comments'] = htmlspecialchars($Host[$i]['Comments'], ENT_NOQUOTES, 'UTF-8');
 				//for WiFi Extended device
 				$isExtendedDevice = false;
@@ -788,7 +787,7 @@ $(document).ready(function() {
 			$onXHS_clients_num = count($onXHSClientArr);
 			$offXHS_clients_num = count($offXHSClientArr);
 			for ($i=0; $i < $onXHS_clients_num; $i++) { 
-				$Hostname    = $onXHSClientArr[$i]['X_CISCO_COM_HostName'];
+				$Hostname    = htmlspecialchars_decode($onXHSClientArr[$i]['X_CISCO_COM_HostName'], ENT_NOQUOTES);
 				$HostnameHtml = htmlspecialchars($Hostname, ENT_NOQUOTES, 'UTF-8');
 				$MACAddress  = strtoupper($onXHSClientArr[$i]['Chaddr']);
 				$disconnectInfoAttr = htmlspecialchars(json_encode(array('xhs-ssid' => '3', 'dev_name' => $Hostname, 'mac_addr' => $MACAddress)), ENT_QUOTES, 'UTF-8');
@@ -833,7 +832,7 @@ $(document).ready(function() {
       			echo '<th id="offXHS-disconnect-button" width=""></th>';
       		echo '</tr>';
       		for ($i=0; $i < $offXHS_clients_num; $i++) { 
-				$Hostname    = $offXHSClientArr[$i]['X_CISCO_COM_HostName'];
+				$Hostname    = htmlspecialchars_decode($offXHSClientArr[$i]['X_CISCO_COM_HostName'], ENT_NOQUOTES);
 				$HostnameHtml = htmlspecialchars($Hostname, ENT_NOQUOTES, 'UTF-8');
 				$MACAddress  = strtoupper($offXHSClientArr[$i]['Chaddr']);
 				$disconnectInfoAttr = htmlspecialchars(json_encode(array('xhs-ssid' => '3', 'dev_name' => $Hostname, 'mac_addr' => $MACAddress)), ENT_QUOTES, 'UTF-8');

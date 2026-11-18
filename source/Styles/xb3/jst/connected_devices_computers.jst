@@ -908,7 +908,7 @@ else if($offlinePrivateNetworkHost[$x.toString()]['Connection']=="Ethernet"){pri
 			$onXHS_clients_num = count($onXHSClientArr);
 			$offXHS_clients_num = count($offXHSClientArr);
 			for ($i=0; $i < $onXHS_clients_num; $i++) {
-				$Hostname    = $onXHSClientArr[$i]['X_CISCO_COM_HostName'];
+				$Hostname    = $onXHSClientArr[$i]['X_CISCO_COM_HostName'].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 				$HostnameHtml = htmlspecialchars($Hostname, ENT_NOQUOTES, 'UTF-8');
 				$MACAddress  = strtoupper($onXHSClientArr[$i]['Chaddr']);
 				$disconnectInfoAttr = htmlspecialchars(json_encode({"xhs-ssid":"3","dev_name":$Hostname,"mac_addr":$MACAddress}), ENT_NOQUOTES, 'UTF-8').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -953,7 +953,7 @@ else if($offlinePrivateNetworkHost[$x.toString()]['Connection']=="Ethernet"){pri
       			echo( '<th id="offXHS-disconnect-button" width=""></th>');
       		echo( '</tr>');
       		for ($i=0; $i < $offXHS_clients_num; $i++) { 
-				$Hostname    = $offXHSClientArr[$i]['X_CISCO_COM_HostName'];
+				$Hostname    = $offXHSClientArr[$i]['X_CISCO_COM_HostName'].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
       			$HostnameHtml = htmlspecialchars($Hostname, ENT_NOQUOTES, 'UTF-8');
 				$MACAddress  = strtoupper($offXHSClientArr[$i]['Chaddr']);
       			$disconnectInfoAttr = htmlspecialchars(json_encode({"xhs-ssid":"3","dev_name":$Hostname,"mac_addr":$MACAddress}), ENT_NOQUOTES, 'UTF-8').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
