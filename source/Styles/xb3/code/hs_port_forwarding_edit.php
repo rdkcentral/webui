@@ -159,7 +159,7 @@ $(document).ready(function() {
 	<div class="module forms">
 		<h2><?php echo _('Edit HS Port Forward')?></h2>
 		<div class="form-row odd">
-			<label for="service_name"><?php echo _('Service Name:')?></label> <input type="text" class="text" value="<?php echo $service_name; ?>" id="service_name" name="service_name" />
+			<label for="service_name"><?php echo _('Service Name:')?></label> <input type="text" class="text" value="<?php echo htmlspecialchars($service_name, ENT_QUOTES, 'UTF-8'); ?>" id="service_name" name="service_name" />
 		</div>
 		<div class="form-row">
 			<label for="service_type"><?php echo _('Service Type:')?></label>

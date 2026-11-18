@@ -281,10 +281,11 @@ $(document).ready(function() {
 						$hostsInstance[$i.toString()]["HostName"] = htmlspecialchars($hostsInstance[$i.toString()]["HostName"], ENT_NOQUOTES, 'UTF-8');
 						if ($iclass=="") {$iclass="odd";} else {$iclass="";}
 						$hostName = $hostsInstance[$i.toString()]["HostName"]; 
+						$hostNameAttr = $hostName.replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 						$hostMac = $hostsInstance[$i.toString()]["PhysAddress"]; 
 						echo( "\
 						<tr class=$iclass>\
-							<th class=\"row-label alt\"><input name=\"computer\" id=" + "'" +$hostMac+ "'" +" type=\"radio\" value=" + "'" +$hostName+ "'" + " /></th>\
+							<th class=\"row-label alt\"><input name=\"computer\" id=" + "'" +$hostMac+ "'" +" type=\"radio\" value=" + "'" +$hostNameAttr+ "'" + " /></th>\
 							<td>"+$hostName+"</td>\
 							<td>"+$hostMac+"</td>\
 						</tr>");
