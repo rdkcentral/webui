@@ -330,8 +330,8 @@ wpa2psk ==> 8 to 63 Ascii characters
 function set_config(jsConfig)
 {
 	// alert(jsConfig);
-	var network_name_1= '<?% echo( $wifi_value['network_name']); ?>';
-	var network_name_2= '<?% echo( $wifi_value['network_name1']); ?>';
+	var network_name_1= <?% echo( json_encode($wifi_value['network_name'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)); ?>;
+	var network_name_2= <?% echo( json_encode($wifi_value['network_name1'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)); ?>;
 	jProgress('<?% echo( _("This may take several seconds..."));?>', 60);
 	$.post(
 		"actionHandler/ajaxSet_wizard_step2.jst",
