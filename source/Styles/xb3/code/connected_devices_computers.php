@@ -523,8 +523,8 @@ $(document).ready(function() {
 		    //This for loop aims to construct online and offline network host arrays based on $Host		    
 		    for ($i=0,$j=0,$k=0,$x=0; $i < $HostNum; $i++) { 
                 $Host["$i"]['instanceID'] = $i + 1;
-                $Host[$i]['HostName'] = htmlspecialchars($Host[$i]['HostName'], ENT_NOQUOTES, 'UTF-8');
-                $Host[$i]['Comments'] = htmlspecialchars($Host[$i]['Comments'], ENT_NOQUOTES, 'UTF-8');
+                $Host[$i]['HostName'] = htmlspecialchars($Host[$i]['HostName'], ENT_QUOTES, 'UTF-8');
+                $Host[$i]['Comments'] = htmlspecialchars($Host[$i]['Comments'], ENT_QUOTES, 'UTF-8');
 				//for WiFi Extended device
 				$isExtendedDevice = false;
 				if (array_key_exists($Host["$i"]['X_RDKCENTRAL-COM_Parent'], $NetworkExtender)){
