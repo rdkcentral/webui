@@ -763,7 +763,7 @@ $(document).ready(function() {
 			$onXHSAssoDeviceArr  = array();
 			$offXHSClientArr = array();
 			foreach ($PoolClientArr as $poolEntry) {
-				$poolEntry['X_CISCO_COM_HostName'] = htmlspecialchars($poolEntry['X_CISCO_COM_HostName'], ENT_NOQUOTES, 'UTF-8');
+				$poolEntry['X_CISCO_COM_HostName'] = htmlspecialchars($poolEntry['X_CISCO_COM_HostName'], ENT_QUOTES, 'UTF-8');
 				$match = "";
 				foreach ($AssoDeviceArr as $wifiEntry) {
 					if (! strcasecmp($poolEntry['Chaddr'], $wifiEntry['MACAddress'])) {
