@@ -1,0 +1,466 @@
+# =====================================================================
+#  LAN GROUP POLICY - UPDATED FOR CURRENT TEST SETUP
+# =====================================================================
+#
+# Active devices:
+#   - d8:3a:dd:c0:c0:98 (RPI) - WORK group
+#   - dc:a6:32:52:f8:23 (warehousepi) - IOT group
+#
+# Active policy:
+#   - PERSONAL <-> WORK: Full bidirectional access (ANY ALLOW)
+#   - WORK -> IOT: Full access (ANY ALLOW)
+#   - IOT -> WORK: Blocked (ANY DROP) - IOT cannot initiate to WORK
+#   - PERSONAL <-> IOT: Blocked (ANY DROP)
+#   - Same-group: PERSONAL and WORK allow, IOT isolation ACTIVE (DROP)
+#
+# Device-specific restrictions:
+#   - WORK -> dc:a6:32:52:f8:23 (warehousepi): DNS blocked
+#   - Other device-specific rules commented out for testing
+#
+# =====================================================================
+#
+# Unified policy format:
+#
+#   <SRC> <DST> <SERVICE> <ACTION>
+#
+# Examples:
+#
+#   PERSONAL WORK ANY ALLOW
+#   WORK IOT HTTPS ALLOW
+#   WORK PRINTER PRINT ALLOW
+#   WORK PRINTER MDNS ALLOW
+#
+# SERVICE can be:
+#   - ANY
+#   - predefined protocol/service
+#   - compound service macro
+#
+# Stateful behavior:
+#   ALLOW permits NEW connections from SRC -> DST.
+#   ESTABLISHED/RELATED return traffic is automatically permitted.
+#
+# =====================================================================
+
+
+# =====================================================================
+# GROUP DEFINITIONS
+# =====================================================================
+#
+# Format:
+#   <group_name> <group_id>
+#
+[groups]
+
+PERSONAL    1
+WORK        2
+IOT         4
+PRINTER     8
+CAMERA      16
+
+
+# =====================================================================
+# DEVICE -> GROUP ASSIGNMENT
+# =====================================================================
+#
+# Format:
+#   <mac_address> <group_name>
+#
+[devices]
+
+# RPI - testing (move between WORK / PERSONAL / IOT as needed)
+d8:3a:dd:c0:c0:98    WORK
+# d8:3a:dd:c0:c0:98    PERSONAL
+# d8:3a:dd:c0:c0:98    IOT
+
+# IoT test device (warehousepi)
+dc:a6:32:52:f8:23    IOT
+
+# Example printer (uncomment and update MAC to use)
+# aa:bb:cc:dd:ee:ff    PRINTER
+
+# Example camera (uncomment and update MAC to use)
+# 11:22:33:44:55:66    CAMERA
+
+# Laptop (currently inaccessible/offline)
+# 28:f1:0e:12:a1:a4    WORK
+
+
+# =====================================================================
+# BASIC SERVICE DEFINITIONS
+# =====================================================================
+#
+# Format:
+#
+#   <service_name> <protocol> <destination_port>
+#
+# Port ranges are supported.
+#
+[services]
+
+# Remote access
+SSH             tcp     22
+TELNET          tcp     23
+
+# Web
+HTTP            tcp     80
+HTTPS           tcp     443
+
+# DNS
+DNS_TCP         tcp     53
+DNS_UDP         udp     53
+
+# DHCP
+DHCP_SERVER     udp     67
+DHCP_CLIENT     udp     68
+
+DHCPV6_CLIENT   udp     546
+DHCPV6_SERVER   udp     547
+
+# Discovery
+MDNS            udp     5353
+SSDP            udp     1900
+
+# Printing
+IPP             tcp     631
+RAW_PRINT       tcp     9100
+
+# File sharing
+SMB             tcp     445
+NFS             tcp     2049
+
+# Management
+SNMP            udp     161
+SNMP_TRAP       udp     162
+
+# Time
+NTP             udp     123
+
+# Messaging / IoT
+MQTT            tcp     1883
+MQTTS           tcp     8883
+
+# Camera / streaming
+RTSP            tcp     554
+
+# Media stream range (OpenFlow does not support port ranges - commented out)
+# RTP             udp     16384-32767
+
+# SCTP example (for testing)
+# SCTP_9999       sctp    9999
+
+
+# =====================================================================
+# SERVICE MACROS
+# =====================================================================
+#
+# A macro can contain one or more basic services.
+#
+# Format:
+#
+#   <macro_name> <service>,<service>,...
+#
+[service_macros]
+
+DNS         DNS_TCP,DNS_UDP
+
+WEB         HTTP,HTTPS
+
+DHCP        DHCP_SERVER,DHCP_CLIENT
+
+DHCPV6      DHCPV6_CLIENT,DHCPV6_SERVER
+
+DISCOVERY   MDNS,SSDP
+
+PRINT       IPP,RAW_PRINT
+
+MQTT_ALL    MQTT,MQTTS
+
+FILE_SHARE  SMB,NFS
+
+CAMERA_CTRL HTTPS,RTSP
+
+# CAMERA_MEDIA uses RTSP only (RTP port range not supported in OpenFlow)
+CAMERA_MEDIA RTSP
+
+# =====================================================================
+# DEFAULTS
+# =====================================================================
+
+[defaults]
+
+# Default policy if no explicit rule matches.
+inter_group_policy      drop
+
+# Default communication inside a group.
+intra_group_policy      allow
+
+# Permit ESTABLISHED/RELATED return traffic.
+stateful                true
+
+# Recommended behavior:
+# More-specific rules override less-specific rules.
+policy_precedence       specific-first
+
+
+# =====================================================================
+# GROUP POLICY
+# =====================================================================
+#
+# Unified format:
+#
+#   <SRC_GROUP> <DST_GROUP> <SERVICE> <ACTION>
+#
+#
+# SRC_GROUP
+#   Group initiating the connection.
+#
+# DST_GROUP
+#   Destination group.
+#
+# SERVICE
+#
+#   ANY
+#       All protocols/services.
+#
+#   Basic service
+#       MDNS, HTTPS, SSH, etc.
+#
+#   Macro
+#       PRINT, WEB, DISCOVERY, DNS, etc.
+#
+# ACTION
+#
+#   ALLOW
+#   DROP
+#
+#
+# IMPORTANT:
+#
+#   WORK IOT HTTPS ALLOW
+#
+# means WORK may initiate HTTPS toward IOT.
+#
+# Return traffic from IOT -> WORK is automatically permitted
+# by conntrack.
+#
+# It does NOT permit an IoT device to independently initiate
+# a connection toward WORK.
+#
+# =====================================================================
+
+[group_policy]
+
+
+# ---------------------------------------------------------------------
+# PERSONAL <-> WORK
+# ---------------------------------------------------------------------
+
+PERSONAL    WORK        ANY         ALLOW
+WORK        PERSONAL    ANY         ALLOW
+
+
+# ---------------------------------------------------------------------
+# WORK <-> IOT
+# ---------------------------------------------------------------------
+#
+# WORK can initiate connections to IoT devices.
+# IoT CANNOT initiate connections toward WORK (stateless DROP).
+# Return traffic for WORK-initiated connections would be allowed
+# if stateful tracking were enabled.
+#
+
+WORK        IOT         ANY         ALLOW
+
+# IoT cannot initiate toward WORK.
+IOT         WORK        ANY         DROP
+# ...except service discovery: let WORK see IoT's mDNS/SSDP announcements.
+IOT         WORK        MDNS        ALLOW
+IOT         WORK        DISCOVERY   ALLOW
+
+# ---------------------------------------------------------------------
+# PERSONAL <-> IOT
+# ---------------------------------------------------------------------
+
+PERSONAL    IOT         ANY         DROP
+IOT         PERSONAL    ANY         DROP
+
+
+# ---------------------------------------------------------------------
+# WORK -> PRINTER
+# ---------------------------------------------------------------------
+#
+# Work devices do NOT receive unrestricted access to printers.
+#
+# Only discovery + printing protocols are permitted.
+#
+
+WORK        PRINTER     MDNS        ALLOW
+WORK        PRINTER     PRINT       ALLOW
+
+# Everything else is blocked by default.
+WORK        PRINTER     ANY         DROP
+
+
+# ---------------------------------------------------------------------
+# PERSONAL -> PRINTER
+# ---------------------------------------------------------------------
+
+PERSONAL    PRINTER     MDNS        ALLOW
+PERSONAL    PRINTER     PRINT       ALLOW
+
+PERSONAL    PRINTER     ANY         DROP
+
+
+# ---------------------------------------------------------------------
+# PRINTER -> PERSONAL / WORK
+# ---------------------------------------------------------------------
+#
+# Printer cannot initiate connections toward user devices.
+#
+
+PRINTER     PERSONAL    ANY         DROP
+PRINTER     WORK        ANY         DROP
+
+
+# ---------------------------------------------------------------------
+# WORK -> CAMERA
+# ---------------------------------------------------------------------
+#
+# Allow camera management and video access.
+#
+
+WORK        CAMERA      CAMERA_CTRL     ALLOW
+WORK        CAMERA      CAMERA_MEDIA    ALLOW
+
+WORK        CAMERA      ANY             DROP
+
+
+# ---------------------------------------------------------------------
+# CAMERA -> WORK
+# ---------------------------------------------------------------------
+
+CAMERA      WORK        ANY         DROP
+
+
+# ---------------------------------------------------------------------
+# PERSONAL -> CAMERA
+# ---------------------------------------------------------------------
+#
+# Example: Personal devices may view cameras but cannot access
+# arbitrary camera services.
+#
+
+PERSONAL    CAMERA      HTTPS           ALLOW
+PERSONAL    CAMERA      RTSP            ALLOW
+
+PERSONAL    CAMERA      ANY             DROP
+
+
+# ---------------------------------------------------------------------
+# CAMERA -> PERSONAL
+# ---------------------------------------------------------------------
+
+CAMERA      PERSONAL    ANY         DROP
+
+
+# =====================================================================
+# INTRA-GROUP POLICY
+# =====================================================================
+#
+# Format:
+#
+#   <GROUP> <SERVICE> <ACTION>
+#
+# Note: IOT isolation is ACTIVE (IOT devices cannot communicate with each other)
+#
+# =====================================================================
+
+[intra_group_policy]
+
+PERSONAL    ANY         ALLOW
+
+WORK        ANY         ALLOW
+
+# IoT client isolation - ACTIVE
+IOT         ANY         DROP
+
+# Printers should generally not communicate with each other.
+PRINTER     ANY         DROP
+
+# Cameras should generally not communicate with each other.
+CAMERA      ANY         DROP
+
+
+# =====================================================================
+# DEVICE-SPECIFIC POLICY
+# =====================================================================
+#
+# Optional policy layer for exceptions involving a specific device.
+#
+# Format:
+#
+#   <SRC_GROUP> <DST_MAC> <SERVICE> <ACTION>
+#
+# A device-specific rule has higher precedence than a group rule.
+#
+# Currently ACTIVE: DNS block to warehousepi from WORK
+#
+[device_policy]
+
+
+# ---------------------------------------------------------------------
+# IoT test device (warehousepi: dc:a6:32:52:f8:23)
+# ---------------------------------------------------------------------
+#
+# Group rule says: WORK IOT ANY ALLOW
+#
+# But DNS access to this specific device is blocked (priority 160).
+#
+
+WORK    dc:a6:32:52:f8:23    DNS         DROP
+
+# Additional examples (commented out):
+
+# Block HTTP access to this IoT device from WORK
+# WORK    dc:a6:32:52:f8:23    HTTP        DROP
+
+# Block SSH access to this IoT device from WORK
+# WORK    dc:a6:32:52:f8:23    SSH         DROP
+
+# Block SCTP port 9999 to this IoT device from WORK
+# (Note: SCTP service would need to be defined in [services] section)
+# WORK    dc:a6:32:52:f8:23    SCTP_9999   DROP
+
+
+# =====================================================================
+# POLICY PRECEDENCE
+# =====================================================================
+#
+# Recommended evaluation order:
+#
+#   1. ESTABLISHED / RELATED connection
+#
+#   2. Device-specific service policy
+#
+#   3. Group-specific service policy
+#
+#   4. Group ANY policy
+#
+#   5. Intra-group policy
+#
+#   6. Global default
+#
+#
+# Example:
+#
+#   WORK IOT ANY ALLOW
+#   WORK dc:a6:32:52:f8:23 DNS DROP
+#
+# Result:
+#
+#   WORK -> IoT device HTTPS       ALLOW
+#   WORK -> IoT device SSH         ALLOW
+#   WORK -> IoT device UDP/53      DROP
+#   WORK -> IoT device TCP/53      DROP
+#
+# =====================================================================
