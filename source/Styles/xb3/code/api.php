@@ -213,29 +213,23 @@
         header('HTTP/1.1 401 Unauthorized');
         $data = array("status"=>"401","message"=>"What is Wifi passphrase");
 
-        if ("false" == getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.EasyConnect.EnableAPISecurity")) {
-            $data["status"] = "200";
-            $data["message"] = "Success";
+        $token = getHeaderValue("X-Authorization-Token");
+        if (!empty($token) ) {
+            $retdata=validateToken($token);
+            $data["status"] = $retdata["status"];
+            $data["message"] = $retdata["message"];
         }
         else {
-            $token = getHeaderValue("X-Authorization-Token");
-            if (!empty($token) ) {
-                $retdata=validateToken($token);
-                $data["status"] = $retdata["status"];
-                $data["message"] = $retdata["message"];
-            }
-            else {
-                $wifipassphrase = getHeaderValue("X-Challenge-Response");
-                if (!empty($wifipassphrase)) {
-                    $Password_24G = getStr("Device.WiFi.AccessPoint.1.Security.X_COMCAST-COM_KeyPassphrase");
-                    $Password_5G = getStr("Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase");
-                    if (($wifipassphrase == $Password_24G) || ($wifipassphrase == $Password_5G)) {
-                        $retdata=genToken();
-                        $data["status"] = $retdata["status"];
-                        $data["message"] = $retdata["message"];
-                        if ($retdata["status"] == "200") {
-                            $data["token"] = $retdata["token"];
-                        }
+            $wifipassphrase = getHeaderValue("X-Challenge-Response");
+            if (!empty($wifipassphrase)) {
+                $Password_24G = getStr("Device.WiFi.AccessPoint.1.Security.X_COMCAST-COM_KeyPassphrase");
+                $Password_5G = getStr("Device.WiFi.AccessPoint.2.Security.X_COMCAST-COM_KeyPassphrase");
+                if (($wifipassphrase == $Password_24G) || ($wifipassphrase == $Password_5G)) {
+                    $retdata=genToken();
+                    $data["status"] = $retdata["status"];
+                    $data["message"] = $retdata["message"];
+                    if ($retdata["status"] == "200") {
+                        $data["token"] = $retdata["token"];
                     }
                 }
             }
