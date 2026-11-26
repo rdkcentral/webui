@@ -45,7 +45,7 @@
 			'Acc_Enabled'=>getStr("Device.Services.VoiceService.1.VoiceProfile.1.Line.1.Enable"),
 			'Acc_Status'=> getStr("Device.Services.VoiceService.1.VoiceProfile.1.Line.1.Status"),
 			'Directory' => getStr("Device.Services.VoiceService.1.VoiceProfile.1.Line.1.DirectoryNumber"),
-			'Auth_pwd' => getStr("Device.Services.VoiceService.1.VoiceProfile.1.Line.1.SIP.AuthPassword"),
+			'Auth_pwd' => '********',
 			'Auth_usr' => getStr("Device.Services.VoiceService.1.VoiceProfile.1.Line.1.SIP.AuthUserName"),
 			'OutboundProxy' => getStr("Device.Services.VoiceService.1.VoiceProfile.1.SIP.OutboundProxy"),
 			'OutboundProxyPort' => getStr("Device.Services.VoiceService.1.VoiceProfile.1.SIP.OutboundProxyPort"),
