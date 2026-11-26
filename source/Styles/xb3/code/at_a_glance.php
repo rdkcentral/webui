@@ -446,6 +446,7 @@ function popUp(URL) {
 						if (($HostName == "*") || (strlen($HostName) == 0)) {
 							$HostName = strtoupper($HostInfo[$i]['PhysAddress']);
 						}
+						$HostName = htmlspecialchars($HostName, ENT_QUOTES, 'UTF-8');
 						echo "
 						   <div class=\" $divClass \"><span class=\"on-off sprite_cont\"><img src=\"./cmn/img/icn_on_off.png\" alt='"._("Host On")."' /></span> <span class=\"readonlyLabel\">$HostName</span></div>
 						";
