@@ -27,13 +27,14 @@
 
     try{
         if ("true" == getStr("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.EasyConnect.Enable")) {
-            switch ($_GET["REQUEST_METHOD"]) {
+            $requestMethod = $_SERVER['REQUEST_METHOD'];
+            switch ($requestMethod) {
                 case 'POST':
                     $data=processPostRequest();
                     break;
 
                 case 'GET':
-                case 'PUT':	
+                case 'PUT':
                 case 'DELETE':
                 default:
                     $data=array("status"=>"405","message"=>"Please use proper request method !!");
@@ -41,7 +42,7 @@
         }
         else {
             $data=array("status"=>"503","message"=>"Easy Connect feature is not enabled");
-        }        
+        }
         echo json_encode($data);
     }
     catch(Exception $e) {
